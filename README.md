@@ -1,15 +1,18 @@
-# Dev Workspace
+# aweave
 
-A unified multi-project development workspace with AI Agent support, centralized documentation, and shared development tools.
+> *AI + Weave — Weaving engineering context with intelligence*
+
+An AI-first engineering platform that weaves together code, documentation, operations, and context into a unified workspace.
 
 ## Overview
 
-This workspace consolidates multiple projects under a single root, enabling:
+**aweave** consolidates multiple projects and tools under a single root, enabling:
 
-- **Centralized Documentation** — All project docs in one place (`devdocs/`)
-- **AI Agent Integration** — Structured context for AI coding assistants
-- **Shared DevTools** — Common development infrastructure across projects (`devtools/`)
-- **Consistent Conventions** — Standardized paths and project structure
+- **AI-First Development** — Optimized for AI coding assistants with structured context
+- **Context Weaving** — Pull context from Confluence, logs, incidents into actionable insights
+- **Requirements Management** — Extract, sync, and track requirements across sources
+- **Centralized DevTools** — Shared infrastructure for local dev, testing, and operations
+- **Multi-Project Support** — Manage multiple independent projects in one workspace
 
 ## Directory Structure
 
