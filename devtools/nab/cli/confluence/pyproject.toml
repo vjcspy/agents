@@ -8,7 +8,7 @@ dependencies = [
     "aweave",
 ]
 
-[project.entry-points."aweave.plugins"]
+[project.entry-points."aw.plugins"]
 confluence = "nab.confluence.cli:app"
 
 [build-system]
