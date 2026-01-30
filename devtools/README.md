@@ -10,6 +10,61 @@ This repo supports:
 - Python tools via **entry points** (`aw.plugins`) → runs in-process.
 - Node tools via a **registry** (`aw-plugins.yaml`) + subprocess wrapper → `aw <node-plugin> ...`.
 
+## Context (for AI Agents)
+
+### User Requirements
+
+- Monorepo with multiple CLI tools organized by domain: common, nab, tinybots.
+- Each tool may be implemented in Python or Node.
+- Single unified CLI entrypoint: aw <subcommand>.
+- Domain-first folder structure; do not split by language. All CLIs live under <domain>/cli/.
+- Feature-based package naming; no special prefixes required.
+- Python managed by uv workspace with pip fallback when uv is unavailable.
+- Node plugins discovered via registry so aw can invoke them through subprocess.
+
+### Objective
+
+- Provide a unified CLI aw for both Python and Node tools.
+- Python plugins: auto-discovered via aw.plugins entry points and run in-process.
+- Node plugins: discovered via aw-plugin.yaml → generate aw-plugins.yaml → executed via subprocess wrapper.
+- Use uv workspace as a single lock for all Python members; pnpm workspace for Node.
+- Support pip fallback for environments without uv.
+
+### Key Considerations
+
+- Single Python environment and shared lock; dependency conflicts across tools will cause sync failures.
+- The root can export requirements.txt from uv.lock for pip fallback; install-all.sh uses it when present.
+- Internal workspace dependencies must declare [tool.uv.sources] with workspace = true in the member’s pyproject.
+- aw is linked to ~/.local/bin/aw via a wrapper script (runs uv run aw when needed).
+- Node plugins are loaded only when aw-plugin.yaml exists and dist/cli.js is built, then the registry is generated.
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    User Terminal                            │
+│                         │                                   │
+│                    aw <command>                             │
+│                         │                                   │
+│         ┌───────────────┴───────────────┐                   │
+│         │                               │                   │
+│         ▼                               ▼                   │
+│  ┌─────────────────┐           ┌─────────────────┐         │
+│  │ Python Plugins  │           │  Node Plugins   │         │
+│  │ (Entry Points)  │           │   (Registry +   │         │
+│  │   aw.plugins    │           │   Subprocess)   │         │
+│  │ • confluence    │           │ • foo           │         │
+│  └─────────────────┘           └─────────────────┘         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Plugin System Comparison
+
+| Type | Discovery | Execution | Use Case |
+|------|-----------|-----------|----------|
+| Python | Entry points (aw.plugins) | In-process | Complex logic, leverage shared libraries |
+| Node   | Registry (aw-plugin.yaml → aw-plugins.yaml) | Subprocess | Rapid prototyping, leverage npm ecosystem |
+
 ## Quickstart
 
 ### Install (recommended)
