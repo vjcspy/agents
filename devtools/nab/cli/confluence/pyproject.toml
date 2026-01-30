@@ -4,8 +4,6 @@ version = "0.1.0"
 description = "Confluence domain tools"
 requires-python = ">=3.13"
 dependencies = [
-    "typer>=0.21.1",
-    "aweave",
 ]
 
 [project.entry-points."aw.plugins"]
