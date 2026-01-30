@@ -1,0 +1,26 @@
+[project]
+name = "devtools-workspace"
+version = "0.1.0"
+description = "Unified development tools monorepo"
+requires-python = ">=3.13"
+dependencies = [
+      "typer>=0.21.1",
+    "dt",
+    "nab-confluence"
+]
+
+[tool.uv.workspace]
+members = [
+    "common/cli/devtool",
+    "nab/cli/confluence",
+]
+
+[tool.uv.sources]
+dt = { workspace = true }
+nab-confluence = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.4", # Ruff handles both linting and formatting
+    "pytest",
+]

@@ -1,0 +1,150 @@
+name: vocalmeet-assessment
+
+services:
+  # =============================================================================
+  # MySQL Database for WordPress
+  # =============================================================================
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-vocalmeet_root_pass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-vocalmeet}
+      MYSQL_USER: ${MYSQL_USER:-vocalmeet}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-vocalmeet_pass}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-vocalmeet_root_pass}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vocalmeet-network
+
+  # =============================================================================
+  # WordPress Application with Xdebug
+  # =============================================================================
+  wordpress:
+    build:
+      context: .
+      dockerfile: Dockerfile.wordpress
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      WORDPRESS_DB_HOST: mysql:3306
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE:-vocalmeet}
+      WORDPRESS_DB_USER: ${MYSQL_USER:-vocalmeet}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD:-vocalmeet_pass}
+      WORDPRESS_DEBUG: ${WORDPRESS_DEBUG:-1}
+      WORDPRESS_DEBUG_LOG: ${WORDPRESS_DEBUG_LOG:-1}
+      WORDPRESS_DEBUG_DISPLAY: ${WORDPRESS_DEBUG_DISPLAY:-1}
+      WORDPRESS_SCRIPT_DEBUG: ${WORDPRESS_SCRIPT_DEBUG:-1}
+      PHP_IDE_CONFIG: "serverName=vocalmeet.local"
+      # Important: Tell WordPress it's behind HTTPS proxy
+      WORDPRESS_CONFIG_EXTRA: |
+        /* HTTPS behind reverse proxy */
+        if (isset($$_SERVER['HTTP_X_FORWARDED_PROTO']) && $$_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+            $$_SERVER['HTTPS'] = 'on';
+        }
+        
+        /* Site URLs - adjust if needed */
+        define('WP_HOME', 'https://vocalmeet.local');
+        define('WP_SITEURL', 'https://vocalmeet.local');
+        
+        /* WooCommerce REST API - Allow HTTP for local development */
+        define('WC_API_DEV_MODE', true);
+
+        /* Internal base URL for server-to-server WooCommerce REST calls (Docker) */
+        define('VOCALMEET_WOO_API_WC_REST_BASE_URL', 'http://wordpress');
+    volumes:
+      # Mount entire WordPress source to local folder for IDE access
+      # Configure WORDPRESS_SOURCE_PATH in .env file
+      - ${WORDPRESS_SOURCE_PATH}:/var/www/html
+      # Mount Xdebug config for runtime editing
+      - ./php/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini
+      - ./php/runtime.ini:/usr/local/etc/php/conf.d/runtime.ini
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - vocalmeet-network
+
+  # =============================================================================
+  # Nginx Reverse Proxy with HTTPS (Self-signed SSL)
+  # =============================================================================
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      - wordpress
+    ports:
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - vocalmeet-network
+
+  # =============================================================================
+  # phpMyAdmin - Database Management UI
+  # =============================================================================
+  phpmyadmin:
+    image: phpmyadmin:latest
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD:-vocalmeet_root_pass}
+      UPLOAD_LIMIT: 100M
+    ports:
+      - "${PHPMYADMIN_PORT:-8081}:80"
+    networks:
+      - vocalmeet-network
+
+  # =============================================================================
+  # WP-CLI - WordPress Command Line Interface
+  # =============================================================================
+  wpcli:
+    image: wordpress:cli
+    depends_on:
+      wordpress:
+        condition: service_healthy
+    volumes:
+      # Same mount as wordpress service
+      - ${WORDPRESS_SOURCE_PATH}:/var/www/html
+      - ./php/runtime.ini:/usr/local/etc/php/conf.d/runtime.ini
+    environment:
+      WORDPRESS_DB_HOST: mysql:3306
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE:-vocalmeet}
+      WORDPRESS_DB_USER: ${MYSQL_USER:-vocalmeet}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD:-vocalmeet_pass}
+      # Use /tmp for WP-CLI cache to avoid permission issues
+      WP_CLI_CACHE_DIR: /tmp/wp-cli-cache
+    entrypoint: ["wp", "--allow-root"]
+    user: "33:33"
+    profiles:
+      - cli
+    networks:
+      - vocalmeet-network
+
+networks:
+  vocalmeet-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    name: vocalmeet_assessment_mysql_data
+  # Note: wordpress_data volume is no longer used
+  # WordPress files are now mounted from local folder

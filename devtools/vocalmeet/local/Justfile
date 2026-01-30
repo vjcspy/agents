@@ -1,0 +1,39 @@
+# =============================================================================
+# Vocalmeet DevTools - WordPress Development Environment
+# =============================================================================
+# Usage: just <command>
+# Run `just --list` to see all available commands
+# =============================================================================
+#
+# Structure:
+#   justfiles/
+#   ├── _common.just     # Shared variables & settings
+#   ├── ssl.just         # SSL certificate commands
+#   ├── services.just    # Service management (start, stop, etc.)
+#   ├── logs.just        # Log viewing commands
+#   ├── wp.just          # WP-CLI commands
+#   ├── db.just          # Database commands
+#   ├── dev.just         # Development helpers
+#   └── assessment.just  # Assessment specific commands
+#
+# =============================================================================
+
+# Import common variables first
+import 'justfiles/_common.just'
+
+# Import command modules
+import 'justfiles/ssl.just'
+import 'justfiles/services.just'
+import 'justfiles/logs.just'
+import 'justfiles/wp.just'
+import 'justfiles/db.just'
+import 'justfiles/dev.just'
+import 'justfiles/assessment.just'
+
+# =============================================================================
+# Core Commands
+# =============================================================================
+
+# Show all available commands (default)
+default:
+    @just --list

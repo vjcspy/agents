@@ -1,0 +1,14 @@
+# Custom WordPress image with Xdebug for local development
+FROM wordpress:latest
+
+# Install Xdebug
+RUN pecl install xdebug && docker-php-ext-enable xdebug
+
+# Note: xdebug.ini is mounted at runtime via docker-compose
+# This allows editing config without rebuilding the image
+
+# Install additional useful extensions for development
+RUN apt-get update && apt-get install -y \
+    vim \
+    less \
+    && rm -rf /var/lib/apt/lists/*

@@ -1,0 +1,12 @@
+# Environment files
+.env
+
+# WordPress content (if mounted locally)
+wp-content/
+
+# Logs
+*.log
+
+# IDE
+.idea/
+.vscode/

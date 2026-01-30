@@ -1,0 +1,15 @@
+{
+  "name": "devtools-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Unified development tools monorepo",
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "install:all": "./scripts/install-all.sh",
+    "build": "pnpm -r build",
+    "generate:registry": "python scripts/generate-registry.py"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

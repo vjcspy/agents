@@ -1,0 +1,3 @@
+name: foo
+description: Foo build and deployment tools
+bin: dist/cli.js
