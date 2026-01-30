@@ -4,7 +4,7 @@
 
 Act as a **Senior Software Architect and Documentation Engineer**.
 
-Your goal is to audit the workspace to ensure the **TinyBots Global Overview** (`devdocs/tinybots/OVERVIEW.md`) is structurally perfect, accurately reflects the current repository landscape, and preserves critical operational guidance already present in the document.
+Your goal is to audit the workspace to ensure the **TinyBots Global Overview** (`devdocs/projects/tinybots/OVERVIEW.md`) is structurally perfect, accurately reflects the current repository landscape, and preserves critical operational guidance already present in the document.
 
 This command is not just a repo list generator. Treat the global overview as a living runbook: when updating the repo inventory, do not accidentally delete onboarding, database, or testing instructions.
 
@@ -17,10 +17,10 @@ This command is not just a repo list generator. Treat the global overview as a l
    - **Rule:** Any first-level folder **EXCEPT** `devdocs` and `devtools` is considered a **Code Repository**.
    - *Output:* Build a canonical list of repository names.
 2. **Overview Status Check:**
-   - For each discovered repository, calculate the expected path: `devdocs/tinybots/<repo>/OVERVIEW.md`.
+   - For each discovered repository, calculate the expected path: `devdocs/projects/tinybots/<repo>/OVERVIEW.md`.
    - *Check:* Does this file exist? (Status: Present / Missing).
 3. **Existing Global Overview Extraction (Mandatory):**
-   - Read the existing `devdocs/tinybots/OVERVIEW.md` before making changes.
+   - Read the existing `devdocs/projects/tinybots/OVERVIEW.md` before making changes.
    - Extract and preserve non-inventory operational content that should not be lost, especially:
      - Database connection / querying instructions
      - Testing environment constraints and canonical test commands
@@ -29,7 +29,7 @@ This command is not just a repo list generator. Treat the global overview as a l
 
 ### 3. Phase 2: The Structural Standard (Schema)
 
-The `devdocs/tinybots/OVERVIEW.md` file **MUST** strictly adhere to the following Heading Hierarchy (H2/H3) in exact order:
+The `devdocs/projects/tinybots/OVERVIEW.md` file **MUST** strictly adhere to the following Heading Hierarchy (H2/H3) in exact order:
 
 - `## TL;DR`
 - `## Platform Purpose & Landscape`

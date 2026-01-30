@@ -2,10 +2,10 @@
 
 ## References
 
-- **Global Standard**: `devdocs/tinybots/OVERVIEW.md`
+- **Global Standard**: `devdocs/projects/tinybots/OVERVIEW.md`
 - **Repo Standard**: Not available (devtools OVERVIEW.md does not exist yet)
 - **Related Documentation**:
-  - `devdocs/tinybots/micro-manager/251206-store-trigger-script.md` - Trigger-based script execution implementation
+  - `devdocs/projects/tinybots/micro-manager/251206-store-trigger-script.md` - Trigger-based script execution implementation
   - `typ-e/src/main/resources/db/migration/V97__add_triggered_script_execution_support.sql` - Schema migration
 - **Key Files**:
   - `devtools/src/seed/units/RobotAccountSeed.ts` - Example seed implementation

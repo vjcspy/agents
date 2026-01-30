@@ -100,7 +100,7 @@ test-megazord-events:
 
 When adding integration test support for a new repository, follow the detailed guide in:
 
-**→ [devdocs/tinybots/devtools/create-just-commands.md](create-just-commands.md)**
+**→ [devdocs/projects/tinybots/devtools/create-just-commands.md](create-just-commands.md)**
 
 The guide covers:
 - Reading CI configuration to extract dependencies
@@ -475,7 +475,7 @@ lsof -i :1123
 
 - **[create-just-commands.md](create-just-commands.md)** - Detailed guide for adding integration test support for new repositories
 - **[AGENTS.md](/Users/kai/work/tinybots/AGENTS.md)** - TinyBots engineering protocols and AI agent guidelines
-- **[devdocs/tinybots/OVERVIEW.md](../OVERVIEW.md)** - Global TinyBots project overview
+- **[devdocs/projects/tinybots/OVERVIEW.md](../OVERVIEW.md)** - Global TinyBots project overview
 
 ---
 

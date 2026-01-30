@@ -688,7 +688,7 @@ When adding a new repository to devtools:
 | `devtools/Justfile` | Main orchestration file |
 | `devtools/docker-compose.yaml` | Complete service definitions |
 | `devtools/justfiles/*.just` | Per-repo command files |
-| `devdocs/tinybots/OVERVIEW.md` | Global TinyBots standards |
+| `devdocs/projects/tinybots/OVERVIEW.md` | Global TinyBots standards |
 | `<repo>/ci/docker-compose.yml` | Original repo CI configs (reference) |
 | `<repo>/ci/test.sh` | Original test scripts (reference) |
 
