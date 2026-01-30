@@ -26,33 +26,100 @@ Your goal is to analyze Bitbucket PR comments and tasks from reviewers, evaluate
 
 ## Phase 1: Fetch PR Data
 
-**Action:** Use the `bitbucket` skill to fetch all necessary data.
+**Action:** Use the `aw tinybots-bitbucket` CLI to fetch all necessary data.
 
 ### Step 1.1: Get PR Info
 
 ```bash
-curl --request GET \
-  --url 'https://api.bitbucket.org/2.0/repositories/{WORKSPACE}/{REPO_SLUG}/pullrequests/{PR_ID}' \
-  --user "${BITBUCKET_USER}:${BITBUCKET_APP_PASSWORD}" \
-  --header 'Accept: application/json'
+aw tinybots-bitbucket pr {REPO_SLUG} {PR_ID} -w {WORKSPACE}
+```
+
+**Response format (MCP-style JSON):**
+```json
+{
+  "success": true,
+  "content": [{
+    "type": "json",
+    "data": {
+      "id": 126,
+      "title": "feat: implement API for ...",
+      "author": {"display_name": "Kai", "uuid": "..."},
+      "source_branch": "feature/xxx",
+      "destination_branch": "main",
+      "state": "OPEN"
+    }
+  }],
+  "metadata": {"workspace": "tinybots", "repo_slug": "micro-manager", "resource_type": "pull_request"}
+}
 ```
 
 ### Step 1.2: Get All Comments
 
 ```bash
-curl --request GET \
-  --url 'https://api.bitbucket.org/2.0/repositories/{WORKSPACE}/{REPO_SLUG}/pullrequests/{PR_ID}/comments' \
-  --user "${BITBUCKET_USER}:${BITBUCKET_APP_PASSWORD}" \
-  --header 'Accept: application/json'
+aw tinybots-bitbucket comments {REPO_SLUG} {PR_ID} -w {WORKSPACE} --limit 100
 ```
+
+**Response format:**
+```json
+{
+  "success": true,
+  "content": [
+    {
+      "type": "json",
+      "data": {
+        "id": 740667474,
+        "content": "Why not create a separate model?",
+        "author": {"display_name": "Max", "uuid": "..."},
+        "file_path": "src/controllers/UserController.ts",
+        "line": 29,
+        "created_on": "2026-01-19T11:02:38+00:00"
+      }
+    }
+  ],
+  "metadata": {"resource_type": "pr_comments"},
+  "has_more": false,
+  "total_count": 11
+}
+```
+
+> **Note:** If `has_more: true`, fetch more with `--offset {next_offset}`
 
 ### Step 1.3: Get All Tasks
 
 ```bash
-curl --request GET \
-  --url 'https://api.bitbucket.org/2.0/repositories/{WORKSPACE}/{REPO_SLUG}/pullrequests/{PR_ID}/tasks' \
-  --user "${BITBUCKET_USER}:${BITBUCKET_APP_PASSWORD}" \
-  --header 'Accept: application/json'
+aw tinybots-bitbucket tasks {REPO_SLUG} {PR_ID} -w {WORKSPACE} --limit 100
+```
+
+**Response format:**
+```json
+{
+  "success": true,
+  "content": [
+    {
+      "type": "json",
+      "data": {
+        "id": 58007442,
+        "content": "Fix formatting and case issues",
+        "state": "RESOLVED",
+        "comment_id": null,
+        "creator": {"display_name": "Max", "uuid": "..."}
+      }
+    },
+    {
+      "type": "json",
+      "data": {
+        "id": 58006601,
+        "content": "Separate model",
+        "state": "UNRESOLVED",
+        "comment_id": 740667474,
+        "creator": {"display_name": "Max", "uuid": "..."}
+      }
+    }
+  ],
+  "metadata": {"resource_type": "pr_tasks"},
+  "has_more": false,
+  "total_count": 3
+}
 ```
 
 ---
@@ -63,28 +130,29 @@ curl --request GET \
 
 ### Step 2.1: Create Comment-Task Mapping
 
-Build a mapping structure:
+Use `comment_id` field in tasks to link with comments:
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │ TASKS (Required Work)                                            │
 ├──────────────────────────────────────────────────────────────────┤
-│ [TASK-1] "Task description"                                      │
-│   └── Linked Comment: #comment_id                                │
-│       └── File: path/to/file.ts (Line X)                         │
-│       └── Content: "Comment text..."                             │
-│   └── Status: UNRESOLVED / RESOLVED                              │
-├──────────────────────────────────────────────────────────────────┤
-│ [TASK-2] "Standalone task" (no linked comment)                   │
+│ [TASK-58006601] "Separate model"                                 │
+│   └── Linked Comment: #740667474                                 │
+│       └── File: src/controllers/UserController.ts (Line 29)      │
+│       └── Content: "Why not create a separate model?"            │
 │   └── Status: UNRESOLVED                                         │
+├──────────────────────────────────────────────────────────────────┤
+│ [TASK-58007442] "Fix formatting and case issues"                 │
+│   └── Linked Comment: (none - standalone task)                   │
+│   └── Status: RESOLVED                                           │
 └──────────────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────────────┐
 │ ORPHAN COMMENTS (Nice-to-have, no task created)                  │
 ├──────────────────────────────────────────────────────────────────┤
-│ [COMMENT-X] File: path/to/file.ts (Line Y)                       │
-│   └── Content: "Suggestion text..."                              │
-│   └── Author: Reviewer Name                                      │
+│ [COMMENT-740668693] File: src/controllers/UserController.ts      │
+│   └── Content: "Should add the response to tiny-specs..."        │
+│   └── Author: Max                                                │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -92,9 +160,9 @@ Build a mapping structure:
 
 Group by priority:
 
-1. **MUST FIX**: Tasks with `state: UNRESOLVED`
+1. **MUST FIX**: Tasks with `state: "UNRESOLVED"`
 2. **SHOULD CONSIDER**: Orphan comments (no linked task)
-3. **ALREADY DONE**: Tasks with `state: RESOLVED`
+3. **ALREADY DONE**: Tasks with `state: "RESOLVED"`
 
 ---
 
@@ -152,7 +220,7 @@ Evaluate based on:
 ## Summary
 - **PR Title:** {title}
 - **Author:** {author}
-- **Branch:** {source} → {destination}
+- **Branch:** {source_branch} → {destination_branch}
 - **Total Tasks:** X (Y unresolved)
 - **Total Comments:** Z (W without tasks)
 
@@ -263,10 +331,30 @@ After fixing, report:
 
 ## Error Handling
 
-- **API Error 401/403:** Check credentials and permissions
-- **PR Not Found:** Verify workspace, repo slug, and PR ID
-- **No Comments/Tasks:** Report "No review feedback found"
-- **Ambiguous Feedback:** Ask user for clarification before proceeding
+The CLI returns MCP-style error responses:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "AUTH_FAILED",
+    "message": "Authentication failed",
+    "suggestion": "Check your credentials (username/password or token)"
+  }
+}
+```
+
+| Error Code | Cause | Action |
+|------------|-------|--------|
+| `AUTH_FAILED` | Invalid credentials | Check `BITBUCKET_USER` and `BITBUCKET_APP_PASSWORD` |
+| `FORBIDDEN` | Insufficient permissions | Verify App Password has required permissions |
+| `NOT_FOUND` | PR/repo doesn't exist | Verify workspace, repo slug, and PR ID |
+| `HTTP_xxx` | Other API errors | Check error message for details |
+
+**Missing credentials error:**
+```
+Error: BITBUCKET_USER and BITBUCKET_APP_PASSWORD environment variables required.
+```
 
 ---
 
@@ -276,11 +364,13 @@ After fixing, report:
 User: Check PR 126 on micro-manager and help me fix the comments
 
 Agent:
-1. Fetches PR #126 data from tinybots/micro-manager
-2. Analyzes 7 comments and 3 tasks
-3. Maps relationships between comments and tasks
-4. Provides expert assessment for each item
-5. Presents report and waits for user approval
-6. After approval, fixes only the approved items
-7. Reports changes and suggests next steps
+1. Runs: aw tinybots-bitbucket pr micro-manager 126
+2. Runs: aw tinybots-bitbucket comments micro-manager 126 --limit 100
+3. Runs: aw tinybots-bitbucket tasks micro-manager 126 --limit 100
+4. Parses MCP responses to extract PR info, comments, and tasks
+5. Maps relationships between comments and tasks using comment_id
+6. Provides expert assessment for each item
+7. Presents report and waits for user approval
+8. After approval, fixes only the approved items
+9. Reports changes and suggests next steps
 ```
