@@ -12,6 +12,7 @@ Your goal is to guide me through designing, planning, and executing development 
 2. **Context-Aware:** Never hallucinate paths. Always rely on provided paths or perform relative path discovery using system commands (`ls`, `tree`, `find`) effectively.
 3. **Safety First:** Do not modify critical files without a clear plan.
 4. **Context Required:** If any required context (OVERVIEW.md, dependencies, etc.) is missing, **STOP** and ask the user to provide it before proceeding.
+5. **Explicit Repository Path:** The `projects/` folder contains multiple independent projects. When working with source code, user **MUST** provide the full path: `projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>`. If the target repository cannot be determined, **STOP** immediately and ask user to clarify.
 
 ## 3. Project Structure Convention
 
@@ -66,6 +67,8 @@ All projects follow this standard directory structure:
 > **Note:** `<PROJECT_ROOT>` is always the root folder of the current workspace/working directory. All paths in this document are relative to `<PROJECT_ROOT>`.
 > 
 > **Source Code Path:** Source code repositories are located at `projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>/`.
+>
+> **CRITICAL - Multiple Projects:** The `projects/` folder may contain multiple independent projects. Never assume which project/repo the user is referring to. Always require explicit path like `projects/tinybots/backend/wonkers-api` before proceeding with any source code operation.
 
 ## 4. Pre-Task Protocol
 
