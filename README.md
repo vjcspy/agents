@@ -1,0 +1,124 @@
+# Dev Workspace
+
+A unified multi-project development workspace with AI Agent support, centralized documentation, and shared development tools.
+
+## Overview
+
+This workspace consolidates multiple projects under a single root, enabling:
+
+- **Centralized Documentation** — All project docs in one place (`devdocs/`)
+- **AI Agent Integration** — Structured context for AI coding assistants
+- **Shared DevTools** — Common development infrastructure across projects (`devtools/`)
+- **Consistent Conventions** — Standardized paths and project structure
+
+## Directory Structure
+
+```
+<PROJECT_ROOT>/
+├── devdocs/                    # Documentation & AI Agent context
+│   ├── agent/                  # Agent configurations
+│   │   ├── commands/           # Custom agent commands
+│   │   ├── templates/          # Document templates
+│   │   └── rules/              # Working protocols & guidelines
+│   ├── misc/                   # Cross-domain documentation
+│   │   └── devtools/           # DevTools documentation per domain
+│   └── projects/               # Project-specific documentation
+│       └── <PROJECT_NAME>/     # Mirrors projects/ structure
+│           ├── OVERVIEW.md     # Global project overview
+│           └── <DOMAIN>/<REPO>/
+│               ├── OVERVIEW.md # Repository overview
+│               └── plans/      # Implementation plans
+│
+├── devtools/                   # Development tools & utilities
+│   ├── common/                 # Shared tools across all projects
+│   │   └── cli/                # Shared CLI tools (dt)
+│   └── <PROJECT_NAME>/         # Project-specific devtools
+│       └── local/              # Local dev infrastructure
+│           ├── docker-compose.yaml
+│           ├── Justfile        # Just commands
+│           └── prisma/         # Database schemas
+│
+├── projects/                   # Source code root
+│   └── <PROJECT_NAME>/         # Project container
+│       └── <DOMAIN>/           # Domain grouping
+│           └── <REPO>/         # Individual repository
+│
+├── AGENTS.md                   # AI Agent instructions (symlink)
+└── README.md                   # This file
+```
+
+## Path Conventions
+
+| Path Pattern | Description | Example |
+|--------------|-------------|---------|
+| `projects/<PROJECT>/<DOMAIN>/<REPO>/` | Source code | `projects/tinybots/backend/wonkers-api/` |
+| `devdocs/projects/<PROJECT>/<DOMAIN>/<REPO>/` | Documentation | `devdocs/projects/tinybots/backend/wonkers-api/` |
+| `devtools/<PROJECT>/local/` | Local dev tools | `devtools/tinybots/local/` |
+
+## Working with AI Agents
+
+This workspace is optimized for AI coding assistants. The `AGENTS.md` file contains detailed instructions for AI agents.
+
+### Key Rules for AI Agents
+
+1. **Always specify the full repository path** when working with source code:
+   ```
+   projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>
+   ```
+
+2. **Load context before tasks**:
+   - Global Overview: `devdocs/projects/<PROJECT>/OVERVIEW.md`
+   - Repo Overview: `devdocs/projects/<PROJECT>/<DOMAIN>/<REPO>/OVERVIEW.md`
+
+3. **Use DevTools** for local development:
+   ```bash
+   just -f devtools/<PROJECT>/local/Justfile <command>
+   ```
+
+## Current Projects
+
+| Project | Description | DevTools |
+|---------|-------------|----------|
+| `tinybots` | Backend services for telemetry & automation | `devtools/tinybots/local/` |
+| `vocalmeet` | WordPress-based assessment platform | `devtools/vocalmeet/local/` |
+
+## Quick Start
+
+### Prerequisites
+
+- [Just](https://github.com/casey/just) — Command runner
+- [Docker](https://www.docker.com/) — Container runtime
+- [uv](https://github.com/astral-sh/uv) — Python package manager (for CLI tools)
+- [pnpm](https://pnpm.io/) — Node.js package manager
+
+### DevTools CLI
+
+```bash
+# Install the dt CLI tool
+cd devtools && ./scripts/install-all.sh
+
+# Use dt commands
+dt <command>
+```
+
+### Project-Specific Commands
+
+```bash
+# TinyBots example
+just -f devtools/tinybots/local/Justfile start-wonkers-api
+just -f devtools/tinybots/local/Justfile test-wonkers-api
+
+# Vocalmeet example
+just -f devtools/vocalmeet/local/Justfile up
+just -f devtools/vocalmeet/local/Justfile logs
+```
+
+## Documentation
+
+- **AI Agent Rules**: See `AGENTS.md` for AI assistant guidelines
+- **DevTools Guide**: See `devtools/README.md` for development tools
+- **Project Overviews**: See `devdocs/projects/<PROJECT>/OVERVIEW.md` for each project
+
+## License
+
+Private repository. All rights reserved.
