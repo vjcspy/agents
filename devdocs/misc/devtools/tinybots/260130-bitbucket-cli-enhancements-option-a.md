@@ -1,6 +1,6 @@
 # 📋 [260130: 2026-01-30] - Bitbucket CLI Enhancements
 
-**Status:** Draft  
+**Status:** Implemented (Phase 1–2 completed); Tests pending  
 **Related:** [260130-bitbucket-cli-implementation.md](./260130-bitbucket-cli-implementation.md)
 
 ## References
@@ -8,8 +8,8 @@
 - MCP Best Practices: `devdocs/agent/skills/common/mcp-builder/reference/mcp_best_practices.md`
 - Command liên quan: `devdocs/agent/commands/tinybots/fix-pr-comments.md`
 - Source code:
-  - Common MCP/HTTP: `devtools/common/cli/devtool/aweave/mcp/`, `devtools/common/cli/devtool/aweave/http/`
-  - Tinybots Bitbucket: `devtools/tinybots/cli/bitbucket/tinybots/bitbucket/`
+  - Common MCP/HTTP: [mcp](file:///Users/kai/work/aweave/devtools/common/cli/devtool/aweave/mcp), [http](file:///Users/kai/work/aweave/devtools/common/cli/devtool/aweave/http)
+  - Tinybots Bitbucket: [bitbucket](file:///Users/kai/work/aweave/devtools/tinybots/cli/bitbucket/tinybots/bitbucket)
 
 ---
 
@@ -79,22 +79,12 @@ Nâng cao chất lượng Bitbucket CLI và common MCP/HTTP:
 
 ---
 
-## 🔍 Current Implementation Issues
+## ✅ Triển khai hiện tại
 
-### Issue 1: JSON decode không có error handling
-
-```python
-# http/client.py line 101
-return response.json()  # ❌ Có thể crash nếu response không phải JSON
-```
-
-### Issue 2: Pagination logic dựa vào `size` (unreliable)
-
-```python
-# bitbucket/client.py
-total = data.get("size", len(comments))  # ❌ Fallback misleading
-has_more = offset + len(items) < total   # ❌ Sai nếu không có size
-```
+- HTTP JSON decode hardening: đã triển khai trong [client.py](file:///Users/kai/work/aweave/devtools/common/cli/devtool/aweave/http/client.py#L90-L109) với try/except và lỗi `BAD_JSON`.
+- Pagination helpers: [pagination.py](file:///Users/kai/work/aweave/devtools/common/cli/devtool/aweave/mcp/pagination.py) hỗ trợ `total: int | None`, `has_more`, `next_offset`.
+- Markdown output khi `total_count=None`: cập nhật trong [response.py](file:///Users/kai/work/aweave/devtools/common/cli/devtool/aweave/mcp/response.py#L91-L121).
+- BitbucketClient sử dụng `next` để xác định `has_more`: xem [client.py](file:///Users/kai/work/aweave/devtools/tinybots/cli/bitbucket/tinybots/bitbucket/client.py#L52-L86).
 
 ---
 
@@ -268,10 +258,10 @@ devtools/
 
 | # | Task | Status |
 |---|------|--------|
-| 1 | JSON decode hardening in HTTPClient | ⬜ Pending |
-| 2.1 | Update `create_paginated_response` signature | ⬜ Pending |
-| 2.2 | Update `MCPResponse.to_markdown()` | ⬜ Pending |
-| 2.3 | Fix BitbucketClient pagination logic | ⬜ Pending |
+| 1 | JSON decode hardening in HTTPClient | ✅ Done |
+| 2.1 | Update `create_paginated_response` signature | ✅ Done |
+| 2.2 | Update `MCPResponse.to_markdown()` | ✅ Done |
+| 2.3 | Fix BitbucketClient pagination logic | ✅ Done |
 | 3.1 | Tests for HTTP client | ⬜ Pending |
 | 3.2 | Tests for models | ⬜ Pending |
 | 3.3 | Tests for BitbucketClient | ⬜ Pending |

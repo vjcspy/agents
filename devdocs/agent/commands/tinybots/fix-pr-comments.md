@@ -19,8 +19,30 @@ Your goal is to analyze Bitbucket PR comments and tasks from reviewers, evaluate
 | `BITBUCKET_USER` | Bitbucket username/email | `user@example.com` |
 | `BITBUCKET_APP_PASSWORD` | Bitbucket App Password | `ATATTxxxxx...` |
 
-> **Note:** Create an App Password at: https://bitbucket.org/account/settings/app-passwords/
+> **Note:** Create an App Password at: <https://bitbucket.org/account/settings/app-passwords/>
 > Required permissions: `Repositories: Read`, `Pull requests: Read`
+
+---
+
+## CLI Execution
+
+- Requirement: Use the globally installed `aw` in PATH. Do not run via `uv run aw` or shell wrappers.
+- Pre-flight check (mandatory):
+
+  ```bash
+  aw --help
+  ```
+
+  If this fails or `aw` is not found, STOP and fix your environment first. See Quickstart in `devtools/README.md` for installation and PATH setup.
+- Standard commands:
+
+  ```bash
+  aw tinybots-bitbucket pr micro-manager 126 -w tinybots
+  aw tinybots-bitbucket comments micro-manager 126 -w tinybots --limit 100
+  aw tinybots-bitbucket tasks micro-manager 126 -w tinybots --limit 100
+  ```
+
+- Environment: Ensure `BITBUCKET_USER` and `BITBUCKET_APP_PASSWORD` are exported in your shell session before running commands.
 
 ---
 
@@ -35,6 +57,7 @@ aw tinybots-bitbucket pr {REPO_SLUG} {PR_ID} -w {WORKSPACE}
 ```
 
 **Response format (MCP-style JSON):**
+
 ```json
 {
   "success": true,
@@ -60,6 +83,7 @@ aw tinybots-bitbucket comments {REPO_SLUG} {PR_ID} -w {WORKSPACE} --limit 100
 ```
 
 **Response format:**
+
 ```json
 {
   "success": true,
@@ -91,6 +115,7 @@ aw tinybots-bitbucket tasks {REPO_SLUG} {PR_ID} -w {WORKSPACE} --limit 100
 ```
 
 **Response format:**
+
 ```json
 {
   "success": true,
@@ -352,6 +377,7 @@ The CLI returns MCP-style error responses:
 | `HTTP_xxx` | Other API errors | Check error message for details |
 
 **Missing credentials error:**
+
 ```
 Error: BITBUCKET_USER and BITBUCKET_APP_PASSWORD environment variables required.
 ```
