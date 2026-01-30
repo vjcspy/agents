@@ -1,5 +1,6 @@
 """Base HTTP client with error handling."""
 
+import json
 from typing import Any
 
 import httpx
@@ -98,4 +99,11 @@ class HTTPClient:
         if response.status_code == 204:
             return {}
 
-        return response.json()
+        try:
+            return response.json()
+        except (ValueError, json.JSONDecodeError) as e:
+            raise HTTPClientError(
+                code="BAD_JSON",
+                message=f"Invalid JSON response: {e}",
+                suggestion="Check if endpoint returns JSON or verify Accept header",
+            ) from e

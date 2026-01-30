@@ -26,6 +26,7 @@ Nâng cao chất lượng Bitbucket CLI và common MCP/HTTP:
 - Giữ nguyên API hiện có, không phá vỡ entry points hoặc hành vi output
 - Credentials chỉ qua environment variables (an toàn, không expose qua CLI args)
 - Logging sẽ được improve riêng trong task khác
+- Không cần tương thích legacy; luôn dùng latest. Loại bỏ PaginationParams.
 
 ---
 
@@ -149,6 +150,15 @@ def create_paginated_response(
     )
 ```
 
+#### 2.1b Remove `PaginationParams` and update exports
+
+**Files:**
+- `devtools/common/cli/devtool/aweave/mcp/pagination.py` — Xóa dataclass `PaginationParams`
+- `devtools/common/cli/devtool/aweave/mcp/__init__.py` — Bỏ export `PaginationParams` khỏi `__all__`
+
+Lý do:
+- Latest-only: API mới không dựa vào offset/limit để suy luận `has_more`. Sử dụng trực tiếp `has_more`, `next_offset`, `total_count`.
+
 #### 2.2 Update `MCPResponse.to_markdown()` for None total_count
 
 **File:** `devtools/common/cli/devtool/aweave/mcp/response.py`
@@ -247,7 +257,8 @@ devtools/
 | File | Changes |
 |------|---------|
 | `aweave/http/client.py` | Add JSON decode error handling |
-| `aweave/mcp/pagination.py` | Change signature: `total: int \| None`, add `has_more`, `next_offset` |
+| `aweave/mcp/pagination.py` | Change signature: `total: int \| None`, add `has_more`, `next_offset`; remove `PaginationParams` |
+| `aweave/mcp/__init__.py` | Update `__all__`: remove `PaginationParams` export |
 | `aweave/mcp/response.py` | Update `to_markdown()` for `total_count=None` |
 | `bitbucket/client.py` | Use `"next" in data` for `has_more`, `data.get("size")` for total |
 

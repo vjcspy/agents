@@ -110,9 +110,12 @@ class MCPResponse:
                 lines.append(f"```json\n{json.dumps(item.data, indent=2, default=str)}\n```")
 
         if self.has_more:
+            if self.total_count is not None:
+                msg = f"Showing {len(self.content)} of {self.total_count} items."
+            else:
+                msg = f"Showing {len(self.content)} items. More available."
             lines.append(
-                f"\n---\n*Showing {len(self.content)} of {self.total_count} items. "
-                f"Use --offset {self.next_offset} to see more.*"
+                f"\n---\n*{msg} Use --offset {self.next_offset} to see more.*"
             )
 
         return "\n".join(lines)

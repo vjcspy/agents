@@ -6,7 +6,6 @@ from aweave.mcp import (
     MCPContent,
     MCPError,
     MCPResponse,
-    PaginationParams,
     create_paginated_response,
 )
 
@@ -29,10 +28,7 @@ class BitbucketClient:
     def _repo_path(self, repo_slug: str) -> str:
         return f"/repositories/{self._workspace}/{repo_slug}"
 
-    # === Pull Request Operations ===
-
     def get_pr(self, repo_slug: str, pr_id: int) -> MCPResponse:
-        """Get pull request details."""
         try:
             path = f"{self._repo_path(repo_slug)}/pullrequests/{pr_id}"
             data = self._http.get(path)
@@ -60,19 +56,21 @@ class BitbucketClient:
         limit: int = 25,
         offset: int = 0,
     ) -> MCPResponse:
-        """List PR comments with pagination."""
         try:
             path = f"{self._repo_path(repo_slug)}/pullrequests/{pr_id}/comments"
             params = {"pagelen": limit, "page": (offset // limit) + 1}
             data = self._http.get(path, params=params)
 
             comments = [PRComment.from_api(c) for c in data.get("values", [])]
-            total = data.get("size", len(comments))
+            has_more = "next" in data
+            total_count = data.get("size")
+            next_offset = offset + len(comments) if has_more else None
 
             return create_paginated_response(
                 items=comments,
-                total=total,
-                params=PaginationParams(limit=limit, offset=offset),
+                total=total_count,
+                has_more=has_more,
+                next_offset=next_offset,
                 formatter=lambda c: MCPContent(type=ContentType.JSON, data=c.to_dict()),
                 metadata={
                     "workspace": self._workspace,
@@ -94,19 +92,21 @@ class BitbucketClient:
         limit: int = 25,
         offset: int = 0,
     ) -> MCPResponse:
-        """List PR tasks with pagination."""
         try:
             path = f"{self._repo_path(repo_slug)}/pullrequests/{pr_id}/tasks"
             params = {"pagelen": limit, "page": (offset // limit) + 1}
             data = self._http.get(path, params=params)
 
             tasks = [PRTask.from_api(t) for t in data.get("values", [])]
-            total = data.get("size", len(tasks))
+            has_more = "next" in data
+            total_count = data.get("size")
+            next_offset = offset + len(tasks) if has_more else None
 
             return create_paginated_response(
                 items=tasks,
-                total=total,
-                params=PaginationParams(limit=limit, offset=offset),
+                total=total_count,
+                has_more=has_more,
+                next_offset=next_offset,
                 formatter=lambda t: MCPContent(type=ContentType.JSON, data=t.to_dict()),
                 metadata={
                     "workspace": self._workspace,

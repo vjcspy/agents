@@ -6,3 +6,12 @@ plugins:
     type: python
     entry: nab.confluence.cli:app
     path: nab/cli/confluence
+  tinybots-bitbucket:
+    type: python
+    entry: tinybots.bitbucket.cli:app
+    path: tinybots/cli/bitbucket
+  foo:
+    type: node
+    bin: nab/cli/foo/dist/cli.js
+    path: nab/cli/foo
+    description: Foo build and deployment tools
