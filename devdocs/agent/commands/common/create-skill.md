@@ -1,42 +1,55 @@
-# Create Skill
+# Create Cursor Skill
 
 ## Role & Objective
 
 Act as a **Senior AI Agent Developer** and **Prompt Engineer**.
-Your goal is to create a Claude Code skill (SKILL.md and supporting files) following the [Agent Skills open standard](https://code.claude.com/docs/en/skills).
+Your goal is to create a Cursor Agent Skill (SKILL.md and supporting files) following the [Agent Skills open standard](https://cursor.com/docs/context/skills).
 
-A skill extends Claude's capabilities - it's a set of instructions Claude uses when relevant, or that users can invoke directly via `/skill-name`.
+A skill extends Cursor's capabilities - it's a set of instructions the agent uses when relevant, or that users can invoke directly via `/skill-name`.
 
 **Input Variables:**
 
 - `SKILL_NAME`: Name of the skill (lowercase, hyphens allowed, max 64 chars)
 - `SKILL_DESCRIPTION`: What the skill does and when to use it
-- `SKILL_SCOPE`: `personal` | `project` | `plugin`
-- `INVOCATION_MODE`: `both` | `user-only` | `model-only`
-- `EXECUTION_CONTEXT`: `inline` | `fork` (default: `inline`)
+- `SKILL_SCOPE`: `user` (global) | `project` (workspace)
+- `AUTO_INVOKE`: `true` (agent decides) | `false` (user-only via `/skill-name`)
 
 ---
 
 ## Phase 0: Requirements Gathering (CRITICAL)
 
-**Action:** Clarify the skill's purpose and behavior before implementation.
+**Action:** Before creating any files, clarify the skill's purpose through questions.
 
-1. **Define the Skill Intent:**
-   - What task or knowledge does this skill provide?
-   - Is it **reference content** (conventions, patterns, domain knowledge) or **task content** (step-by-step actions)?
+### 0.1 Define Skill Intent
 
-2. **Determine Invocation Mode:**
-   - `both` (default): User can invoke via `/skill-name`, Claude can invoke automatically when relevant
-   - `user-only`: Only user can invoke (for workflows with side effects like deploy, commit)
-   - `model-only`: Only Claude can invoke (background knowledge users shouldn't invoke directly)
+Ask the user:
 
-3. **Determine Execution Context:**
-   - `inline` (default): Runs in the current conversation context
-   - `fork`: Runs in an isolated subagent context (use for research, exploration, or tasks that need isolation)
+1. **What task or knowledge does this skill provide?**
+   - Is it **reference content** (conventions, patterns, domain knowledge)?
+   - Or **task content** (step-by-step actions, workflows)?
 
-4. **Identify Supporting Files:**
-   - Does the skill need templates, examples, scripts, or reference docs?
-   - Plan the directory structure if supporting files are needed
+2. **When should this skill be used?**
+   - What keywords/scenarios should trigger it?
+   - This directly informs the `description` field
+
+3. **Who should invoke it?**
+   - **Agent decides** (default): Agent applies automatically when relevant, user can also invoke via `/skill-name`
+   - **User-only**: Only triggered when user explicitly types `/skill-name` (for workflows with side effects like deploy, publish)
+
+4. **Does it need supporting files?**
+   - Scripts the agent should execute?
+   - Reference documentation too large for SKILL.md?
+   - Static assets like templates or config files?
+
+### 0.2 Validate Skill Name
+
+- Must use **lowercase letters, numbers, and hyphens only**
+- Maximum **64 characters**
+- Must match the parent folder name
+- Should be **descriptive but concise**
+
+Good: `deploy-staging`, `api-conventions`, `create-migration`
+Bad: `MySkill`, `deploy_staging`, `skill1`
 
 ---
 
@@ -44,20 +57,20 @@ A skill extends Claude's capabilities - it's a set of instructions Claude uses w
 
 **Action:** Create the skill directory based on scope.
 
-### Skill Location by Scope
+### Skill Locations
 
-| Scope | Path |
-|-------|------|
-| Personal | `~/.claude/skills/{SKILL_NAME}/SKILL.md` |
-| Project | `.claude/skills/{SKILL_NAME}/SKILL.md` |
-| Plugin | `{plugin-path}/skills/{SKILL_NAME}/SKILL.md` |
+| Scope | Path | Use Case |
+|-------|------|----------|
+| User (global) | `~/.cursor/skills/{SKILL_NAME}/` | Personal skills, available in all projects |
+| Project | `.cursor/skills/{SKILL_NAME}/` | Project-specific skills, version-controlled |
+
+> **Compatibility Paths:** Cursor also discovers skills from `.claude/skills/` and `.codex/skills/` (both project and user level) for compatibility with other agents.
 
 ### Basic Structure
 
 ```
 {SKILL_NAME}/
-├── SKILL.md           # Main instructions (required)
-└── ... (optional supporting files)
+└── SKILL.md           # Main instructions (required)
 ```
 
 ### Extended Structure (with supporting files)
@@ -65,65 +78,90 @@ A skill extends Claude's capabilities - it's a set of instructions Claude uses w
 ```
 {SKILL_NAME}/
 ├── SKILL.md           # Main instructions (required)
-├── templates/         # Templates for Claude to fill in
-│   └── template.md
-├── examples/          # Example outputs showing expected format
-│   └── sample.md
-├── scripts/           # Scripts Claude can execute
-│   └── helper.py
-└── reference/         # Detailed reference documentation
-    └── api-docs.md
+├── scripts/           # Executable scripts the agent can run
+│   ├── deploy.sh
+│   └── validate.py
+├── references/        # Additional documentation (loaded on demand)
+│   └── api-docs.md
+└── assets/            # Static resources
+    └── config-template.json
 ```
+
+### Directory Purpose
+
+| Directory | Purpose | When to Use |
+|-----------|---------|-------------|
+| `scripts/` | Executable code (any language) | Automation, CLI tools, validation |
+| `references/` | Extended documentation | Large reference material, API docs |
+| `assets/` | Static files, templates | Config templates, data files, images |
 
 ---
 
 ## Phase 2: Frontmatter Configuration
 
-**Action:** Configure the YAML frontmatter based on requirements.
+**Action:** Configure the YAML frontmatter. Only use fields that Cursor supports.
 
-### Frontmatter Reference
+### Supported Frontmatter Fields
 
 ```yaml
 ---
-# Required/Recommended
-name: {SKILL_NAME}                    # Display name (defaults to directory name)
-description: {SKILL_DESCRIPTION}      # RECOMMENDED: When to use this skill
+# Required
+name: {SKILL_NAME}
+description: {SKILL_DESCRIPTION}
 
-# Invocation Control
-disable-model-invocation: false       # true = only user can invoke
-user-invocable: true                  # false = only Claude can invoke
-
-# Arguments
-argument-hint: "[arg1] [arg2]"        # Hint shown during autocomplete
-
-# Tool Restrictions
-allowed-tools: Read, Grep, Glob       # Limit available tools
-
-# Execution
-model: claude-sonnet-4-20250514             # Override model
-context: fork                         # Run in isolated subagent
-agent: Explore                        # Subagent type (if context: fork)
-
-# Hooks (optional)
-hooks:                                # Lifecycle hooks
-  pre-invoke: "./scripts/setup.sh"
+# Optional
+license: MIT                           # License name or reference
+compatibility:                         # Environment requirements
+  - "Node.js 18+"
+  - "Docker"
+metadata:                              # Arbitrary key-value data
+  version: "1.0.0"
+  author: "team-name"
+disable-model-invocation: false        # true = user-only (not auto-applied)
 ---
 ```
 
-### Invocation Mode Mapping
+### Field Reference
 
-| INVOCATION_MODE | Frontmatter |
-|-----------------|-------------|
-| `both` | (defaults, no extra fields) |
-| `user-only` | `disable-model-invocation: true` |
-| `model-only` | `user-invocable: false` |
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | **Yes** | Skill identifier. Must match folder name. |
+| `description` | **Yes** | Explains what the skill does and when to use it. Agent uses this to determine relevance. |
+| `license` | No | License name or path to license file |
+| `compatibility` | No | List of environment requirements |
+| `metadata` | No | Custom key-value pairs for additional info |
+| `disable-model-invocation` | No | When `true`, only user can invoke via `/skill-name` |
 
-### Execution Context Mapping
+### Auto-Invoke Mapping
 
-| EXECUTION_CONTEXT | Frontmatter |
-|-------------------|-------------|
-| `inline` | (default, no extra fields) |
-| `fork` | `context: fork` and optionally `agent: Explore|Plan|general-purpose` |
+| AUTO_INVOKE | Frontmatter |
+|-------------|-------------|
+| `true` (default) | (no extra fields needed) |
+| `false` | `disable-model-invocation: true` |
+
+### Description Best Practices
+
+The `description` field is **critical** - it determines when the agent applies the skill.
+
+**Good descriptions:**
+```yaml
+# Specific, action-oriented, includes trigger keywords
+description: Deploy the application to staging or production environments. Use when deploying code, releasing, or pushing to environments.
+
+description: TypeScript coding conventions for this codebase. Use when writing or reviewing TypeScript code.
+
+description: Create database migrations using Prisma. Use when schema changes are needed or when creating new tables.
+```
+
+**Bad descriptions:**
+```yaml
+# Too vague, no trigger keywords
+description: A helpful skill for deployment.
+
+description: Code conventions.
+
+description: Database stuff.
+```
 
 ---
 
@@ -131,25 +169,28 @@ hooks:                                # Lifecycle hooks
 
 **Action:** Write the markdown content following these guidelines.
 
-### Content Structure Guidelines
+### Content Structure
 
-1. **Start with Context:**
-   - Brief explanation of what the skill does
-   - When it should be used
+1. **Purpose Statement** (brief)
+   - What does this skill do?
+   - When should it be used?
 
-2. **Provide Clear Instructions:**
-   - Step-by-step actions for task skills
-   - Guidelines and patterns for reference skills
+2. **Instructions** (main content)
+   - Clear, actionable guidance
+   - Step-by-step for tasks
+   - Guidelines/patterns for reference
 
-3. **Use String Substitutions:**
-   - `$ARGUMENTS` - All arguments passed when invoking
-   - `${CLAUDE_SESSION_ID}` - Current session ID
+3. **Script References** (if applicable)
+   - How to use scripts in `scripts/`
+   - Expected inputs/outputs
 
-4. **Dynamic Context Injection (Optional):**
-   - Use `!`command`` syntax to inject shell command output
-   - Commands run before skill content is sent to Claude
+4. **Additional Resources** (if applicable)
+   - Links to files in `references/`
+   - Links to files in `assets/`
 
 ### Reference Content Template
+
+For skills that provide conventions, patterns, or domain knowledge:
 
 ```markdown
 ---
@@ -157,20 +198,28 @@ name: {SKILL_NAME}
 description: {SKILL_DESCRIPTION}
 ---
 
-When [doing X], follow these guidelines:
+# {Skill Title}
 
-## [Category 1]
+{Brief statement of when to apply these guidelines.}
 
-- [Guideline 1]
-- [Guideline 2]
+## {Category 1}
 
-## [Category 2]
+- {Guideline 1}
+- {Guideline 2}
 
-- [Guideline 3]
-- [Guideline 4]
+## {Category 2}
+
+- {Guideline 3}
+- {Guideline 4}
+
+## Examples
+
+{Show examples of correct usage}
 ```
 
 ### Task Content Template
+
+For skills that execute workflows or procedures:
 
 ```markdown
 ---
@@ -181,43 +230,65 @@ disable-model-invocation: true
 
 # {Task Name}
 
-Execute the following steps for $ARGUMENTS:
+{Brief description of what this task accomplishes.}
 
-## Step 1: [Action]
+## Prerequisites
 
-[Detailed instructions]
+- {Prerequisite 1}
+- {Prerequisite 2}
 
-## Step 2: [Action]
+## Steps
 
-[Detailed instructions]
+### Step 1: {Action}
+
+{Detailed instructions}
+
+### Step 2: {Action}
+
+{Detailed instructions}
 
 ## Output
 
-[Expected deliverable]
+{What the user should expect after completion}
 ```
 
-### Subagent Task Template
+### Task with Scripts Template
+
+For skills that execute scripts:
 
 ```markdown
 ---
 name: {SKILL_NAME}
 description: {SKILL_DESCRIPTION}
-context: fork
-agent: Explore
-allowed-tools: Read, Grep, Glob
+disable-model-invocation: true
 ---
 
-# Research Task
+# {Task Name}
 
-Investigate $ARGUMENTS thoroughly:
+{Brief description}
 
-1. [Step 1]
-2. [Step 2]
-3. [Step 3]
+## Usage
 
-## Output Format
+Run the deployment script:
 
-Summarize findings with specific file references.
+```bash
+scripts/deploy.sh <environment>
+```
+
+Where `<environment>` is either `staging` or `production`.
+
+## Pre-deployment Validation
+
+Before deploying, run validation:
+
+```bash
+python scripts/validate.py
+```
+
+## What the Scripts Do
+
+- `deploy.sh`: Builds and pushes the application to the specified environment
+- `validate.py`: Checks configuration and dependencies
 ```
 
 ---
@@ -226,30 +297,76 @@ Summarize findings with specific file references.
 
 **Action:** Create supporting files if needed.
 
-### When to Use Supporting Files
+### When to Use Each Directory
 
-- **Templates:** Structured outputs Claude should fill in
-- **Examples:** Sample outputs showing expected format
-- **Scripts:** Automation scripts Claude can execute
-- **Reference:** Detailed docs too large for SKILL.md
+#### `scripts/`
+- Automation that agent can execute
+- Validation scripts
+- Build/deploy scripts
+- Data processing utilities
+
+**Script Guidelines:**
+- Make scripts self-contained
+- Include helpful error messages
+- Handle edge cases gracefully
+- Add shebang and make executable
+
+```bash
+#!/bin/bash
+# scripts/deploy.sh
+set -e
+
+ENVIRONMENT="${1:-staging}"
+
+if [[ "$ENVIRONMENT" != "staging" && "$ENVIRONMENT" != "production" ]]; then
+    echo "Error: Environment must be 'staging' or 'production'"
+    exit 1
+fi
+
+echo "Deploying to $ENVIRONMENT..."
+# deployment logic here
+```
+
+#### `references/`
+- Detailed API documentation
+- Extended examples
+- Technical specifications
+- Content too large for SKILL.md
+
+**Reference Guidelines:**
+- Keep focused on one topic per file
+- Use descriptive filenames
+- Cross-reference from SKILL.md
+
+#### `assets/`
+- Configuration templates
+- Sample data files
+- Images (for documentation)
+- Static resources
 
 ### Referencing Supporting Files
 
-In SKILL.md, reference files so Claude knows when to load them:
+In SKILL.md, guide the agent to supporting files:
 
 ```markdown
 ## Additional Resources
 
-- For complete API details, see [reference.md](reference/api-docs.md)
-- For usage examples, see [examples.md](examples/sample.md)
-- Use the template at [template.md](templates/template.md) for output
+For complete API documentation, see [references/api-docs.md](references/api-docs.md).
+
+Use the configuration template at [assets/config-template.json](assets/config-template.json).
+
+Run the validation script before proceeding: `scripts/validate.py`
 ```
 
 ### Size Guidelines
 
-- Keep `SKILL.md` under 500 lines
-- Move detailed reference material to separate files
-- Large reference docs load on-demand, not every invocation
+| File | Recommended Size |
+|------|------------------|
+| SKILL.md | < 500 lines |
+| Individual reference files | < 1000 lines |
+| Total skill size | Keep focused, split if growing large |
+
+**Why?** Agent loads `SKILL.md` immediately but loads `references/` files on demand. Keep main instructions concise.
 
 ---
 
@@ -261,37 +378,46 @@ In SKILL.md, reference files so Claude knows when to load them:
 
 1. **File Structure:**
    - [ ] `SKILL.md` exists in correct location
+   - [ ] Folder name matches `name` in frontmatter
    - [ ] Frontmatter is valid YAML between `---` markers
-   - [ ] Supporting files are properly referenced
 
-2. **Naming:**
-   - [ ] Skill name uses lowercase letters, numbers, and hyphens only
-   - [ ] Skill name is max 64 characters
+2. **Frontmatter:**
+   - [ ] `name` field is present and valid (lowercase, hyphens, max 64 chars)
+   - [ ] `description` field is present and descriptive
+   - [ ] Only supported fields are used (no unsupported fields)
 
-3. **Description:**
-   - [ ] Description explains what the skill does
-   - [ ] Description includes keywords users would naturally say
-
-4. **Content:**
+3. **Content:**
    - [ ] Instructions are clear and actionable
-   - [ ] String substitutions are correct (`$ARGUMENTS`, not `{ARGUMENTS}`)
-   - [ ] Dynamic context uses correct syntax (`!`command``, not `$(command)`)
+   - [ ] Supporting files are properly referenced
+   - [ ] Scripts are executable (if applicable)
+
+4. **Discovery:**
+   - [ ] Skill appears in Cursor Settings → Rules → Agent Decides section
 
 ### Testing Methods
 
-1. **Direct Invocation:**
+1. **Check Skill Discovery:**
+   - Open Cursor Settings (Cmd+Shift+J / Ctrl+Shift+J)
+   - Navigate to Rules
+   - Verify skill appears in "Agent Decides" section
+
+2. **Direct Invocation:**
    ```
-   /{SKILL_NAME} [arguments]
+   /{SKILL_NAME}
    ```
 
-2. **Automatic Invocation (if enabled):**
-   - Ask Claude something that matches the skill description
-   - Verify Claude loads and uses the skill
+3. **Automatic Invocation (if enabled):**
+   - Ask the agent something that matches the skill description
+   - Agent should automatically apply the skill
 
-3. **List Available Skills:**
-   ```
-   What skills are available?
-   ```
+### Common Issues
+
+| Issue | Solution |
+|-------|----------|
+| Skill not discovered | Check file path and folder structure |
+| Frontmatter error | Validate YAML syntax, check for typos |
+| Agent not using skill | Improve `description` with better trigger keywords |
+| Scripts not running | Check file permissions, add shebang |
 
 ---
 
@@ -303,59 +429,46 @@ In SKILL.md, reference files so Claude knows when to load them:
 
 - [ ] Created `SKILL.md` with valid frontmatter and content
 - [ ] Created supporting files (if applicable)
-- [ ] Verified skill appears in available skills
-- [ ] Tested invocation works as expected
+- [ ] Set correct file permissions for scripts
+- [ ] Verified skill appears in Cursor Settings
 
-### Delivery Format
+### Delivery Report
 
-Report to user:
-- Skill location path
-- How to invoke: `/{SKILL_NAME}` or automatic
-- Summary of what the skill does
-- Any supporting files created
+After creating the skill, report to user:
+
+```markdown
+## Skill Created Successfully
+
+**Location:** `{full path to skill}`
+
+**Invoke:** 
+- Direct: `/{SKILL_NAME}` in chat
+- Auto: Agent applies when relevant (if not disabled)
+
+**Summary:** {brief description of what the skill does}
+
+**Files Created:**
+- SKILL.md (main instructions)
+- {list any supporting files}
+
+**Next Steps:**
+1. Open Cursor Settings → Rules to verify discovery
+2. Test with `/{SKILL_NAME}` in chat
+```
 
 ---
 
 ## Examples
 
-### Example 1: Code Review Skill (User-Only Task)
-
-```markdown
----
-name: review-pr
-description: Review pull request changes for code quality
-disable-model-invocation: true
-argument-hint: "[pr-number]"
-allowed-tools: Bash(gh:*)
----
-
-# PR Review
-
-Review PR #$ARGUMENTS:
-
-## Current PR Context
-- PR diff: !`gh pr diff $ARGUMENTS`
-- PR description: !`gh pr view $ARGUMENTS`
-
-## Review Checklist
-
-1. **Code Quality:** Check for SOLID violations, code smells
-2. **Security:** Look for injection risks, exposed secrets
-3. **Performance:** Identify N+1 queries, expensive operations
-4. **Tests:** Verify adequate test coverage
-
-## Output
-
-Provide structured feedback with specific line references.
-```
-
-### Example 2: API Conventions Skill (Reference Content)
+### Example 1: API Conventions (Reference Content)
 
 ```markdown
 ---
 name: api-conventions
-description: REST API design patterns and conventions for this codebase
+description: REST API design patterns and conventions for this codebase. Use when writing or reviewing API endpoints.
 ---
+
+# API Conventions
 
 When writing API endpoints, follow these conventions:
 
@@ -368,45 +481,137 @@ When writing API endpoints, follow these conventions:
 ## Response Format
 
 - Always return JSON
-- Use consistent error format: `{ "error": { "code": "...", "message": "..." } }`
+- Use consistent error format:
+  ```json
+  { "error": { "code": "VALIDATION_ERROR", "message": "..." } }
+  ```
 - Include pagination metadata for list endpoints
 
 ## Status Codes
 
-- 200: Success with body
-- 201: Created
-- 204: Success without body
-- 400: Bad request (validation)
-- 401: Unauthorized
-- 404: Not found
-- 500: Server error
+| Code | Usage |
+|------|-------|
+| 200 | Success with body |
+| 201 | Resource created |
+| 204 | Success, no body |
+| 400 | Bad request (validation) |
+| 401 | Unauthorized |
+| 404 | Not found |
+| 500 | Server error |
 ```
 
-### Example 3: Research Skill (Subagent Fork)
+### Example 2: Deploy to Staging (Task with Scripts)
 
 ```markdown
 ---
-name: deep-research
-description: Research a topic thoroughly in the codebase
-context: fork
-agent: Explore
-allowed-tools: Read, Grep, Glob, SemanticSearch
+name: deploy-staging
+description: Deploy the application to staging environment. Use when deploying to staging or preparing a release.
+disable-model-invocation: true
 ---
 
-# Deep Research
+# Deploy to Staging
 
-Research "$ARGUMENTS" thoroughly:
+Deploy the current branch to the staging environment.
 
-1. **Discovery:** Use Glob and Grep to find relevant files
-2. **Analysis:** Read and understand the code structure
-3. **Connections:** Identify dependencies and relationships
-4. **Patterns:** Note design patterns and conventions used
+## Prerequisites
 
-## Output Format
+- Clean git working directory
+- All tests passing
+- Docker running locally
 
-Summarize findings with:
-- List of relevant files with descriptions
-- Key functions/classes and their purposes
-- Data flow diagrams (ASCII if helpful)
-- Recommendations or concerns
+## Usage
+
+Run the deployment:
+
+```bash
+scripts/deploy.sh staging
 ```
+
+## Pre-deployment
+
+Run validation first:
+
+```bash
+python scripts/validate.py
+```
+
+## What Happens
+
+1. Builds Docker image with current commit SHA
+2. Pushes to container registry
+3. Updates staging Kubernetes deployment
+4. Waits for rollout completion
+5. Runs smoke tests
+
+## Rollback
+
+If deployment fails:
+
+```bash
+scripts/rollback.sh staging
+```
+```
+
+### Example 3: Create Migration (Task Workflow)
+
+```markdown
+---
+name: create-migration
+description: Create a database migration using Prisma. Use when schema changes are needed, creating tables, or modifying database structure.
+disable-model-invocation: true
+---
+
+# Create Database Migration
+
+Generate and apply Prisma migrations for schema changes.
+
+## Steps
+
+### Step 1: Update Schema
+
+Edit `prisma/schema.prisma` with the required changes.
+
+### Step 2: Generate Migration
+
+```bash
+npx prisma migrate dev --name <migration-name>
+```
+
+Use descriptive names: `add_user_email_index`, `create_orders_table`
+
+### Step 3: Review Generated SQL
+
+Check the generated migration in `prisma/migrations/`
+
+### Step 4: Apply to Development
+
+Migration is auto-applied with `migrate dev`. For production:
+
+```bash
+npx prisma migrate deploy
+```
+
+## Conventions
+
+- One logical change per migration
+- Use snake_case for migration names
+- Always include rollback consideration
+```
+
+---
+
+## Migration from Legacy Commands
+
+If migrating existing Cursor rules or commands to skills, use the built-in `/migrate-to-skills` command:
+
+1. Type `/migrate-to-skills` in Agent chat
+2. Agent will identify eligible rules/commands
+3. Review generated skills in `.cursor/skills/`
+
+**What Gets Migrated:**
+- Dynamic rules (Apply Intelligently)
+- Slash commands → Skills with `disable-model-invocation: true`
+
+**Not Migrated:**
+- Rules with `alwaysApply: true`
+- Rules with specific `globs` patterns

@@ -1,8 +1,6 @@
 ---
 name: bitbucket
 description: Provides Bitbucket API integration for interacting with repositories, pull requests, comments, and tasks. Use when working with Bitbucket PRs, reviewing code, or automating PR workflows.
-user-invocable: false
-disable-model-invocation: false
 ---
 
 # Bitbucket API Integration

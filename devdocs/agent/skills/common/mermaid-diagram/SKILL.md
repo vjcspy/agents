@@ -1,9 +1,6 @@
 ---
 name: mermaid-diagram
 description: Generates Mermaid diagrams from a text description. Invoke when user asks to draw/visualize flows, architecture, sequences, or state machines in Mermaid.
-user-invocable: true
-disable-model-invocation: false
-argument-hint: "<diagram-type> <topic-or-flow>"
 ---
 
 # Mermaid Diagram
@@ -115,7 +112,14 @@ flowchart TD
 
 ## How to Invoke
 
-- `/mermaid-diagram flowchart Shortcode flow in WordPress`
-- `/mermaid-diagram sequence Create product via WP endpoint`
-- `/mermaid-diagram state Widget lifecycle states`
+**Direct invocation:**
+```
+/mermaid-diagram
+```
+Then describe what you need, e.g.:
+- "Draw a flowchart for shortcode rendering flow in WordPress"
+- "Create a sequence diagram for the create product API endpoint"
+- "Visualize the widget lifecycle states"
+
+**Automatic invocation:** The agent will apply this skill when you ask to draw, visualize, or create diagrams.
 
