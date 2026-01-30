@@ -1,1 +1,0 @@
-devdocs/agent/rules/rule.md
