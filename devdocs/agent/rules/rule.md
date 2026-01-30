@@ -28,13 +28,14 @@ All projects follow this standard directory structure:
 │   │   └── devtools/           # DevTools documentation
 │   │       └── <DOMAIN>/       # Per-domain devtools docs
 │   │           └── OVERVIEW.md # DevTools overview for the domain
-│   └── <PROJECT_NAME>/         # Project-specific documentation
-│       ├── OVERVIEW.md         # **Global overview** for the entire project
-│       └── <DOMAIN>/           # Domain-specific documentation
-│           └── <REPO_NAME>/    # Per-repo context & documentation
-│               ├── OVERVIEW.md # Repository-specific overview & business context
-│               └── plans/      # Implementation plans for the repo
-│                   └── *.md    # Plan files: [YYMMDD-Ticket-Name].md
+│   └── projects/               # Project-specific documentation (mirrors projects/)
+│       └── <PROJECT_NAME>/     # Project documentation container
+│           ├── OVERVIEW.md     # **Global overview** for the entire project
+│           └── <DOMAIN>/       # Domain-specific documentation
+│               └── <REPO_NAME>/# Per-repo context & documentation
+│                   ├── OVERVIEW.md # Repository-specific overview & business context
+│                   └── plans/  # Implementation plans for the repo
+│                       └── *.md# Plan files: [YYMMDD-Ticket-Name].md
 │
 ├── devtools/                   # Development tools & utilities (multi-domain)
 │   ├── common/                 # Shared tools across domains
@@ -45,11 +46,12 @@ All projects follow this standard directory structure:
 │           ├── Justfile        # Just commands for the domain
 │           └── ...
 │
-└── <PROJECT_NAME>/             # Project source code container
-    └── <DOMAIN>/               # Domain-specific source code
-        ├── <REPO_1>/           # Individual repository
-        ├── <REPO_2>/           # Individual repository
-        └── ...
+└── projects/                   # Source code root (all projects live here)
+    └── <PROJECT_NAME>/         # Project source code container
+        └── <DOMAIN>/           # Domain-specific source code
+            ├── <REPO_1>/       # Individual repository
+            ├── <REPO_2>/       # Individual repository
+            └── ...
 ```
 
 ### Key Path Variables
@@ -57,13 +59,13 @@ All projects follow this standard directory structure:
 | Variable           | Description                                                                 | Example                            |
 | ------------------ | --------------------------------------------------------------------------- | ---------------------------------- |
 | `<PROJECT_ROOT>`   | **Current workspace root directory** (the folder where the agent operates) | `/Users/dev/my-project`            |
-| `<PROJECT_NAME>`   | Project name - top-level folder containing all source code                  | `tinybots`, `myapp`                |
+| `<PROJECT_NAME>`   | Project name - folder directly under `projects/`                            | `nab`, `myapp`, `tinybots`         |
 | `<DOMAIN>`         | Business domain name                                                        | `core`, `frontend`, `backend`     |
 | `<REPO_NAME>`      | Repository name within a domain                                             | `wonkers-api`, `user-service`      |
 
 > **Note:** `<PROJECT_ROOT>` is always the root folder of the current workspace/working directory. All paths in this document are relative to `<PROJECT_ROOT>`.
 > 
-> **Source Code Path:** Source code repositories are located at `<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>/`.
+> **Source Code Path:** Source code repositories are located at `projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>/`.
 
 ## 4. Pre-Task Protocol
 
@@ -84,8 +86,8 @@ Determine the task category:
 
 | # | Condition | Required Action |
 |---|-----------|-----------------|
-| 1 | Working on **any repo** within a project | **MUST** read Global Overview: `devdocs/<PROJECT_NAME>/OVERVIEW.md` first |
-| 2 | Working on a **specific repository** | **MUST** read Repo Overview: `devdocs/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>/OVERVIEW.md` |
+| 1 | Working on **any repo** within a project | **MUST** read Global Overview: `devdocs/projects/<PROJECT_NAME>/OVERVIEW.md` first |
+| 2 | Working on a **specific repository** | **MUST** read Repo Overview: `devdocs/projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>/OVERVIEW.md` |
 | 3 | Task is **Implementation/Refactoring** | **MUST** read `devdocs/agent/rules/coding-standard-and-quality.md` |
 | 4 | Task involves **local dev/testing** for a domain | **MUST** read DevTools Overview: `devdocs/misc/devtools/<DOMAIN>/OVERVIEW.md` |
 
@@ -120,13 +122,13 @@ To keep context lean, additional rules are loaded **only when needed**:
 - **Source of Truth:** Use `devdocs/agent/templates/create-plan.md` as the canonical structure.
 - **Output:** Generate the full plan content matching the template.
 - **Output Location:** Plans must be stored in the `plans/` subfolder within the repo documentation.
-- **Naming Convention:** Propose a filename strictly following: `devdocs/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>/plans/[YYMMDD-Ticket-Name].md`.
+- **Naming Convention:** Propose a filename strictly following: `devdocs/projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>/plans/[YYMMDD-Ticket-Name].md`.
 
 ### Task: `Implementation / Refactoring`
 
 - **Pre-requisite:** Ensure `coding-standard-and-quality.md` has been loaded.
 - **Structure Analysis:** Always list or analyze the relevant project folder structure first to understand organization.
-- **Locate Source:** Find the target repository in `<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>/`.
+- **Locate Source:** Find the target repository in `projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>/`.
 - **Execution:** Follow explicit user instructions.
 - **Testing:** **NO Unsolicited Tests.** Do not write or run test cases unless the user explicitly asks for it.
 

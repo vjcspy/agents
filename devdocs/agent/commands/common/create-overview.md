@@ -8,7 +8,36 @@ This document serves as the primary context source for other AI Agents or Develo
 
 **Input Variables:**
 
-- `TARGET_PATH`: [User Defined Path, e.g., devdocs/services/payment/OVERVIEW.md]
+- `TARGET_PATH`: Path to the OVERVIEW.md file (auto-detected or user-provided)
+
+---
+
+## Path Resolution (Auto-Detection)
+
+**Action:** Resolve `TARGET_PATH` based on user input.
+
+**Input Patterns:**
+
+| User Input | Resolved TARGET_PATH |
+|------------|---------------------|
+| `projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>` | `devdocs/projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>/OVERVIEW.md` |
+| `devdocs/projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>/OVERVIEW.md` | Use as-is |
+| `devdocs/projects/<PROJECT_NAME>/OVERVIEW.md` | Use as-is (Global Project Overview) |
+
+**Resolution Logic:**
+
+1. **IF** user provides a source path starting with `projects/`:
+   - Extract: `projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>`
+   - Derive: `TARGET_PATH` = `devdocs/projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>/OVERVIEW.md`
+   - Set: `SOURCE_PATH` = user input (for code scanning)
+
+2. **IF** user provides a path starting with `devdocs/projects/`:
+   - Use the provided path as `TARGET_PATH`
+   - Derive: `SOURCE_PATH` = `projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>/` (extracted from TARGET_PATH)
+
+3. **Confirm** both paths with user before proceeding:
+   - "📁 Source: `{SOURCE_PATH}`"
+   - "📄 Output: `{TARGET_PATH}`"
 
 ---
 
