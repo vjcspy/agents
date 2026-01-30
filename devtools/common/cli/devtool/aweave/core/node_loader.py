@@ -12,7 +12,7 @@ def get_repo_root() -> Path:
     current = Path(__file__).resolve()
     for parent in current.parents:
         # Check for markers that indicate repo root
-        if (parent / "dt-plugins.yaml").exists():
+        if (parent / "aw-plugins.yaml").exists():
             return parent
         if (parent / "pyproject.toml").exists() and (parent / "pnpm-workspace.yaml").exists():
             return parent
@@ -21,14 +21,14 @@ def get_repo_root() -> Path:
 
 
 def get_registry_path() -> Path:
-    """Get path to dt-plugins.yaml."""
-    return get_repo_root() / "dt-plugins.yaml"
+    """Get path to aw-plugins.yaml."""
+    return get_repo_root() / "aw-plugins.yaml"
 
 
 def load_node_plugins(app: typer.Typer) -> None:
     """Load Node plugins from registry and create subprocess wrappers.
 
-    Node plugins are registered in dt-plugins.yaml with type: node.
+    Node plugins are registered in aw-plugins.yaml with type: node.
     Each plugin is wrapped as a Typer command that delegates to the
     Node.js CLI via subprocess.
     """

@@ -8,17 +8,17 @@ import typer
 def load_python_plugins(app: typer.Typer) -> None:
     """Load Python plugins via entry points.
 
-    Plugins register themselves using the 'dt.plugins' entry point group
+    Plugins register themselves using the 'aw.plugins' entry point group
     in their pyproject.toml:
 
-        [project.entry-points."dt.plugins"]
+        [project.entry-points."aw.plugins"]
         mycommand = "mypackage.cli:app"
     """
     try:
-        eps = entry_points(group="dt.plugins")
+        eps = entry_points(group="aw.plugins")
     except TypeError:
         # Python < 3.10 compatibility
-        eps = entry_points().get("dt.plugins", [])
+        eps = entry_points().get("aw.plugins", [])
 
     for ep in eps:
         try:

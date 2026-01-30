@@ -3,12 +3,12 @@
 A domain/project-oriented “dev tools” monorepo with **a single entrypoint**:
 
 ```bash
-dt <subcommand> [...]
+aw <subcommand> [...]
 ```
 
 This repo supports:
-- Python tools via **entry points** (`dt.plugins`) → runs in-process.
-- Node tools via a **registry** (`dt-plugins.yaml`) + subprocess wrapper → `dt <node-plugin> ...`.
+- Python tools via **entry points** (`aw.plugins`) → runs in-process.
+- Node tools via a **registry** (`aw-plugins.yaml`) + subprocess wrapper → `aw <node-plugin> ...`.
 
 ## Quickstart
 
@@ -19,11 +19,11 @@ cd devtools
 ./scripts/install-all.sh
 ```
 
-If you want to run without linking `~/.local/bin/dt`:
+If you want to run without linking `~/.local/bin/aw`:
 
 ```bash
 uv sync
-uv run dt --help
+uv run aw --help
 ```
 
 ### Generate plugin registry (for Node plugins)
@@ -32,43 +32,43 @@ uv run dt --help
 uv run python scripts/generate-registry.py
 ```
 
-The registry is written to `dt-plugins.yaml` at the repo root.
+The registry is written to `aw-plugins.yaml` at the repo root.
 
 ## Usage
 
 ```bash
-dt --help
-dt version
+aw --help
+aw version
 ```
 
 ### Python plugin: confluence
 
 ```bash
-dt confluence --help
-dt confluence status
-dt confluence sync <source> --dry-run
+aw confluence --help
+aw confluence status
+aw confluence sync <source> --dry-run
 ```
 
 ### Node plugin: foo
 
-The Node plugin is only added to `dt` if the `bin` path in the registry exists (e.g. `nab/cli/foo/dist/cli.js`).
+The Node plugin is only added to `aw` if the `bin` path in the registry exists (e.g. `nab/cli/foo/dist/cli.js`).
 
 ```bash
 pnpm install
 pnpm -r build
 uv run python scripts/generate-registry.py
 
-dt foo --help
-dt foo build --watch
+aw foo --help
+aw foo build --watch
 ```
 
 ## Repository layout (short)
 
 ```
 devtools/
-  common/cli/devtool/          # Python package "dt" (root CLI)
-  nab/cli/confluence/          # Python package (dt plugin)
-  nab/cli/foo/                 # Node package (dt plugin)
+  common/cli/devtool/          # Python package "aw" (root CLI)
+  nab/cli/confluence/          # Python package (aw plugin)
+  nab/cli/foo/                 # Node package (aw plugin)
   scripts/                     # install-all.sh, doctor.sh, generate-registry.py, ...
   pyproject.toml               # uv workspace root
   pnpm-workspace.yaml          # pnpm workspace
@@ -82,7 +82,7 @@ devtools/
 2) Register an entry point:
 
 ```toml
-[project.entry-points."dt.plugins"]
+[project.entry-points."aw.plugins"]
 <command> = "<module.path>:app"
 ```
 
@@ -90,7 +90,7 @@ devtools/
 
 ```bash
 uv sync
-dt <command> --help
+aw <command> --help
 ```
 
 Example: [confluence/pyproject.toml](file:///Users/kai/work/k/dev/devtools/nab/cli/confluence/pyproject.toml).
@@ -98,7 +98,7 @@ Example: [confluence/pyproject.toml](file:///Users/kai/work/k/dev/devtools/nab/c
 ### Add a Node plugin
 
 1) Create a package at `<domain>/cli/<name>/` with a `package.json`.
-2) Add a `dt-plugin.yaml` marker in that folder:
+2) Add a `aw-plugin.yaml` marker in that folder:
 
 ```yaml
 name: <command>
@@ -111,7 +111,7 @@ bin: dist/cli.js
 ```bash
 pnpm -r build
 python scripts/generate-registry.py
-dt <command> --help
+aw <command> --help
 ```
 
 ## Lint
@@ -122,5 +122,5 @@ uv run ruff check .
 
 ## Troubleshooting
 
-- `dt` can't find a Node plugin: run `pnpm -r build` and `python scripts/generate-registry.py`, then check `dt-plugins.yaml`.
+- `aw` can't find a Node plugin: run `pnpm -r build` and `python scripts/generate-registry.py`, then check `aw-plugins.yaml`.
 - No `uv` available: [install-all.sh](file:///Users/kai/work/k/dev/devtools/scripts/install-all.sh) falls back to `pip` (using `.venv`).

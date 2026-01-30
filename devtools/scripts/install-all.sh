@@ -52,7 +52,7 @@ else
         fi
     done
     
-    # Install dependencies for dt-core
+    # Install dependencies for aw-core
     pip install typer rich pyyaml
 fi
 echo ""
@@ -81,16 +81,16 @@ else
 fi
 echo ""
 
-# 5. Link dt CLI
+# 5. Link aw CLI
 echo "=== Step 5: Link CLI ==="
 mkdir -p ~/.local/bin
 
 DT_BIN=""
-if [ -f ".venv/bin/dt" ]; then
-    DT_BIN="$REPO_ROOT/.venv/bin/dt"
+if [ -f ".venv/bin/aw" ]; then
+    DT_BIN="$REPO_ROOT/.venv/bin/aw"
 elif command -v uv &> /dev/null; then
     # uv installs to its own location, create a wrapper
-    DT_BIN="$REPO_ROOT/.venv/bin/dt"
+    DT_BIN="$REPO_ROOT/.venv/bin/aw"
     if [ ! -f "$DT_BIN" ]; then
         # Create wrapper script
         mkdir -p "$(dirname "$DT_BIN")"
@@ -98,17 +98,17 @@ elif command -v uv &> /dev/null; then
 #!/bin/bash
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
-cd "$REPO_ROOT" && uv run dt "$@"
+cd "$REPO_ROOT" && uv run aw "$@"
 EOF
         chmod +x "$DT_BIN"
     fi
 fi
 
 if [ -n "$DT_BIN" ]; then
-    ln -sf "$DT_BIN" ~/.local/bin/dt
-    echo "Linked: ~/.local/bin/dt -> $DT_BIN"
+    ln -sf "$DT_BIN" ~/.local/bin/aw
+    echo "Linked: ~/.local/bin/aw -> $DT_BIN"
 else
-    echo "Warning: Could not find dt binary to link"
+    echo "Warning: Could not find aw binary to link"
 fi
 
 echo ""
@@ -116,7 +116,7 @@ echo "=========================================="
 echo "  Installation Complete!"
 echo "=========================================="
 echo ""
-echo "Run 'dt --help' to get started."
+echo "Run 'aw --help' to get started."
 echo ""
 echo "Make sure ~/.local/bin is in your PATH:"
 echo '  export PATH="$HOME/.local/bin:$PATH"'

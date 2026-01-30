@@ -4,9 +4,24 @@ requires-python = ">=3.13"
 
 [manifest]
 members = [
+    "aweave",
     "devtools-workspace",
-    "dt",
     "nab-confluence",
+]
+
+[[package]]
+name = "aweave"
+version = "0.1.0"
+source = { editable = "common/cli/devtool" }
+dependencies = [
+    { name = "pyyaml" },
+    { name = "typer" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pyyaml", specifier = ">=6.0" },
+    { name = "typer", specifier = ">=0.21.1" },
 ]
 
 [[package]]
@@ -35,7 +50,7 @@ name = "devtools-workspace"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "dt" },
+    { name = "aweave" },
     { name = "nab-confluence" },
     { name = "typer" },
 ]
@@ -48,7 +63,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "dt", editable = "common/cli/devtool" },
+    { name = "aweave", editable = "common/cli/devtool" },
     { name = "nab-confluence", editable = "nab/cli/confluence" },
     { name = "typer", specifier = ">=0.21.1" },
 ]
@@ -57,21 +72,6 @@ requires-dist = [
 dev = [
     { name = "pytest" },
     { name = "ruff", specifier = ">=0.12.4" },
-]
-
-[[package]]
-name = "dt"
-version = "0.1.0"
-source = { editable = "common/cli/devtool" }
-dependencies = [
-    { name = "pyyaml" },
-    { name = "typer" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "pyyaml", specifier = ">=6.0" },
-    { name = "typer", specifier = ">=0.21.1" },
 ]
 
 [[package]]
@@ -109,13 +109,13 @@ name = "nab-confluence"
 version = "0.1.0"
 source = { editable = "nab/cli/confluence" }
 dependencies = [
-    { name = "dt" },
+    { name = "aweave" },
     { name = "typer" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "dt", editable = "common/cli/devtool" },
+    { name = "aweave", editable = "common/cli/devtool" },
     { name = "typer", specifier = ">=0.21.1" },
 ]
 
