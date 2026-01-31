@@ -2,3 +2,4 @@ packages:
   # All CLIs (both Python and Node) are under cli/ folders
   # pnpm will only pick up folders with package.json
   - "nab/cli/foo"
+  - "common/debate-server"

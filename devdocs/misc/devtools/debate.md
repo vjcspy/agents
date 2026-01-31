@@ -38,54 +38,68 @@ Lúc này sẽ có 2 trường hợp:
 - Tạo mới một debate conversation
 
 **Trường hợp user gửi một `debate_id` đã tồn tại:**
-Sẽ gọi command `getOldDebateContext` để lấy thông tin debate cũ đọc và hiểu context, phân tích và có thể cần thực hiện thêm các addition steps như scan folder, read source code, nói chung là làm toàn bộ nhưng thứ mà cho là cần thiết để lấy được lại context cũ, cuối cùng xem role của argument cuối cùng là gì?
-Nếu role là của `Proposer` chính là role của mình thì sẽ gọi `waitForArgumentResponse` để chờ kết quả
-Nếu role khác `Proposer` tức là đã có phản hồi thì xem phản hồi đó là gì để đánh giá xem có chuẩn không, hoặc nếu là của `Arbitrator` thì follow theo option mà `Arbitrator` đưa ra. Sau đó thực hiện tiếp các công việc cần thiết rồi gọi `submitArgument` lấy được `argument_id` rồi gọi `waitForArgumentResponse` trên `argument_id` để chờ phản hồi
+Sẽ gọi command `aw debate get-context` để lấy thông tin debate cũ đọc và hiểu context, phân tích và có thể cần thực hiện thêm các addition steps như scan folder, read source code, nói chung là làm toàn bộ nhưng thứ mà cho là cần thiết để lấy được lại context cũ, cuối cùng xem role của argument cuối cùng là gì?
+Nếu role là của `Proposer` chính là role của mình thì sẽ gọi `aw debate wait` để chờ kết quả
+Nếu role khác `Proposer` tức là đã có phản hồi thì xem phản hồi đó là gì để đánh giá xem có chuẩn không, hoặc nếu là của `Arbitrator` thì follow theo option mà `Arbitrator` đưa ra. Sau đó thực hiện tiếp các công việc cần thiết rồi gọi `aw debate submit` lấy được `argument_id` rồi gọi `aw debate wait` trên `argument_id` để chờ phản hồi
 
 **Trường hợp user yêu cầu create new debate:**
- Nếu user gửi 1 create 1 debetate conversation bằng cách sử dụng `generateId` và `createDebate`.
+Nếu user yêu cầu tạo debate mới, sử dụng `aw debate generate-id` và `aw debate create`.
 
-   Sau khi `createDebate` trả về resonse thành công sẽ có `debate_id`, `argument_id`, thì sẽ gọi `waitForArgumentResponse` dùng 2 tham số đó và chờ response
+Sau khi `aw debate create` trả về response thành công sẽ có `debate_id`, `argument_id`, thì sẽ gọi `aw debate wait` dùng 2 tham số đó và chờ response
 
 **1.1.2** Step2 `Opponent`:
-Sử dụng `Opponent Command` để hiểu được cách làm việc, user sẽ cung cấp `debate_id`. Gọi command `getOldDebateContext` để lấy thông tin debate cũ đọc và hiểu context,phân tích và có thể cần thực hiện thêm các addition steps như scan folder, read source code, nói chung là làm toàn bộ nhưng thứ mà cho là cần thiết để lấy được lại context cũ, cuối cùng xem role của argument cuối cùng là gì?
-Nếu role là `Proposer` thì do chưa có `argument_id` tại thời điểm này nên sẽ xem `type` của `argument` nếu nó là `MOTION` tức là 1 vấn đề mới thì follow theo các rules đã được nạp trước đó để tiền hành đánh giá và sau khi có kết quả thì gọi `submitArgument`. Response sẽ trả về là `argument_id` tức là thành công và đó chính là `argument` cần được truyền vào command `waitForArgumentResponse` cùng với `debate_id` để chờ phản hồi.
+Sử dụng `Opponent Command` để hiểu được cách làm việc, user sẽ cung cấp `debate_id`. Gọi command `aw debate get-context` để lấy thông tin debate cũ đọc và hiểu context, phân tích và có thể cần thực hiện thêm các addition steps như scan folder, read source code, nói chung là làm toàn bộ nhưng thứ mà cho là cần thiết để lấy được lại context cũ, cuối cùng xem role của argument cuối cùng là gì?
+Nếu role là `Proposer` thì do chưa có `argument_id` tại thời điểm này nên sẽ xem `type` của `argument` nếu nó là `MOTION` tức là 1 vấn đề mới thì follow theo các rules đã được nạp trước đó để tiền hành đánh giá và sau khi có kết quả thì gọi `aw debate submit`. Response sẽ trả về là `argument_id` tức là thành công và đó chính là `argument` cần được truyền vào command `aw debate wait` cùng với `debate_id` để chờ phản hồi.
 
 **1.1.3** Step3 Lặp lại quá trình debate:
 2 bên `Proposer` và `Opponent` sẽ tương tác với nhau. Trong quá trình này sẽ follow theo `rules` đã được nạp từ trước. Các bên có thể sử dụng các công cụ cho phép để yêu cầu thêm thông tin ví dụ như Opponent yêu cầu Proposer submit các document cần thiết và gửi cho Opponent id của document để verify. Nếu `Proposer` thấy các CLAIM của `Opponent` là hợp lý thì sẽ chỉnh sửa, nếu thấy không hợp lý thì phản hồi lại, trong trường hợp KHÔNG thể thống nhất thì `Proposer` có quyền raise `APPEAL` cho `Arbitrator` phán quyết.
-`Proposer` sẽ gọi command `submitAppeal` với tham số là `debate_id`, `targetId` là `argument_id` trước đó sẽ phản hồi mà cần phán quyết. Cần lưu ý cách đặt câu hỏi chỗ này. Phải nói đủ context, đưa ra các option(luôn phải có 1 option cuối cùng là user sẽ chọn phương án khác). Resonse từ cli sẽ trả về new `argument_id` cho bản ghi argument đã được tạo. `Proposer` sau đó sẽ lại call `waitForArgumentResponse`
-`Opponent` trước đó đã called `waitForArgumentResponse` và nhận được phản hồi tuy nhiên argument có type là `APPEAL` thì sẽ chỉ thông báo cho user là phía `Proposer` đang yêu cầu phán xử, và sẽ call tiêp `waitForArgumentResponse` với new `argument_id` chờ `Arbitrator` phán quyết.
+`Proposer` sẽ gọi command `aw debate appeal` với tham số `--debate-id`, `--target-id` là `argument_id` trước đó mà cần phán quyết. Cần lưu ý cách đặt câu hỏi chỗ này. Phải nói đủ context, đưa ra các option (luôn phải có 1 option cuối cùng là user sẽ chọn phương án khác). Response từ CLI sẽ trả về new `argument_id` cho bản ghi argument đã được tạo. `Proposer` sau đó sẽ lại call `aw debate wait`.
+`Opponent` trước đó đã called `aw debate wait` và nhận được phản hồi tuy nhiên argument có type là `APPEAL` thì sẽ chỉ thông báo cho user là phía `Proposer` đang yêu cầu phán xử, và sẽ call tiếp `aw debate wait` với new `argument_id` chờ `Arbitrator` phán quyết.
 
 **1.1.4** Step4 `Arbitrator` phán quyết:
-`Arbitrator` sẽ sử dụng debate-web application(sẽ được build để monitoring conversation) để submitRuling, cái này sẽ call xuống debate-server nodejs để tạo bản ghi mới trong database.
+`Arbitrator` sẽ sử dụng debate-web application (sẽ được build để monitoring conversation) để submit RULING, cái này sẽ call xuống debate-server để tạo bản ghi mới trong database.
 Khi có bản ghi mới thì `Proposer` và `Opponent` đều sẽ nhận được response. Tuy nhiên lúc đó mỗi bên sẽ hành động khác nhau.
-`Proposer` hành động để align theo phán quyết. Sau đó gọi `submitArgument` rồi gọi `waitForArgumentResponse`
-`Opponent` chỉ đơn giản là đọc hiểu ngữ cảnh, lấy được `argument_id` của phán quyết này rồi gọi luôn
-`waitForArgumentResponse` để chờ `Proposer` align theo phán quyết.
+`Proposer` hành động để align theo phán quyết. Sau đó gọi `aw debate submit` rồi gọi `aw debate wait`.
+`Opponent` chỉ đơn giản là đọc hiểu ngữ cảnh, lấy được `argument_id` của phán quyết này rồi gọi luôn `aw debate wait` để chờ `Proposer` align theo phán quyết.
 
 **1.1.5** Step5 2 bên đều nhất trí hết các điểm:
-Lúc đó `Proposer` sẽ gọi `requestCompletion` để tạo bản ghi `RESOLUTION`. Lúc này cả 2 `Proposer` và `Opponent` đều sẽ cần `waitForArgumentResponse` trên argument_id này, `Arbitrator` sẽ hành động trên web để tạo bản ghi `RULING` để complete -> chuyển status của debate sang `closed` hoặc đưa ra 1 hướng khác. Nếu đưa ra hướng khác thì quay lại step 4 còn nếu close thì 2 bên `Proposer` và `Opponent` sẽ dừng.
+Lúc đó `Proposer` sẽ gọi `aw debate request-completion` để tạo bản ghi `RESOLUTION`. Lúc này cả 2 `Proposer` và `Opponent` đều sẽ cần `aw debate wait` trên argument_id này, `Arbitrator` sẽ hành động trên web để tạo bản ghi `RULING` để complete → chuyển state của debate sang `CLOSED` hoặc đưa ra 1 hướng khác. Nếu đưa ra hướng khác thì quay lại step 4 còn nếu close thì 2 bên `Proposer` và `Opponent` sẽ dừng.
 
-**1.1.6** Lưu ý, vào bất cứ thời điểm nào `Arbitrator` cũng có thể cắt ngang cuộc tranh luận bằng cách submit 1 bản ghi `INTERVENTION`. Nói cụ thể thì tại thời điểm đó sẽ đang có 1 `argument_id` đang chờ phản hồi và 1 AI agent đang phản hồi argument đó. Khi `Arbitrator` submit INTERVENTION thì cũng không thể cắt ngang việc phản hồi của 1 trong 2 bên được nên vẫn phải chấp nhận lưu kết quả sau khi 1 trong 2 bên `Proposer` hoặc `Opponent` submit argument. Nhưng kết quả khi submit xong là sẽ yêu cầu `waitForArgumentResponse` trên arugment_id của bản ghi `INTERVENTION`. Tức là ở `debate-web` sẽ submit `INTERVENTION` để cho 2 bên lắng nghe trên bản ghi này, và sau đó submit tiếp 1 bản ghi type là `RULING` để quay về Step4.
+**1.1.6** Lưu ý về INTERVENTION:
+
+Vào bất cứ thời điểm nào `Arbitrator` cũng có thể can thiệp bằng cách submit 1 bản ghi `INTERVENTION`.
+
+**QUAN TRỌNG - INTERVENTION Semantics:**
+- INTERVENTION **không hủy** argument mà AI agent đang soạn
+- INTERVENTION được xử lý như một argument mới "đứng trước" vòng tiếp theo
+- Nếu 1 AI agent đang soạn argument, agent đó vẫn submit được, nhưng sau khi submit xong sẽ nhận được response yêu cầu `aw debate wait` trên `argument_id` của bản ghi `INTERVENTION`
+
+**Flow:**
+1. `debate-web` submit `INTERVENTION` → state chuyển sang `INTERVENTION_PENDING`
+2. Cả 2 AI agents nhận response với `action: "wait_for_ruling"`
+3. `Arbitrator` submit tiếp bản ghi `RULING` → quay về Step4
 
 ### 1.2 Document Sharing Mechanism (Cơ chế chia sẻ tài liệu)
 
-**QUAN TRỌNG:** Các AI agents KHÔNG được copy nội dung tài liệu vào content của argument. Thay vào đó, phải sử dụng CLI tool `aw docs` để chia sẻ tài liệu.
+**QUAN TRỌNG:** Argument content chỉ chứa **summary ngắn + references (doc_id)**, không paste nội dung dài. Sử dụng CLI tool `aw docs` để chia sẻ tài liệu đầy đủ.
 
 **Nguyên tắc:**
 
-1. **Tất cả tài liệu phải qua docs CLI tool**: Sử dụng `devtools/common/cli/devtool/aweave/docs` để submit và get document
-2. **Chỉ gửi document ID**: Khi muốn share tài liệu, submit file qua CLI tool, lấy `doc_id` và gửi ID đó trong content của argument
-3. **Mỗi bên duy trì file ở local**: Proposer/Opponent làm việc trực tiếp trên file local của mình, khi cần bên kia review thì submit lên để có version tracking
-4. **Lấy tài liệu qua ID**: Bất kỳ bên nào (Proposer/Opponent) có thể get document qua ID ở bất kỳ thời điểm nào
+1. **Tài liệu dài phải qua docs CLI tool**: Sử dụng `aw docs` để submit và get document
+2. **Argument chỉ chứa summary + doc_id**: Có thể kèm snippet cực ngắn nếu cần, nhưng không paste toàn bộ nội dung
+3. **Giới hạn content size**: Server enforce max content length (ví dụ: 10KB) để tránh abuse
+4. **Mỗi bên duy trì file ở local**: Proposer/Opponent làm việc trực tiếp trên file local của mình, khi cần bên kia review thì submit lên để có version tracking
+5. **Lấy tài liệu qua ID**: Bất kỳ bên nào (Proposer/Opponent) có thể get document qua ID ở bất kỳ thời điểm nào
 
 **Các trường hợp sử dụng:**
 
 | Trường hợp | Hành động |
 |------------|-----------|
-| Proposer tạo debate với tài liệu | Submit file qua `aw docs submit`, gửi `doc_id` kèm trong MOTION content |
+| Proposer tạo debate với tài liệu | Tạo file qua `aw docs create`, gửi `doc_id` kèm trong MOTION content |
 | Opponent cần thêm context | Gửi CLAIM yêu cầu Proposer submit tài liệu bổ sung và cung cấp `doc_id` |
-| Update tài liệu sau khi chỉnh sửa | Submit lại file để có version mới, gửi `doc_id` mới cho bên kia |
+| Update tài liệu sau khi chỉnh sửa | Submit version mới qua `aw docs submit <doc_id>`, gửi `doc_id` cho bên kia |
+
+> **Note:** `aw docs create` = tạo document mới (version 1), `aw docs submit` = tạo version mới cho document đã tồn tại.
 
 **Cấu hình Tools cho Debate:**
 
@@ -179,16 +193,16 @@ Cần có cơ chế cấu hình để AI agents biết các CLI tools được p
 
 ### 2.2 Communication Pattern
 
-#### 2.2.1 Long Polling cho `waitForArgumentResponse`
+#### 2.2.1 Long Polling cho `aw debate wait`
 
 CLI sử dụng **Long Polling** để chờ response từ server:
 
 ```python
-# CLI Python pseudo-code
+# CLI Python pseudo-code (tối giản - implementation chuẩn xem 2.2.3)
 while True:
     response = requests.get(
-        f"{SERVER}/wait",
-        params={"debate_id": X, "argument_id": Y, "role": "proposer"},
+        f"{SERVER}/debates/{debate_id}/wait",
+        params={"argument_id": Y, "role": "proposer"},
         timeout=65  # > server timeout (60s)
     )
     if response.json()["has_new_argument"]:
@@ -196,10 +210,10 @@ while True:
     # else: retry (server timeout, no new data yet)
 ```
 
-**Tham số `waitForArgumentResponse`:**
-- `debate_id`: ID của debate
-- `argument_id`: ID của argument đang chờ response
-- `role`: Role của requester (`proposer` hoặc `opponent`) - để server trả response phù hợp
+**Tham số `aw debate wait`:**
+- `--debate-id`: ID của debate
+- `--argument-id`: ID của argument đang chờ response
+- `--role`: Role của requester (`proposer` hoặc `opponent`) - để server trả response phù hợp
 
 #### 2.2.2 Response theo Role
 
@@ -211,24 +225,53 @@ while True:
 | Arbitrator INTERVENTION | `action: "wait_for_ruling"` | `action: "wait_for_ruling"` |
 | Debate CLOSED | `action: "debate_closed"` | `action: "debate_closed"` |
 
-#### 2.2.3 Timeout Behavior
+#### 2.2.3 Timeout Behavior (2 layers)
 
-**Cấu hình:** Timeout = **5 phút** (300 giây)
+**Layer 1 - Poll Timeout (per request):**
+- Server long-poll tối đa **60 giây** mỗi request
+- Client timeout **65 giây** (> server timeout)
+- Nếu hết 60s mà chưa có data mới, server trả về `{ "has_new_argument": false }`
+- CLI tự động retry request mới
 
-- Nếu không có response trong 5 phút, CLI trả về `status: "timeout"`
-- AI agent sẽ thông báo cho user và thoát
+**Layer 2 - Overall Wait Deadline:**
+- CLI có overall deadline **5 phút** (300 giây)
+- Nếu sau 5 phút vẫn chưa có response, CLI trả về `status: "timeout"`
+- AI agent thông báo cho user và thoát
 - Khi cần resume, user trigger lại **CẢ Proposer và Opponent**
+
+```python
+# CLI pseudo-code
+overall_start = time.time()
+OVERALL_DEADLINE = int(os.getenv("DEBATE_WAIT_DEADLINE", 300))  # default 5 phút, có thể override
+POLL_TIMEOUT = 65  # > server 60s
+
+while time.time() - overall_start < OVERALL_DEADLINE:
+    response = requests.get(
+        f"{SERVER}/debates/{debate_id}/wait",
+        params={"argument_id": Y, "role": "proposer"},
+        timeout=POLL_TIMEOUT
+    )
+    if response.json()["has_new_argument"]:
+        return response.json()
+    # else: retry
+
+return {"status": "timeout", "message": f"No response after {OVERALL_DEADLINE} seconds"}
+```
+
+**Environment Variables:**
+- `DEBATE_WAIT_DEADLINE`: Override overall deadline (seconds). Default: 300 (5 phút)
+- Use case: debate phức tạp có thể cần deadline dài hơn
 
 **Resume Flow:**
 1. User chạy lại Proposer với `debate_id`
 2. User chạy lại Opponent với `debate_id`
-3. Mỗi bên gọi `getOldDebateContext` để lấy lại context
+3. Mỗi bên gọi `aw debate get-context` để lấy lại context
 4. Dựa vào `state` hiện tại, mỗi bên biết mình cần làm gì tiếp
 
 **LƯU Ý cho Commands/Rules:** Proposer và Opponent Commands PHẢI hướng dẫn AI agent handle trường hợp resume với `debate_id` đã tồn tại. AI agent cần:
-- Đọc lại toàn bộ context từ `getOldDebateContext`
+- Đọc lại toàn bộ context từ `aw debate get-context`
 - Kiểm tra `state` hiện tại
-- Thực hiện action phù hợp hoặc gọi `waitForArgumentResponse` nếu đang chờ bên kia
+- Thực hiện action phù hợp hoặc gọi `aw debate wait` nếu đang chờ bên kia
 
 ### 2.3 Devtool CLI
 
@@ -273,6 +316,10 @@ while True:
 **SQL Schema:**
 
 ```sql
+-- Enable WAL mode và foreign keys (copy pattern từ aw docs)
+PRAGMA journal_mode = WAL;
+PRAGMA foreign_keys = ON;
+
 CREATE TABLE debates (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
@@ -290,13 +337,39 @@ CREATE TABLE arguments (
   role TEXT NOT NULL,
   content TEXT NOT NULL,
   client_request_id TEXT,
+  seq INTEGER NOT NULL,  -- Auto-increment per debate để ordering
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE(debate_id, client_request_id)
+  UNIQUE(debate_id, client_request_id),
+  UNIQUE(debate_id, seq)  -- Đảm bảo seq unique per debate
 );
 
 CREATE INDEX idx_arguments_debate_id ON arguments(debate_id);
 CREATE INDEX idx_arguments_parent_id ON arguments(parent_id);
+CREATE INDEX idx_arguments_seq ON arguments(debate_id, seq);
 ```
+
+**Ordering:**
+- Sử dụng `seq` integer tăng dần per debate để đảm bảo thứ tự arguments
+- Khi query arguments, ORDER BY `seq` ASC
+
+**QUAN TRỌNG - seq Assignment:**
+`seq` assignment và insert PHẢI nằm trong **cùng một transaction** để tránh race condition:
+
+```sql
+BEGIN IMMEDIATE;
+-- Lấy next seq trong cùng transaction
+SELECT COALESCE(MAX(seq), 0) + 1 AS next_seq FROM arguments WHERE debate_id = ?;
+-- Insert với seq vừa lấy
+INSERT INTO arguments (id, debate_id, ..., seq) VALUES (?, ?, ..., ?);
+COMMIT;
+```
+
+Không rely hoàn toàn vào mutex ở application layer - transaction là source of truth.
+
+**Database Patterns (copy từ `aw docs`):**
+- WAL mode cho concurrent access
+- `BEGIN IMMEDIATE` transaction cho write operations
+- Retry on `SQLITE_BUSY` với exponential backoff
 
 #### 2.3.3 CLI Commands
 
@@ -430,12 +503,38 @@ async function submitArgument(debateId, role, content, clientRequestId) {
 }
 ```
 
-#### 2.4.2 Validation khi submit sai lượt
+#### 2.4.2 State/Role Validation (Invariant)
 
-Nếu AI agent submit sai lượt (ví dụ: Opponent submit khi đang `AWAITING_PROPOSER`):
-- Server trả về **error** ngay lập tức
-- Không queue request
-- AI agent nhận error và cần debug logic
+**Đây là invariant bắt buộc.** Server PHẢI validate và trả lỗi nếu:
+- Role không được phép submit trong state hiện tại
+- Action không hợp lệ cho state hiện tại
+
+**Validation Matrix:**
+
+| State | Proposer allowed | Opponent allowed | Arbitrator allowed |
+|-------|------------------|------------------|-------------------|
+| `AWAITING_OPPONENT` | ❌ | ✅ submit | ✅ intervention |
+| `AWAITING_PROPOSER` | ✅ submit/appeal/completion | ❌ | ✅ intervention |
+| `AWAITING_ARBITRATOR` | ❌ | ❌ | ✅ ruling |
+| `INTERVENTION_PENDING` | ❌ | ❌ | ✅ ruling |
+| `CLOSED` | ❌ | ❌ | ❌ |
+
+**Error Response Format (ổn định để agent handle):**
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "ACTION_NOT_ALLOWED",
+    "message": "Role 'opponent' cannot submit in state 'AWAITING_PROPOSER'",
+    "current_state": "AWAITING_PROPOSER",
+    "allowed_roles": ["proposer"],
+    "suggestion": "Wait for proposer to submit their argument"
+  }
+}
+```
+
+AI agent có thể dựa vào `error.code` để handle programmatically.
 
 ### 2.5 Error Handling & Recovery
 
@@ -492,7 +591,7 @@ Command hướng dẫn AI agent tự đọc `debateType` rồi load rule file t�
 
 ```markdown
 # Trong Proposer Command
-Sau khi biết debateType từ getOldDebateContext hoặc user input:
+Sau khi biết debateType từ `aw debate get-context` hoặc user input:
 - coding_plan_debate: đọc `devdocs/agent/rules/common/debate/proposer/coding-plan.md`
 - general_debate: đọc `devdocs/agent/rules/common/debate/proposer/general.md`
 ```
@@ -558,6 +657,29 @@ Xây dựng Next.js application ở `devtools/common/debate-web`
 ### 2.8 debate-server
 
 Node.js server trong `devtools/common/debate-server`
+
+#### 2.8.0 Server Bind & Security
+
+**Network Binding:**
+- **Default:** Bind `127.0.0.1` (localhost only)
+- Không expose ra LAN/Internet trừ khi explicitly configured
+
+**Authentication (Optional):**
+- Env var `DEBATE_AUTH_TOKEN` để enable bearer token auth
+- Nếu set, tất cả requests phải có header `Authorization: Bearer <token>`
+- Nếu không set, no auth (local development mode)
+
+```bash
+# Development (no auth)
+npm start
+
+# With auth
+DEBATE_AUTH_TOKEN=my-secret-token npm start
+```
+
+**CLI Configuration:**
+- Env var `DEBATE_SERVER_URL` (default: `http://127.0.0.1:3456`)
+- Env var `DEBATE_AUTH_TOKEN` (nếu server require auth)
 
 #### 2.8.1 Responsibilities
 
