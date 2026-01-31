@@ -202,7 +202,7 @@ def submit(
 def get(
     document_id: Annotated[str, typer.Argument(help="Document ID")],
     version: Annotated[int | None, typer.Option("--version", "-v", help="Specific version")] = None,
-    fmt: Annotated[OutputFormat, typer.Option("--format", help="Output format")] = OutputFormat.json,
+    fmt: Annotated[OutputFormat, typer.Option("--format", help="Output format")] = OutputFormat.plain,
 ) -> None:
     if fmt == OutputFormat.plain:
         pass

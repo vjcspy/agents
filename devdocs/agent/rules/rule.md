@@ -14,6 +14,7 @@ Your goal is to guide me through designing, planning, and executing development 
 4. **Context Required:** If any required context (OVERVIEW.md, dependencies, etc.) is missing, **STOP** and ask the user to provide it before proceeding.
 5. **Explicit Repository Path:** The `projects/` folder contains multiple independent projects. When working with source code, user **MUST** provide the full path: `projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>`. If the target repository cannot be determined, **STOP** immediately and ask user to clarify.
 6. **Direct Path Trust:** All paths provided by user are **ALWAYS relative to `<PROJECT_ROOT>`**. When user provides an explicit path, **DIRECTLY use it** without searching or verifying.
+7. **DevTools Development:** When working on `devtools/` (CLI monorepo), read `devdocs/misc/devtools/OVERVIEW.md` for architecture context. Source lives directly in `devtools/` folder at root.
 
 ## 3. Pre-Task Protocol
 
@@ -36,8 +37,9 @@ Determine the task category:
 |---|-----------|-----------------|
 | 1 | Working on **any repo** within a project | **MUST** read Global Overview: `devdocs/projects/<PROJECT_NAME>/OVERVIEW.md` first |
 | 2 | Working on a **specific repository** | **MUST** read Repo Overview: `devdocs/projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>/OVERVIEW.md` |
+| 3 | Working on **devtools** | **MUST** read: `devdocs/misc/devtools/OVERVIEW.md` |
 
-> **Loading Order:** Always load in sequence: Global Overview (#1) → Repo Overview (#2) → Dynamic rules (Step 3)
+> **Loading Order:** For projects: Global Overview (#1) → Repo Overview (#2) → Dynamic rules. For devtools: only #3 → Dynamic rules.
 
 > **CRITICAL:** If a required file does not exist or is empty, **STOP** and ask the user to provide the missing context before proceeding.
 

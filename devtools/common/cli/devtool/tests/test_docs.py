@@ -78,21 +78,23 @@ def test_submit_nonexistent_doc(runner: CliRunner):
     assert data["error"]["code"] == "DOC_NOT_FOUND"
 
 
-def test_get_latest_json(runner: CliRunner):
+def test_get_default_plain(runner: CliRunner):
+    """Default format is plain (raw content)."""
+    result = runner.invoke(app, ["create", "--summary", "Test", "--content", "Raw content"])
+    doc_id = _parse_json(result.output)["content"][0]["data"]["document_id"]
+    result = runner.invoke(app, ["get", doc_id])  # No --format, should be plain
+    assert result.exit_code == 0
+    assert result.output.strip() == "Raw content"
+
+
+def test_get_json_format(runner: CliRunner):
+    """Explicit --format json returns MCPResponse with metadata."""
     result = runner.invoke(app, ["create", "--summary", "Test", "--content", "Content here"])
     doc_id = _parse_json(result.output)["content"][0]["data"]["document_id"]
-    result = runner.invoke(app, ["get", doc_id])
+    result = runner.invoke(app, ["get", doc_id, "--format", "json"])
     assert result.exit_code == 0
     data = _parse_json(result.output)
     assert data["content"][0]["data"]["content"] == "Content here"
-
-
-def test_get_plain_format(runner: CliRunner):
-    result = runner.invoke(app, ["create", "--summary", "Test", "--content", "Raw content"])
-    doc_id = _parse_json(result.output)["content"][0]["data"]["document_id"]
-    result = runner.invoke(app, ["get", doc_id, "--format", "plain"])
-    assert result.exit_code == 0
-    assert result.output.strip() == "Raw content"
 
 
 def test_list_and_delete_semantics(runner: CliRunner):

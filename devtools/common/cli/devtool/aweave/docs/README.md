@@ -75,12 +75,12 @@ aw docs submit <document_id> --summary "v3" --content "new content" --metadata '
 
 ### `aw docs get`
 
-Lấy document content. **Đây là command duy nhất hỗ trợ `--format plain`.**
+Lấy document content. **Default là `plain` (raw text) để AI Agent đọc trực tiếp.**
 
 ```bash
-aw docs get <document_id>                     # Latest version, JSON
+aw docs get <document_id>                     # Latest version, raw content (default)
 aw docs get <document_id> --version 2         # Specific version
-aw docs get <document_id> --format plain      # Raw content only (for piping)
+aw docs get <document_id> --format json       # With metadata (MCPResponse)
 aw docs get <document_id> --format markdown   # Human-readable
 ```
 
@@ -88,14 +88,17 @@ aw docs get <document_id> --format markdown   # Human-readable
 | Option | Description |
 |--------|-------------|
 | `--version, -v` | Specific version number (default: latest) |
-| `--format` | `json` (default), `markdown`, or `plain` |
+| `--format` | `plain` (default), `json`, or `markdown` |
 
-**Output (plain):**
+**Output (plain - default):**
 ```
 # Your document content here...
+
+No JSON encoding, no escape characters.
+AI Agent reads directly like a file.
 ```
 
-**Output (json):**
+**Output (json - when metadata needed):**
 ```json
 {
   "success": true,
@@ -247,15 +250,15 @@ aw docs submit <doc_id> --summary "v2" --file ./motion.md \
 
 ## Output Format Constraints
 
-| Command | Allowed Formats | Notes |
-|---------|-----------------|-------|
-| `create` | `json`, `markdown` | `plain` → error |
-| `submit` | `json`, `markdown` | `plain` → error |
-| `get` | `json`, `markdown`, `plain` | `plain` = raw content only |
-| `list` | `json`, `markdown` | `plain` → error |
-| `history` | `json`, `markdown` | `plain` → error |
-| `export` | `json`, `markdown` | `plain` → error |
-| `delete` | `json`, `markdown` | `plain` → error |
+| Command | Default | Allowed Formats | Notes |
+|---------|---------|-----------------|-------|
+| `create` | `json` | `json`, `markdown` | `plain` → error |
+| `submit` | `json` | `json`, `markdown` | `plain` → error |
+| `get` | **`plain`** | `plain`, `json`, `markdown` | Raw content for AI agents |
+| `list` | `json` | `json`, `markdown` | `plain` → error |
+| `history` | `json` | `json`, `markdown` | `plain` → error |
+| `export` | `json` | `json`, `markdown` | `plain` → error |
+| `delete` | `json` | `json`, `markdown` | `plain` → error |
 
 When `--format plain` is used on unsupported commands, error is returned as JSON.
 
