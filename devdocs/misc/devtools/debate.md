@@ -52,7 +52,7 @@ Sử dụng `Opponent Command` để hiểu được cách làm việc, user s�
 Nếu role là `Proposer` thì do chưa có `argument_id` tại thời điểm này nên sẽ xem `type` của `argument` nếu nó là `MOTION` tức là 1 vấn đề mới thì follow theo các rules đã được nạp trước đó để tiền hành đánh giá và sau khi có kết quả thì gọi `submitArgument`. Response sẽ trả về là `argument_id` tức là thành công và đó chính là `argument` cần được truyền vào command `waitForArgumentResponse` cùng với `debate_id` để chờ phản hồi.
 
 **1.1.3** Step3 Lặp lại quá trình debate:
-2 bên `Proposer` và `Opponent` sẽ tương tác với nhau. Trong quá trình này sẽ follow theo `rules` đã được nạp từ trước. Các bên có thể sử dụng các công cụ cho phép để yêu cầu thêm thông tin ví dụ như Opponent yêu cầu Proposer submit các document cần thiết và gửi cho Opponent id của document để verify. Nếu `Proposer` thấy các CLAIM của `Opponent` là hợp lý thì sẽ chỉnh sửa, nếu thấy không hợp lý thì phản hồi lại, trong trường hợp KHÔNG thể thống nhất thì `Proposer` có quyền raise `APPEAL` cho `Arbitrator` phán quyết. 
+2 bên `Proposer` và `Opponent` sẽ tương tác với nhau. Trong quá trình này sẽ follow theo `rules` đã được nạp từ trước. Các bên có thể sử dụng các công cụ cho phép để yêu cầu thêm thông tin ví dụ như Opponent yêu cầu Proposer submit các document cần thiết và gửi cho Opponent id của document để verify. Nếu `Proposer` thấy các CLAIM của `Opponent` là hợp lý thì sẽ chỉnh sửa, nếu thấy không hợp lý thì phản hồi lại, trong trường hợp KHÔNG thể thống nhất thì `Proposer` có quyền raise `APPEAL` cho `Arbitrator` phán quyết.
 `Proposer` sẽ gọi command `submitAppeal` với tham số là `debate_id`, `targetId` là `argument_id` trước đó sẽ phản hồi mà cần phán quyết. Cần lưu ý cách đặt câu hỏi chỗ này. Phải nói đủ context, đưa ra các option(luôn phải có 1 option cuối cùng là user sẽ chọn phương án khác). Resonse từ cli sẽ trả về new `argument_id` cho bản ghi argument đã được tạo. `Proposer` sau đó sẽ lại call `waitForArgumentResponse`
 `Opponent` trước đó đã called `waitForArgumentResponse` và nhận được phản hồi tuy nhiên argument có type là `APPEAL` thì sẽ chỉ thông báo cho user là phía `Proposer` đang yêu cầu phán xử, và sẽ call tiêp `waitForArgumentResponse` với new `argument_id` chờ `Arbitrator` phán quyết.
 
@@ -60,7 +60,7 @@ Nếu role là `Proposer` thì do chưa có `argument_id` tại thời điểm n
 `Arbitrator` sẽ sử dụng debate-web application(sẽ được build để monitoring conversation) để submitRuling, cái này sẽ call xuống debate-server nodejs để tạo bản ghi mới trong database.
 Khi có bản ghi mới thì `Proposer` và `Opponent` đều sẽ nhận được response. Tuy nhiên lúc đó mỗi bên sẽ hành động khác nhau.
 `Proposer` hành động để align theo phán quyết. Sau đó gọi `submitArgument` rồi gọi `waitForArgumentResponse`
-`Opponent` chỉ đơn giản là đọc hiểu ngữ cảnh, lấy được `argument_id` của phán quyết này rồi gọi luôn 
+`Opponent` chỉ đơn giản là đọc hiểu ngữ cảnh, lấy được `argument_id` của phán quyết này rồi gọi luôn
 `waitForArgumentResponse` để chờ `Proposer` align theo phán quyết.
 
 **1.1.5** Step5 2 bên đều nhất trí hết các điểm:
@@ -84,13 +84,14 @@ Lúc đó `Proposer` sẽ gọi `requestCompletion` để tạo bản ghi `RESOL
 
 - **debates**
 
-| **Column**      | **Type**      | **Description**                                     |
-| --------------- | ------------- | --------------------------------------------------- |
-| **id** (PK)     | UUID / String | ID duy nhất của cuộc tranh luận.                    |
-| **title**       | String        | Tiêu đề vấn đề cần debate.                          |
-| **debate_type** | String        | Phân loại (ví dụ: coding_plan_debate...).           |
-| **status**      | Enum          | Trạng thái: `open`, `judging`, `closed`. |
-| **created_at**  | Timestamp     | Thời gian tạo.                                      |
+| **Column**      | **Type**      | **Description**                                            |
+| --------------- | ------------- | ---------------------------------------------------------- |
+| **id** (PK)     | UUID / String | ID duy nhất của cuộc tranh luận.                           |
+| **title**       | String        | Tiêu đề vấn đề cần debate.                                 |
+| **debate_type** | String        | Phân loại (ví dụ: coding_plan_debate...).                  |
+| **state**       | Enum          | Sử dụng state để trả về cho AI Agent biết phải làm gì tiếp |
+| **status**      | Enum          | Trạng thái: `open`, `judging`, `closed`.                   |
+| **created_at**  | Timestamp     | Thời gian tạo.                                             |
 
 - **arguments**
 
@@ -155,12 +156,45 @@ Là khi các bên Proposer hoặc Opponent trả lời lại bên đối diện 
 1. debateId: id của debate hiện tại
 2. role: là bên nào
 3. targetId: phản biện lại id câu trả lời trước đó của phe đối diện
+4. content
 
 **submitRuling**
-**submitAppeal**
-**requestCompletion**
+Không cần tại thời điểm hiện tại vì bây giờ `Arbitrator` là human sẽ submit qua `debate-web` xuống `debate-server`
 
-#### 2.1.3 Yêu cầu chung
+**submitAppeal**
+Proposer submit Appeal để yêu cầu `Arbitrator` phán xử
+Tham số:
+
+1. debateId: id của debate hiện tại
+2. targetId: phản biện lại id câu trả lời trước đó của phe đối diện
+3. content
+
+**requestCompletion**
+Proposer submit để yêu cầu close debate. Tức là lúc mọi vấn đề đã được chấp thuận. Sau đó `Arbitrator` sẽ sử dụng web để tạo bản ghi `RULING` đồng thời change status của debate sang `closed` -> kết thúc hoặc nếu không thì phản hồi lại thông tin để tiếp tục tranh luận.(xem ở 1.1.5)
+Tham số:
+
+1. debateId: id của debate hiện tại
+2. targetId: phản biện lại id câu trả lời trước đó của phe đối diện
+3. content
+
+#### 2.1.3 Yêu cầu khi phát triên cli app
+
+Lúc đầu tôi nghĩ sẽ dựa vào rule để cho AI agent thực thi các bước tiếp theo, tuy nhiên nếu như thế có thể xảy ra 1 số vấn đề như:
+
+- AI agent quên context do cuộc tranh luận quá dài nên không đưa ra được chính xác action tiếp theo
+- Khó quy định tập trung, chính xác
+
+Do đó, tôi quyết định lưu thêm trạng thái của `debate` ở phái server. Bên cạnh `status` sẽ có thêm `state` để dựa vào đó phản hồi lại cho các AI agent sẽ cần làm gì tiếp theo.
+
+Để làm được điều này, có 1 vài constrain quan trọng:
+
+1. Write vào debate và arguments phải bị lock theo debate, tức một thời điểm chỉ có duy nhất 1 phía được thao tác vào, cũng giống như thực tế khi tranh luận cũng chỉ có từng bên đưa ra ý kiến, phản hồi không thể 2 bên cùng nói
+2. nên implement theo kiểu machine state cho debate. Mỗi hành động của các bên được coi là 1 action làm thay đổi state của machine. Chỗ này tôi cần bạn với vai trò là 1 expert engineer cho tôi 1 thiết kế hợp lý để có thể:
+
+- Vì lúc nào cũng sẽ có AI agent `waitForArgumentResponse` nên chúng ta phải có các hook hay events gì đó kiểu onStateChange để callback ngược lại trả về response cho AI Agent.
+- Thiết kế để đúng chuẩn state machine mà lại fit với bài toán của chúng ta
+
+1. Return format phải theo đúng chuẩn AI AGENT. Đọc `devdocs/misc/devtools/OVERVIEW.md` để có thể hiểu hơn về `devtools`
 
 ### 2.2 Commands, Rules, SKill
 
@@ -168,6 +202,25 @@ Là khi các bên Proposer hoặc Opponent trả lời lại bên đối diện 
 
 **Proposer Command**:
 **Opponent Command**:
+
+### 2.3 debate-web
+
+Xây dựng nextjs application ở `devtools/common/debate-web`
+UI sử dụng `shadcn`, có 2 phần:
+
+- Sidebar: là liệt kê toàn bộ debate và có 1 ô ở trên đầu để search theo id, mỗi hàng sẽ là `title` của debate
+- Content: Fetch toàn bộ các arguments của debate hiện tại vào. Nhớ làm giao diện để biết được từng row của mỗi bên(Proposer/Opponent...)
+- Dưới Content là có 1 phần chat cách hiển thị như sau:
+  - Khi 2 bên đanh tranh luận thì sẽ hiện 1 full size button thay vì là ô chat box, button với icon là hình stop. Khi user click và hold 1s thì sẽ gửi 1 bản ghi `INTERVENTION`. Khi check argument cuối cùng là `INTERVENTION` thì đổi trạng thái sang hiện thị chat box để human có thể gửi content submit bản ghi type `RULING`
+  - Khi 2 bên tranh luận mà Proposer gửi bản ghi `APPEAL` thì cũng sẽ hiện chat box để user điền content và submit
+
+### 2.4 debate-server
+
+Dùng để expose websocket cho `debate-web`
+Về cơ bản là cung cấp các action để human submit INTERVENTION và RULING
+Tuy nhiên có 1 số diểm tôi chưa nghĩ ra, cần bàn suggest options:
+
+1. Làm sao để biết khi nào có bản ghi mới trong arguments table. Dùng cơ chế polling à?
 
 ## 3. Tóm tắt lại các việc phải làm
 

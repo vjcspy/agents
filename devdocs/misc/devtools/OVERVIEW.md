@@ -166,7 +166,18 @@ Mỗi domain có thể có `<domain>/local/` chứa:
 
 ## Development Workflow
 
-### Adding a New Python Plugin
+### Adding a New CLI Tool (AI Agents)
+
+> **SKILL:** Khi tạo CLI tool mới, AI agents **MUST** đọc và follow `devdocs/agent/skills/common/devtools-builder/SKILL.md`
+>
+> Skill này hướng dẫn:
+> - MCP-compatible response format cho AI agent compatibility
+> - Auto-pagination pattern (CLI trả về full data, `has_more=false`)
+> - Actionable error messages
+> - Shared utilities (`aweave/http/`, `aweave/mcp/`)
+> - Complete implementation checklist
+
+### Adding a New Python Plugin (Manual)
 
 1. Tạo package tại `<domain>/cli/<name>/`
 2. Cấu hình `pyproject.toml` với entry point `aw.plugins`
