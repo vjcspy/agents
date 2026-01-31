@@ -4,6 +4,7 @@ import typer
 
 from aweave.core.node_loader import load_node_plugins
 from aweave.core.python_loader import load_python_plugins
+from aweave.docs import app as docs_app
 
 app = typer.Typer(
     name="aw",
@@ -18,6 +19,9 @@ def version():
     from aweave import __version__
 
     typer.echo(f"aw version {__version__}")
+
+
+app.add_typer(docs_app, name="docs")
 
 
 # Load plugins

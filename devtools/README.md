@@ -123,32 +123,33 @@ aw --help
 aw version
 ```
 
-### Python plugin: confluence
+## Available CLI Tools
+
+See **[CLI_TOOLS.md](CLI_TOOLS.md)** for a complete list of available CLI tools with documentation links.
+
+Quick overview:
+- `aw docs` - Document store for AI agents ([docs](common/cli/devtool/aweave/docs/README.md))
+- `aw tinybots-bitbucket` - Bitbucket PR tools ([docs](tinybots/cli/bitbucket/tinybots/bitbucket/README.md))
+
+### Example: Document Store
 
 ```bash
-aw confluence --help
-aw confluence status
-aw confluence sync <source> --dry-run
+# Create a document
+aw docs create --summary "My plan" --file ./plan.md
+
+# Get document content
+aw docs get <document_id>
+aw docs get <document_id> --format plain  # Raw content only
 ```
 
-### Node plugin: foo
-
-The Node plugin is only added to `aw` if the `bin` path in the registry exists (e.g. `nab/cli/foo/dist/cli.js`).
-
-First, build from devtools directory:
+### Example: Bitbucket
 
 ```bash
-cd devtools
-pnpm install
-pnpm -r build
-uv run python scripts/generate-registry.py
-```
+# Get PR info
+aw tinybots-bitbucket pr micro-manager 126 -f markdown
 
-Then use from anywhere:
-
-```bash
-aw foo --help
-aw foo build --watch
+# List PR comments
+aw tinybots-bitbucket comments micro-manager 126
 ```
 
 ## Repository layout (short)
