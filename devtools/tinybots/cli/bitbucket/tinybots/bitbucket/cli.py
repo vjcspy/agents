@@ -71,12 +71,13 @@ def list_comments(
     fmt: Annotated[
         OutputFormat, typer.Option("--format", "-f", help="Output format")
     ] = OutputFormat.json,
-    limit: Annotated[int, typer.Option("--limit", "-l", help="Max items to return")] = 25,
-    offset: Annotated[int, typer.Option("--offset", "-o", help="Offset for pagination")] = 0,
+    max_items: Annotated[
+        int, typer.Option("--max", "-m", help="Maximum items to fetch")
+    ] = 500,
 ) -> None:
-    """List PR comments."""
+    """List all PR comments (auto-fetches all pages)."""
     client = _get_client(workspace)
-    response = client.list_pr_comments(repo, pr_id, limit=limit, offset=offset)
+    response = client.list_pr_comments(repo, pr_id, max_items=max_items)
     _output(response, fmt)
 
 
@@ -90,12 +91,13 @@ def list_tasks(
     fmt: Annotated[
         OutputFormat, typer.Option("--format", "-f", help="Output format")
     ] = OutputFormat.json,
-    limit: Annotated[int, typer.Option("--limit", "-l", help="Max items to return")] = 25,
-    offset: Annotated[int, typer.Option("--offset", "-o", help="Offset for pagination")] = 0,
+    max_items: Annotated[
+        int, typer.Option("--max", "-m", help="Maximum items to fetch")
+    ] = 500,
 ) -> None:
-    """List PR tasks."""
+    """List all PR tasks (auto-fetches all pages)."""
     client = _get_client(workspace)
-    response = client.list_pr_tasks(repo, pr_id, limit=limit, offset=offset)
+    response = client.list_pr_tasks(repo, pr_id, max_items=max_items)
     _output(response, fmt)
 
 

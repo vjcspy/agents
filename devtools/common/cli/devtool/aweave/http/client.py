@@ -67,6 +67,16 @@ class HTTPClient:
             response = client.delete(path)
             return self._handle_response(response)
 
+    def get_url(self, url: str) -> dict[str, Any]:
+        """
+        GET request using full URL (for pagination next links).
+
+        This bypasses base_url and uses the provided absolute URL.
+        """
+        with self._build_client() as client:
+            response = client.get(url)
+            return self._handle_response(response)
+
     def _handle_response(self, response: httpx.Response) -> dict[str, Any]:
         """Handle HTTP response, raise on error."""
         if response.status_code == 401:
