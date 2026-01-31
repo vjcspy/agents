@@ -13,64 +13,9 @@ Your goal is to guide me through designing, planning, and executing development 
 3. **Safety First:** Do not modify critical files without a clear plan.
 4. **Context Required:** If any required context (OVERVIEW.md, dependencies, etc.) is missing, **STOP** and ask the user to provide it before proceeding.
 5. **Explicit Repository Path:** The `projects/` folder contains multiple independent projects. When working with source code, user **MUST** provide the full path: `projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>`. If the target repository cannot be determined, **STOP** immediately and ask user to clarify.
+6. **Direct Path Trust:** All paths provided by user are **ALWAYS relative to `<PROJECT_ROOT>`**. When user provides an explicit path, **DIRECTLY use it** without searching or verifying.
 
-## 3. Project Structure Convention
-
-All projects follow this standard directory structure:
-
-```text
-<PROJECT_ROOT>/
-├── devdocs/                    # AI Agent context & documentation
-│   ├── agent/                  # Agent-specific configurations
-│   │   ├── commands/           # Custom agent commands
-│   │   ├── templates/          # Document templates (plans, releases, etc.)
-│   │   └── rules/              # Working protocols & guidelines
-│   ├── misc/                   # Cross-domain documentation
-│   │   └── devtools/           # DevTools documentation
-│   │       └── <DOMAIN>/       # Per-domain devtools docs
-│   │           └── OVERVIEW.md # DevTools overview for the domain
-│   └── projects/               # Project-specific documentation (mirrors projects/)
-│       └── <PROJECT_NAME>/     # Project documentation container
-│           ├── OVERVIEW.md     # **Global overview** for the entire project
-│           └── <DOMAIN>/       # Domain-specific documentation
-│               └── <REPO_NAME>/# Per-repo context & documentation
-│                   ├── OVERVIEW.md # Repository-specific overview & business context
-│                   └── plans/  # Implementation plans for the repo
-│                       └── *.md# Plan files: [YYMMDD-Ticket-Name].md
-│
-├── devtools/                   # Development tools & utilities (multi-domain)
-│   ├── common/                 # Shared tools across domains
-│   │   └── cli/                # Shared CLI tools
-│   └── <DOMAIN>/               # Domain-specific devtools
-│       └── local/              # Local development infrastructure
-│           ├── docker-compose.yaml
-│           ├── Justfile        # Just commands for the domain
-│           └── ...
-│
-└── projects/                   # Source code root (all projects live here)
-    └── <PROJECT_NAME>/         # Project source code container
-        └── <DOMAIN>/           # Domain-specific source code
-            ├── <REPO_1>/       # Individual repository
-            ├── <REPO_2>/       # Individual repository
-            └── ...
-```
-
-### Key Path Variables
-
-| Variable           | Description                                                                 | Example                            |
-| ------------------ | --------------------------------------------------------------------------- | ---------------------------------- |
-| `<PROJECT_ROOT>`   | **Current workspace root directory** (the folder where the agent operates) | `/Users/dev/my-project`            |
-| `<PROJECT_NAME>`   | Project name - folder directly under `projects/`                            | `nab`, `myapp`, `tinybots`         |
-| `<DOMAIN>`         | Business domain name                                                        | `core`, `frontend`, `backend`     |
-| `<REPO_NAME>`      | Repository name within a domain                                             | `wonkers-api`, `user-service`      |
-
-> **Note:** `<PROJECT_ROOT>` is always the root folder of the current workspace/working directory. All paths in this document are relative to `<PROJECT_ROOT>`.
-> 
-> **Source Code Path:** Source code repositories are located at `projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>/`.
->
-> **CRITICAL - Multiple Projects:** The `projects/` folder may contain multiple independent projects. Never assume which project/repo the user is referring to. Always require explicit path like `projects/tinybots/backend/wonkers-api` before proceeding with any source code operation.
-
-## 4. Pre-Task Protocol
+## 3. Pre-Task Protocol
 
 **Before executing ANY task, follow these steps in order:**
 
@@ -91,64 +36,34 @@ Determine the task category:
 |---|-----------|-----------------|
 | 1 | Working on **any repo** within a project | **MUST** read Global Overview: `devdocs/projects/<PROJECT_NAME>/OVERVIEW.md` first |
 | 2 | Working on a **specific repository** | **MUST** read Repo Overview: `devdocs/projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>/OVERVIEW.md` |
-| 3 | Task is **Implementation/Refactoring** | **MUST** read `devdocs/agent/rules/coding-standard-and-quality.md` |
-| 4 | Task involves **local dev/testing** for a domain | **MUST** read DevTools Overview: `devdocs/misc/devtools/<DOMAIN>/OVERVIEW.md` |
 
-> **Loading Order:** Always load in sequence: Global Overview (#1) → Repo Overview (#2) → Other rules (#3, #4)
+> **Loading Order:** Always load in sequence: Global Overview (#1) → Repo Overview (#2) → Dynamic rules (Step 3)
 
 > **CRITICAL:** If a required file does not exist or is empty, **STOP** and ask the user to provide the missing context before proceeding.
 
-### Step 3: Verify Context
+### Step 3: Load Dynamic Rules & Task Directives
+
+Load rules **only when needed** based on task type:
+
+| Rule File | Load When | Path |
+|-----------|-----------|------|
+| `project-structure.md` | Need to understand folder structure | `devdocs/agent/rules/common/project-structure.md` |
+| `coding-standard-and-quality.md` | Implementation/Refactoring tasks | `devdocs/agent/rules/common/coding/coding-standard-and-quality.md` |
+| `create-plan.md` | Task type = Plan | `devdocs/agent/rules/common/tasks/create-plan.md` |
+| `implementation.md` | Task type = Implementation/Refactoring | `devdocs/agent/rules/common/tasks/implementation.md` |
+| `local-dev.md` | Task type = Local Dev/Testing | `devdocs/agent/rules/common/tasks/local-dev.md` |
+
+> **Principle:** Load rules lazily to minimize context window usage. Only load what's necessary for the current task.
+
+### Step 4: Verify Context
 
 Before proceeding, confirm you have:
 
 - [ ] Understood the task scope
-- [ ] Loaded all required context files (per Step 2)
+- [ ] Loaded all required context files (per Step 2 & 3)
 - [ ] Identified the target paths/files
 
-## 5. Rule References (Dynamic Loading)
-
-To keep context lean, additional rules are loaded **only when needed**:
-
-| Rule File                          | Load When                        | Path                                          |
-| ---------------------------------- | -------------------------------- | --------------------------------------------- |
-| `coding-standard-and-quality.md`   | Implementation/Refactoring tasks | `devdocs/agent/rules/coding-standard-and-quality.md` |
-
-> **Principle:** Load rules lazily to minimize context window usage. Only load what's necessary for the current task.
-
-## 6. Task-Specific Directives
-
-*Apply the logic below based on the detected "Task Type". If a task type matches multiple rules, prioritize the most specific one.*
-
-### Task: `Create Plan`
-
-- **Source of Truth:** Use `devdocs/agent/templates/create-plan.md` as the canonical structure.
-- **Output:** Generate the full plan content matching the template.
-- **Output Location:** Plans must be stored in the `plans/` subfolder within the repo documentation.
-- **Naming Convention:** Propose a filename strictly following: `devdocs/projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>/plans/[YYMMDD-Ticket-Name].md`.
-
-### Task: `Implementation / Refactoring`
-
-- **Pre-requisite:** Ensure `coding-standard-and-quality.md` has been loaded.
-- **Structure Analysis:** Always list or analyze the relevant project folder structure first to understand organization.
-- **Locate Source:** Find the target repository in `projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>/`.
-- **Execution:** Follow explicit user instructions.
-- **Testing:** **NO Unsolicited Tests.** Do not write or run test cases unless the user explicitly asks for it.
-
-### Task: `Local Development / Testing`
-
-- **Pre-requisite:** Read DevTools Overview: `devdocs/misc/devtools/<DOMAIN>/OVERVIEW.md`
-- **Check devtools:** Look in `devtools/<DOMAIN>/local/` for:
-  - Docker compose files for local environment
-  - Justfile with available commands
-  - Seed scripts for test data
-- **Run Commands:** Use available scripts before creating new ones.
-
-### Task: `Default / Other`
-
-- Follow my explicit instructions combined with general software engineering best practices.
-
-## 7. Output Constraints & Style
+## 4. Output Constraints & Style
 
 - **Format:** Use clean Markdown
 - **Paths:** Always relative to `<PROJECT_ROOT>`
