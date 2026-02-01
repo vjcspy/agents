@@ -1,11 +1,14 @@
 'use client';
 
-import { use } from 'react';
-import { Loader2, WifiOff, Wifi } from 'lucide-react';
+import { use, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { Loader2, WifiOff, Wifi, Trash2 } from 'lucide-react';
 import { useDebate } from '@/hooks/use-debate';
+import { deleteDebate } from '@/lib/api';
 import { ArgumentList } from '@/components/debate/argument-list';
 import { ActionArea } from '@/components/debate/action-area';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import type { DebateState } from '@/lib/types';
@@ -24,6 +27,8 @@ export default function DebatePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
+  const [isDeleting, setIsDeleting] = useState(false);
   const {
     debate,
     arguments: args,
@@ -32,6 +37,22 @@ export default function DebatePage({
     submitIntervention,
     submitRuling,
   } = useDebate(id);
+
+  const handleDelete = useCallback(async () => {
+    if (!confirm('Are you sure you want to delete this debate? This action cannot be undone.')) {
+      return;
+    }
+    
+    setIsDeleting(true);
+    try {
+      await deleteDebate(id);
+      router.push('/debates');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete debate');
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [id, router]);
 
   if (error && !debate) {
     return (
@@ -62,6 +83,21 @@ export default function DebatePage({
           </Badge>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="text-muted-foreground hover:text-destructive"
+            title="Delete debate"
+          >
+            {isDeleting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+          </Button>
+          <Separator orientation="vertical" className="h-6" />
           <div
             className={cn(
               'h-2 w-2 rounded-full',

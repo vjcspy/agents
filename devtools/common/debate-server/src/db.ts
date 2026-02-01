@@ -259,6 +259,13 @@ export class DebateDb {
     if (!debate) throw new DebateNotFoundError(debateId);
     return debate;
   }
+
+  deleteDebate(debateId: string): void {
+    // Delete arguments first (foreign key constraint)
+    this.db.prepare('DELETE FROM arguments WHERE debate_id = ?').run(debateId);
+    // Delete debate
+    this.db.prepare('DELETE FROM debates WHERE id = ?').run(debateId);
+  }
 }
 
 export function createDb(): DebateDb {

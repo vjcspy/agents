@@ -1,5 +1,7 @@
 'use client';
 
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -74,8 +76,10 @@ export function ArgumentCard({ argument }: ArgumentCardProps) {
         </div>
       </CardHeader>
       <CardContent className="px-4 pb-4">
-        <div className="whitespace-pre-wrap text-sm leading-relaxed">
-          {argument.content}
+        <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0 prose-pre:bg-muted prose-pre:text-foreground prose-code:text-foreground prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {argument.content}
+          </ReactMarkdown>
         </div>
       </CardContent>
     </Card>

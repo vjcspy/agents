@@ -168,6 +168,17 @@ export class DebateService {
     return this.db.listDebates(opts);
   }
 
+  async deleteDebate(debateId: string): Promise<void> {
+    await this.locks.withLock(debateId, async () => {
+      return await withSqliteBusyRetry(() => {
+        return this.db.runImmediateTransaction(() => {
+          this.db.ensureDebateExists(debateId);
+          this.db.deleteDebate(debateId);
+        });
+      });
+    });
+  }
+
   async waitForResponse(input: {
     debate_id: string;
     argument_id?: string | null;

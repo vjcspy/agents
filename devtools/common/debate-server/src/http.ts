@@ -66,7 +66,7 @@ export function createHttpApp(services: {
   // CORS middleware for debate-web
   app.use((_req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     next();
   });
@@ -161,6 +161,17 @@ export function createHttpApp(services: {
 
       const result = services.debate.getDebateWithArgs(debateId, limit);
       res.status(200).json(ok(result));
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // DELETE /debates/:id
+  app.delete('/debates/:id', async (req, res, next) => {
+    try {
+      const debateId = req.params.id;
+      await services.debate.deleteDebate(debateId);
+      res.status(200).json(ok({ deleted: true }));
     } catch (err) {
       next(err);
     }
