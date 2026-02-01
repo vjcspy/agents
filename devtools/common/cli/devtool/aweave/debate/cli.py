@@ -129,12 +129,12 @@ def _read_content(
 def generate_id(
     fmt: Annotated[OutputFormat, typer.Option("--format", help="Output format")] = OutputFormat.json,
 ) -> None:
-    """Generate a new debate UUID."""
+    """Generate a new UUID for debate operations."""
     new_id = str(uuid.uuid4())
     response = MCPResponse(
         success=True,
-        content=[MCPContent(type=ContentType.JSON, data={"debate_id": new_id})],
-        metadata={"message": "Use this ID with 'aw debate create'"},
+        content=[MCPContent(type=ContentType.JSON, data={"id": new_id})],
+        metadata={"message": "Use this ID for debate_id or client_request_id"},
     )
     _output(response, fmt)
 

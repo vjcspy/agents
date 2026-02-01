@@ -2,6 +2,11 @@
 
 > **Role:** Opponent - Bên phản biện và kiểm định chất lượng đề xuất
 
+## CLI Reference
+
+> **Xem chi tiết đầy đủ về commands, options, và response format tại:**
+> `devdocs/misc/devtools/common/cli/devtool/aweave/debate/OVERVIEW.md`
+
 ## 1. Khởi Động
 
 ### 1.1 Xác Định Ngữ Cảnh
@@ -34,27 +39,16 @@ Khi được yêu cầu làm **Opponent** trong debate:
 ### 2.1 Lấy Context
 
 ```bash
-aw debate get-context --debate-id <debate_id> --argument-limit 20
+CONTEXT=$(aw debate get-context --debate-id $DEBATE_ID --limit 20)
 ```
 
 ### 2.2 Parse Response
 
-```json
-{
-  "debate": {
-    "id": "xxx",
-    "title": "...",
-    "debate_type": "coding_plan_debate",
-    "state": "AWAITING_OPPONENT"
-  },
-  "motion": {
-    "id": "motion-xxx",
-    "type": "MOTION",
-    "role": "proposer",
-    "content": "..."
-  },
-  "arguments": [...]
-}
+```bash
+DEBATE_TYPE=$(echo $CONTEXT | jq -r '.content[0].data.debate.debate_type')
+STATE=$(echo $CONTEXT | jq -r '.content[0].data.debate.state')
+MOTION_ID=$(echo $CONTEXT | jq -r '.content[0].data.motion.id')
+MOTION_CONTENT=$(echo $CONTEXT | jq -r '.content[0].data.motion.content')
 ```
 
 **Thông tin quan trọng:**
@@ -108,8 +102,7 @@ Argument cuối cùng là MOTION từ Proposer.
 ### 3.2 Submit CLAIM Đầu Tiên
 
 ```bash
-# Sử dụng --content (compose trực tiếp)
-aw debate submit \
+CLAIM_RESULT=$(aw debate submit \
   --debate-id $DEBATE_ID \
   --role opponent \
   --target-id $MOTION_ID \
@@ -121,14 +114,25 @@ aw debate submit \
 ## Issues Found
 
 ### C1: [Critical Issue]
-...
+**Problem:** [Mô tả vấn đề]
+**Suggestion:** [Gợi ý cách fix]
+**Severity:** Critical
 
 ### M1: [Major Issue]
-...
+**Problem:** [Mô tả vấn đề]
+**Suggestion:** [Gợi ý cách fix]
+**Severity:** Major
+
+## Positive Points
+
+- [Điểm tốt 1]
+- [Điểm tốt 2]
 
 EOF
 )" \
-  --client-request-id $(aw debate generate-id | jq -r '.content[0].data.id')
+  --client-request-id $(aw debate generate-id | jq -r '.content[0].data.id'))
+
+CLAIM_ID=$(echo $CLAIM_RESULT | jq -r '.content[0].data.argument.id')
 ```
 
 ### 3.3 Wait for Response
@@ -163,6 +167,9 @@ Sau `get-context`, xác định:
 ### 4.3 Khi Cần Wait
 
 ```bash
+# Lấy argument cuối cùng
+LAST_ARG_ID=$(echo $CONTEXT | jq -r '.content[0].data.arguments[-1].id')
+
 aw debate wait \
   --debate-id $DEBATE_ID \
   --argument-id $LAST_ARG_ID \
@@ -173,18 +180,10 @@ aw debate wait \
 
 ### 5.1 Parse Response từ `aw debate wait`
 
-```json
-{
-  "status": "new_argument",
-  "action": "respond",
-  "debate_state": "AWAITING_OPPONENT",
-  "argument": {
-    "id": "xxx",
-    "type": "CLAIM",
-    "role": "proposer",
-    "content": "..."
-  }
-}
+```bash
+ACTION=$(echo $WAIT_RESULT | jq -r '.content[0].data.action')
+PROPOSER_ARG_ID=$(echo $WAIT_RESULT | jq -r '.content[0].data.argument.id')
+ARG_TYPE=$(echo $WAIT_RESULT | jq -r '.content[0].data.argument.type')
 ```
 
 ### 5.2 Action Mapping
@@ -215,10 +214,10 @@ aw debate wait \
    - Proposer disagree? → Xem xét reasoning, có thể accept hoặc counter
    - Vẫn còn issues mới? → Raise tiếp
 
-5. **Submit response (dùng --content):**
+5. **Submit response:**
 
 ```bash
-aw debate submit \
+RESPONSE_RESULT=$(aw debate submit \
   --debate-id $DEBATE_ID \
   --role opponent \
   --target-id $PROPOSER_ARG_ID \
@@ -240,7 +239,9 @@ aw debate submit \
 
 EOF
 )" \
-  --client-request-id $(aw debate generate-id | jq -r '.content[0].data.id')
+  --client-request-id $(aw debate generate-id | jq -r '.content[0].data.id'))
+
+NEW_ARG_ID=$(echo $RESPONSE_RESULT | jq -r '.content[0].data.argument.id')
 ```
 
 6. **Wait tiếp:**
@@ -269,6 +270,13 @@ Khi nhận được argument type `APPEAL`:
 2. **Thông báo:** "Proposer đã yêu cầu Arbitrator phán xử"
 3. **Call `aw debate wait`** với APPEAL argument_id
 4. **Chờ RULING** từ Arbitrator
+
+```bash
+aw debate wait \
+  --debate-id $DEBATE_ID \
+  --argument-id $APPEAL_ID \
+  --role opponent
+```
 
 ## 6. CLAIM Best Practices
 
@@ -372,16 +380,6 @@ Nếu tranh cãi > 3 vòng trên cùng một điểm:
 ## 9. Error Handling
 
 ### 9.1 ACTION_NOT_ALLOWED
-
-```json
-{
-  "error": {
-    "code": "ACTION_NOT_ALLOWED",
-    "current_state": "AWAITING_PROPOSER",
-    "allowed_roles": ["proposer"]
-  }
-}
-```
 
 **Hành động:** Không phải lượt mình → Call `aw debate wait`
 
