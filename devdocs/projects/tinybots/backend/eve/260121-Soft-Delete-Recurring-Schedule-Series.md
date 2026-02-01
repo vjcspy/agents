@@ -147,8 +147,21 @@ int deleteScheduledScripts(@Bind("scriptId") Long scriptId, @Bind("robotId") Lon
   - 2026-05-06 09:00 → ❌ Removed
 
 **Timezone Handling**:
-- `fromDate` MUST be interpreted in robot's timezone (from `X-Time-Zone` header)
-- Mapper converts to `ZonedDateTime` using robot TZ before storing as `end_at`
+- `fromDate` MUST be provided as ISO8601 with offset (e.g., `2026-05-05T00:00:00+02:00`)
+- Resource layer normalizes `fromDate` to robot's timezone (from `X-Time-Zone` header) using `withZoneSameInstant()`
+- Service layer computes "now" in robot timezone for consistent validation
+- Database stores `end_at` as UTC (via JDBI's ZonedDateTime handling)
+- Invalid format (missing offset, malformed string) → **400 Bad Request**
+
+**DST Handling**:
+- All comparisons use `Instant` (epoch-based) to avoid DST ambiguity
+- Example: If robot TZ is Europe/Amsterdam and `fromDate=2026-03-29T02:30:00+01:00` (during DST gap), the Instant comparison will still work correctly
+
+**Offset vs X-Time-Zone Semantics**:
+- Client-provided offset is treated as the source of truth for the absolute instant
+- `withZoneSameInstant(robotTz)` preserves the instant, only changes zone representation for logging/display
+- **Allowed behavior**: Client may send any valid offset; system normalizes to robot TZ internally
+- **Rationale**: Clients like mobile apps may not know robot's exact TZ offset (especially during DST transitions). Accepting any valid ISO8601+offset is more flexible and less error-prone than requiring exact offset match.
 
 #### 5. Idempotency & No-op Behavior
 
@@ -277,15 +290,26 @@ int updateScheduleEndAt(@Bind("scheduleId") Long scheduleId, @Bind("endAt") Zone
 **File**: `eve/src/main/java/nl/tinybots/eve/service/ScheduleService.java`
 
 ```java
+/**
+ * Delete a scheduled task.
+ * 
+ * @param task       Task with id, optional time (single occurrence), optional fromDate (series soft delete)
+ * @param robot      Robot owning the schedule
+ * @param robotTz    Robot's timezone (from X-Time-Zone header)
+ * @return List of remaining tasks (empty for soft delete)
+ */
 @Transaction  // Ensure atomicity
-public List<Task> delete(@NonNull Task task, @NonNull Robot robot, 
-                         @NonNull ZonedDateTime now, DateTimeZone robotTz) {
+public List<Task> delete(@NonNull Task task, @NonNull Robot robot, DateTimeZone robotTz) {
     Task toBeDeleted = taskRepository.findRobotTaskById(robot.getId(), task.getId());
     if (toBeDeleted == null) {
         throw new NotFoundException("Schedule not found for robot");
     }
 
-    toBeDeleted.getSchedule().setTimeZone(ZoneId.of(robotTz.getID()));
+    ZoneId robotZoneId = ZoneId.of(robotTz.getID());
+    toBeDeleted.getSchedule().setTimeZone(robotZoneId);
+    
+    // Compute "now" in robot timezone for consistent validation
+    ZonedDateTime nowInRobotTz = ZonedDateTime.now(robotZoneId);
 
     // Case 1: Delete single occurrence (existing behavior - unchanged)
     if (task.getTime() != null) {
@@ -293,15 +317,17 @@ public List<Task> delete(@NonNull Task task, @NonNull Robot robot,
     }
     
     // Case 2: Soft delete series from a specific date
-    // Convert fromDate (API) to endAt (DB) - same value, different naming context
-    ZonedDateTime endAt = task.getFromDate() != null ? task.getFromDate() : now;
+    // fromDate should already be normalized to robot TZ by resource layer
+    // If not provided, default to NOW in robot timezone
+    ZonedDateTime endAt = task.getFromDate() != null ? task.getFromDate() : nowInRobotTz;
     
-    // Validate: endAt must not be in the past (DTO @InFutureOrPresent should catch this, but double-check)
-    if (endAt.isBefore(now)) {
+    // Validate: endAt must not be in the past (compared in robot timezone)
+    // Use Instant comparison to handle DST edge cases correctly
+    if (endAt.toInstant().isBefore(nowInRobotTz.toInstant())) {
         throw new BadRequestException("Cannot delete schedule series from a past date");
     }
     
-    // Soft delete by setting end_at
+    // Soft delete by setting end_at (stored as UTC in database)
     Long scheduleId = toBeDeleted.getSchedule().getId();
     int updated = taskRepository.updateScheduleEndAt(scheduleId, endAt);
     
@@ -337,14 +363,30 @@ public void deleteScheduledTask(
     DateTimeZone robotTz = robotTimeZoneService.getRobotTimeZone(robot);
     ResourceUtils.checkTimezone(robotTz, timeZoneId);
 
-    // Support both: query param and body (query param takes precedence for clients that can't send DELETE body)
-    if (fromDateParam != null && taskDto.getFromDate() == null) {
-        taskDto.setFromDate(ZonedDateTime.parse(fromDateParam));
+    // Parse and validate fromDate
+    // Priority: query param > body (for clients that can't send DELETE body)
+    ZonedDateTime fromDate = null;
+    if (fromDateParam != null) {
+        try {
+            fromDate = ZonedDateTime.parse(fromDateParam);
+        } catch (DateTimeParseException e) {
+            throw new BadRequestException("Invalid fromDate format. Expected ISO8601 with offset (e.g., 2026-05-05T00:00:00+02:00)");
+        }
+    } else if (taskDto.getFromDate() != null) {
+        fromDate = taskDto.getFromDate();
+    }
+    
+    // Normalize to robot timezone before processing
+    if (fromDate != null) {
+        ZoneId robotZoneId = ZoneId.of(robotTz.getID());
+        fromDate = fromDate.withZoneSameInstant(robotZoneId);
+        taskDto.setFromDate(fromDate);
     }
 
     Task task = taskIdentifierDtoMapper.map(taskDto, robot, robotTz);
     task.setRobotId(robotId);
     
+    // Note: Service computes "now" internally using robot timezone
     scheduleService.delete(task, robot, robotTz);
     changeNotificationService.notifyChange(robot);
 }
@@ -481,6 +523,39 @@ public void softDeleteWithQueryParam_shouldWork() {
 }
 
 @Test
+public void softDeleteWithInvalidFromDateFormat_shouldReturn400() {
+    // When: Delete using invalid fromDate format (missing offset)
+    given()
+        .contentType(ContentType.JSON)
+        .header("X-Time-Zone", "Europe/Amsterdam")
+        .queryParam("fromDate", "2026-05-05T00:00:00")  // Missing offset!
+        .body("{\"id\": " + scheduleId + "}")
+        .delete("/v4/schedules/" + robotId)
+    .then()
+        .statusCode(400)
+        .body("message", containsString("Invalid fromDate format"));
+}
+
+@Test
+public void softDeleteQueryParamPrecedence_shouldOverrideBody() {
+    // Given: Different dates in query param vs body
+    String queryDate = ZonedDateTime.now(NL).plusDays(7).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+    String bodyDate = ZonedDateTime.now(NL).plusDays(14).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+    
+    // When: Delete with both query param and body fromDate
+    given()
+        .contentType(ContentType.JSON)
+        .header("X-Time-Zone", "Europe/Amsterdam")
+        .queryParam("fromDate", queryDate)
+        .body("{\"id\": " + scheduleId + ", \"fromDate\": \"" + bodyDate + "\"}")
+        .delete("/v4/schedules/" + robotId)
+    .then()
+        .statusCode(204);
+    
+    // Then: end_at should be set to queryDate (7 days), NOT bodyDate (14 days)
+}
+
+@Test
 @DataSet("data/DeleteV4ScheduleResourceIT/recurringScheduleWithExecutions.sql")
 public void softDeleteBoundary_shouldBeExclusive() {
     // Given: Schedule with occurrences at 09:00 daily
@@ -506,7 +581,59 @@ public void softDeleteBoundary_shouldBeExclusive() {
 }
 ```
 
-### Phase 4: Testing Checklist
+### Phase 4: API Documentation Update
+
+**File**: `docs/eve.yaml` (OpenAPI spec)
+
+Update the DELETE `/v4/schedules/{robotId}` endpoint:
+
+```yaml
+delete:
+  summary: Delete a scheduled task
+  description: |
+    Delete a scheduled task. For recurring schedules, this performs a soft delete
+    by setting end_at to preserve historical executions.
+  parameters:
+    - name: robotId
+      in: path
+      required: true
+      schema:
+        type: integer
+    - name: fromDate
+      in: query
+      required: false
+      description: |
+        ISO8601 datetime with offset. Soft delete series from this date onwards.
+        If not provided, defaults to NOW. Must be present or future.
+      schema:
+        type: string
+        format: date-time
+      example: "2026-05-05T00:00:00+02:00"
+  requestBody:
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - id
+          properties:
+            id:
+              type: integer
+              description: Schedule ID
+            fromDate:
+              type: string
+              format: date-time
+              description: Alternative to query param. Query param takes precedence.
+  responses:
+    204:
+      description: Schedule deleted (or no-op if already ended)
+    400:
+      description: Invalid fromDate (past date or invalid format)
+    404:
+      description: Schedule not found
+```
+
+### Phase 5: Testing Checklist
 
 - [ ] Unit tests for `ScheduleService.delete()` with `fromDate`
 - [ ] Integration test: Soft delete from future date preserves executions
@@ -515,8 +642,11 @@ public void softDeleteBoundary_shouldBeExclusive() {
 - [ ] Integration test: Single occurrence delete still works (regression)
 - [ ] Integration test: **No-op returns 204** (already ended schedule)
 - [ ] Integration test: **Query param** `?fromDate=...` works
+- [ ] Integration test: **Query param takes precedence** over body `fromDate`
+- [ ] Integration test: **Invalid fromDate format** returns 400 with clear message
 - [ ] Integration test: **Boundary semantics** (exclusive, occurrences >= fromDate removed)
-- [ ] Integration test: **Timezone handling** (fromDate interpreted in robot TZ)
+- [ ] Integration test: **Timezone handling** (fromDate normalized to robot TZ)
+- [ ] Integration test: **DST edge case** (fromDate during DST transition works correctly)
 - [ ] Manual test on staging: Create recurring task → Execute → Delete series → Verify executions remain
 
 ## 📊 Summary of Results
@@ -546,8 +676,18 @@ public void softDeleteBoundary_shouldBeExclusive() {
 
 ### ⚠️ Open Questions (for Stakeholder)
 
-1. **API Contract Change**: Adding `fromDate` to request body is backward compatible, but should we document this change in API specs (`docs/eve.yaml`)?
+1. **~~API Contract Change~~**: ✅ Resolved - Added Phase 4 with OpenAPI spec update for `docs/eve.yaml`.
 
 2. **Frontend Update**: Does `my.tinybots.academy` need to be updated to pass `fromDate` when user selects a specific date to delete from? Or should it always default to NOW?
 
 3. **Notification**: Should we notify user/admin when a series is soft-deleted vs hard-deleted?
+
+### 📝 Technical Notes (from Review)
+
+**Assumptions to verify from actual `eve` codebase:**
+
+1. **DELETE body support**: Dropwizard typically supports DELETE request bodies. The plan adds query param support (`?fromDate=...`) as fallback for clients that don't support DELETE bodies. *Need to verify current client behavior.*
+
+2. **`task_schedule.end_at` storage format**: Assumed to be **UTC** (standard JDBI ZonedDateTime handling). The code normalizes all comparisons using `Instant` to avoid timezone confusion. *Need to verify actual column type and JDBI config.*
+
+3. **`@FutureOrPresent` validator**: Plan uses javax.validation's standard `@FutureOrPresent`. If not available, will need custom `@InFutureOrPresent` validator. The service layer also includes runtime validation as defense-in-depth.
