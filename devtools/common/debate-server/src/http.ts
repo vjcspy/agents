@@ -63,6 +63,18 @@ export function createHttpApp(services: {
 
   app.use(express.json({ limit: config.maxContentLength + 1024 }));
 
+  // CORS middleware for debate-web
+  app.use((_req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    next();
+  });
+
+  app.options('*', (_req, res) => {
+    res.status(204).end();
+  });
+
   app.use((req, _res, next) => {
     try {
       requireAuth(req);
