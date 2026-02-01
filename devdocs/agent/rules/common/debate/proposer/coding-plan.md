@@ -13,85 +13,125 @@
 
 ## 2. MOTION Content Structure
 
-Khi tạo debate mới, MOTION PHẢI bao gồm:
+> **QUAN TRỌNG:** Plan file đã có đầy đủ chi tiết theo template `create-plan.md` (References, Objective, Key Considerations, Implementation Plan phases, etc.). 
+> 
+> **MOTION chỉ cần summary cực ngắn + yêu cầu đọc full document.**
 
 ```markdown
-## Overview
+## Request for Review
 
-[Mô tả ngắn gọn feature/task cần implement]
+[1-2 câu mô tả mục đích - ví dụ: "Cần review plan cho Feature X trước khi implement"]
 
-## Context
+## Document
 
-- **Project:** [Tên project/repo]
-- **Related files:** [Paths liên quan]
-- **Dependencies:** [Dependencies cần thiết]
+- **Plan:** doc_id=xxx-xxx (v1)
+- Command: `aw docs get --id xxx-xxx`
 
-## Proposed Approach
+## Action Required
 
-### Architecture/Design
+Vui lòng đọc **TOÀN BỘ** plan document và review.
 
-[Mô tả high-level design]
+## Focus Areas (optional)
 
-### Implementation Steps
-
-1. **Step 1:** [Mô tả]
-   - Files affected: [...]
-   - Changes: [...]
-
-2. **Step 2:** [Mô tả]
-   ...
-
-### Technical Decisions
-
-| Decision | Choice | Reasoning |
-|----------|--------|-----------|
-| [Decision 1] | [Choice] | [Why] |
-| [Decision 2] | [Choice] | [Why] |
-
-## Risks & Mitigations
-
-| Risk | Mitigation |
-|------|------------|
-| [Risk 1] | [How to mitigate] |
-
-## Out of Scope
-
-- [Item 1]
-- [Item 2]
-
-## References
-
-- Full implementation details: doc_id=xxx (nếu có)
+[Nếu muốn Opponent chú ý đặc biệt vào sections nào]
 ```
 
-## 3. Response Guidelines
+**KHÔNG bao gồm trong MOTION:**
+- ❌ Context, requirements (đã có trong plan)
+- ❌ Implementation steps (đã có trong plan)  
+- ❌ Technical decisions (đã có trong plan)
+- ❌ Risks (đã có trong plan)
 
-### 3.1 Khi Opponent Raise Valid Issue
+**Lý do:** Tránh duplicate, giữ argument lean, single source of truth là document
 
-**Hành động:**
+## 3. Document Update Workflow (QUAN TRỌNG)
+
+### 3.1 Nguyên Tắc Cốt Lõi
+
+| Rule | Mô tả |
+|------|-------|
+| **Local-first** | Document chính (plan.md) sống ở local, edit trực tiếp |
+| **Version on change** | Mỗi lần sửa document → PHẢI submit version mới |
+| **Notify Opponent** | Response PHẢI include info về version update |
+
+### 3.2 Workflow Khi Accept Valid Feedback
+
+```
+Step 1: Đọc CLAIM từ Opponent
+        ↓
+Step 2: Xác định issues cần address
+        ↓
+Step 3: Edit file ./plan.md trực tiếp ở local
+        ↓
+Step 4: Submit new version
+        $ aw docs submit --id <doc_id> --file ./plan.md
+        → Response: { "version": N }
+        ↓
+Step 5: Submit CLAIM response kèm version info
+```
+
+### 3.3 Response Format (Có Document Update)
+
+> **Nguyên tắc:** Response ngắn gọn, KHÔNG giải thích chi tiết đã sửa gì. Document đã có đầy đủ - yêu cầu Opponent đọc lại.
+
+```markdown
+## Response to Opponent's Review
+
+### Issue Status
+
+| Issue | Status | Note |
+|-------|--------|------|
+| C1: [Name] | ✅ Accepted | - |
+| M1: [Name] | ✅ Accepted | - |
+| M2: [Name] | ❌ Disagree | [1 câu lý do ngắn] |
+
+### Document Updated
+
+- **doc_id=xxx:** v1 → **v2**
+
+### Action Required
+
+**Vui lòng đọc lại TOÀN BỘ document đã update** để:
+1. Verify các issues đã được address
+2. Continue review nếu còn concerns
+
+Command: `aw docs get --id xxx`
+
+---
+
+## Document Version Summary
+
+| Document | Previous | Current | Changes |
+|----------|----------|---------|---------|
+| doc_id=xxx (plan.md) | v1 | v2 | Fixed C1, M1 |
+
+**Verify changes:** `aw docs get --id xxx`
+```
+
+## 4. Response Guidelines
+
+### 4.1 Khi Opponent Raise Valid Issue
+
+**Hành động (theo thứ tự):**
 1. Acknowledge issue
 2. Analyze impact
-3. Propose revision
-4. Update plan accordingly
+3. **Edit document ở local**
+4. **Submit new version** (`aw docs submit`)
+5. Compose response với version info
 
 **Response format:**
 
 ```markdown
 ## Response to [Issue Name]
 
-**Acknowledgment:** Đồng ý, đây là valid concern vì [reasoning]
+**Status:** ✅ Accepted
 
-**Impact Analysis:** 
-- [Impact 1]
-- [Impact 2]
+**Document:** doc_id=xxx updated to **v2**
 
-**Revised Approach:**
-[Mô tả cách revise]
-
-## Updated Plan Section
-
-[Section đã được update]
+**Action Required:** Vui lòng đọc lại document để verify change.
 ```
+
+> **KHÔNG cần:** Impact analysis, summary of change, chi tiết đã sửa gì. Document đã có đầy đủ - Opponent đọc trực tiếp sẽ rõ hơn.
 
 ### 3.2 Khi Opponent Raise Invalid/Unclear Issue
 
@@ -130,37 +170,58 @@ Trước khi address [Issue], tôi cần hiểu rõ hơn:
 Vui lòng clarify để tôi có thể respond accurately.
 ```
 
-## 4. Revise Guidelines
+## 5. Revise Guidelines
 
-### 4.1 Khi Nào Revise?
+### 5.1 Khi Nào Revise?
 
-| Scenario | Action |
-|----------|--------|
-| Technical flaw được point out | Revise immediately |
-| Better alternative suggested | Evaluate và revise nếu better |
-| Missing edge case | Add handling |
-| Unclear documentation | Clarify và update |
-| Style preference | Không cần revise trừ khi có strong reason |
+| Scenario | Action | Submit Version? |
+|----------|--------|-----------------|
+| Technical flaw được point out | Revise immediately | ✅ Yes |
+| Better alternative suggested | Evaluate và revise nếu better | ✅ Yes |
+| Missing edge case | Add handling | ✅ Yes |
+| Unclear documentation | Clarify và update | ✅ Yes |
+| Style preference | Không cần revise trừ khi có strong reason | ❌ No |
 
-### 4.2 Revise Tracking
-
-Khi revise, LUÔN track changes:
+### 5.2 Revise Tracking (trong Response)
 
 ```markdown
 ## Changes in This Revision
 
-| Section | Change | Reason |
-|---------|--------|--------|
-| [Section 1] | [What changed] | [Why] |
-| [Section 2] | [What changed] | [Why] |
+| Section | Change | Reason | Doc Version |
+|---------|--------|--------|-------------|
+| [Section 1] | [What changed] | [Why] | v1 → v2 |
+| [Section 2] | [What changed] | [Why] | v1 → v2 |
 
-## Current Outstanding Issues
+## Document Updates
+
+- **doc_id=xxx (plan.md):** v1 → v2
+- Verify: `aw docs get --id xxx`
+
+## Outstanding Issues
 
 - [ ] [Issue still being discussed]
 - [x] [Issue resolved in this revision]
 ```
 
-## 5. APPEAL Guidelines
+### 5.3 Anti-pattern: Sửa Mà Không Submit Version
+
+❌ **KHÔNG LÀM:**
+```
+1. Edit ./plan.md
+2. Submit response nói "đã sửa"
+3. Quên submit version
+→ Opponent không có cách verify!
+```
+
+✅ **LUÔN LÀM:**
+```
+1. Edit ./plan.md
+2. aw docs submit --id xxx --file ./plan.md → v2
+3. Submit response kèm "doc_id=xxx updated to v2"
+→ Opponent có thể verify changes
+```
+
+## 6. APPEAL Guidelines
 
 ### 5.1 Khi Nào APPEAL?
 
@@ -223,7 +284,7 @@ Khi revise, LUÔN track changes:
 - Team expertise: [Relevant info]
 ```
 
-## 6. Request Completion Guidelines
+## 7. Request Completion Guidelines
 
 ### 6.1 Khi Nào Request?
 
@@ -262,7 +323,7 @@ Khi revise, LUÔN track changes:
 2. [ ] [Other action items]
 ```
 
-## 7. Quality Checklist
+## 8. Quality Checklist
 
 Trước mỗi submission, verify:
 
@@ -272,8 +333,11 @@ Trước mỗi submission, verify:
 - [ ] No contradictions với previous statements?
 - [ ] Changes tracked properly?
 - [ ] Tone professional và constructive?
+- [ ] **Đã edit document ở local chưa?** (nếu accept feedback)
+- [ ] **Đã `aw docs submit` để tạo version mới chưa?**
+- [ ] **Response có include version info cho Opponent verify?**
 
-## 8. Anti-patterns to Avoid
+## 9. Anti-patterns to Avoid
 
 | Anti-pattern | Why Bad | Instead |
 |--------------|---------|---------|
@@ -283,3 +347,6 @@ Trước mỗi submission, verify:
 | Changing without explaining | Confusing | Track all changes |
 | APPEAL quá sớm | Waste Arbitrator time | Try to resolve first |
 | APPEAL quá muộn | Deadlock | APPEAL khi cần |
+| **Sửa doc mà không submit version** | Opponent không verify được | LUÔN `aw docs submit` sau edit |
+| **Paste full doc vào argument** | Bloat, khó track changes | Chỉ summary + doc_id reference |
+| **Tạo file mới mỗi response** | Clutter, khó manage | Dùng `--content` hoặc file cố định |

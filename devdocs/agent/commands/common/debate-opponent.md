@@ -22,12 +22,12 @@ Khi được yêu cầu làm **Opponent** trong debate:
 | `aw debate submit` | Submit CLAIM phản biện |
 | `aw debate wait` | Chờ response từ Proposer/Arbitrator |
 | `aw docs get` | Lấy document content từ doc_id |
-| `aw docs create` | Tạo document (nếu cần share tài liệu) |
 
 **KHÔNG được sử dụng (chỉ dành cho Proposer):**
 - `aw debate create`
 - `aw debate appeal`
 - `aw debate request-completion`
+- `aw docs create` / `aw docs submit` (Opponent không tạo/update document)
 
 ## 2. Join Debate
 
@@ -90,11 +90,14 @@ Argument cuối cùng là MOTION từ Proposer.
 
 **Workflow:**
 
-1. **Đọc kỹ MOTION content**
-2. **Nếu có doc_id references:**
+1. **Đọc MOTION content** - thường chỉ là summary ngắn
+2. **ĐỌC TOÀN BỘ DOCUMENT được reference (QUAN TRỌNG):**
    ```bash
+   # MOTION sẽ chứa doc_id reference
    aw docs get --id <doc_id>
    ```
+   > **LƯU Ý:** Document (plan) chứa đầy đủ context, requirements, implementation details. PHẢI đọc full document, không chỉ MOTION summary.
+   
 3. **Load rule file** theo `debate_type`
 4. **Thực hiện additional context gathering** nếu cần:
    - Scan folders liên quan
@@ -105,11 +108,26 @@ Argument cuối cùng là MOTION từ Proposer.
 ### 3.2 Submit CLAIM Đầu Tiên
 
 ```bash
+# Sử dụng --content (compose trực tiếp)
 aw debate submit \
   --debate-id $DEBATE_ID \
   --role opponent \
   --target-id $MOTION_ID \
-  --file ./claim.md \
+  --content "$(cat <<'EOF'
+## Review Summary
+
+[Tóm tắt assessment]
+
+## Issues Found
+
+### C1: [Critical Issue]
+...
+
+### M1: [Major Issue]
+...
+
+EOF
+)" \
   --client-request-id $(aw debate generate-id | jq -r '.content[0].data.id')
 ```
 
@@ -182,22 +200,46 @@ aw debate wait \
 
 **Workflow:**
 
-1. **Đọc kỹ CLAIM** của Proposer
-2. **So sánh với claims trước** - Proposer đã address đầy đủ chưa?
+1. **Đọc CLAIM** của Proposer - thường là summary ngắn
+2. **NẾU có document update (QUAN TRỌNG):**
+   ```bash
+   # Proposer sẽ nói "doc_id=xxx updated to v2"
+   aw docs get --id <doc_id>
+   ```
+   > **PHẢI đọc lại TOÀN BỘ document** để verify changes, không chỉ dựa vào CLAIM summary
+   
 3. **Load rule file** để đánh giá theo đúng nghiệp vụ
 4. **Phân tích:**
-   - Proposer đã revise hợp lý? → Acknowledge và tiếp tục review các điểm khác
-   - Proposer phản biện lại? → Xem xét logic, có thể accept hoặc counter
-   - Vẫn còn issues? → Raise tiếp
+   - Proposer đã revise đúng? → Acknowledge issue resolved
+   - Revise chưa đủ? → Request thêm changes
+   - Proposer disagree? → Xem xét reasoning, có thể accept hoặc counter
+   - Vẫn còn issues mới? → Raise tiếp
 
-5. **Submit response:**
+5. **Submit response (dùng --content):**
 
 ```bash
 aw debate submit \
   --debate-id $DEBATE_ID \
   --role opponent \
   --target-id $PROPOSER_ARG_ID \
-  --file ./response.md \
+  --content "$(cat <<'EOF'
+## Review of Updated Document (v2)
+
+### Resolved Issues
+
+- ✅ **C1:** [Issue] - Verified fixed
+- ✅ **M1:** [Issue] - Verified fixed
+
+### Remaining Issues
+
+- ❌ **M2:** [Issue] - Still not addressed / Need more work
+
+### New Issues (if any)
+
+- **N1:** [New issue found in v2]
+
+EOF
+)" \
   --client-request-id $(aw debate generate-id | jq -r '.content[0].data.id')
 ```
 
@@ -280,17 +322,17 @@ Khi nhận được argument type `APPEAL`:
 
 ### 7.1 Cần Thêm Thông Tin
 
-Nếu cần Proposer cung cấp thêm context:
+Nếu cần Proposer cung cấp thêm context, yêu cầu trong CLAIM:
 
 ```markdown
 ## Request for Additional Information
 
-Để đánh giá đầy đủ, tôi cần:
+Để đánh giá đầy đủ, tôi cần Proposer cung cấp:
 
 1. **[Loại thông tin]** - [Lý do cần]
 2. **[Document/Code]** - [Mô tả]
 
-Vui lòng sử dụng `aw docs create` để upload và share `doc_id`.
+Proposer vui lòng upload document và share `doc_id` để tôi có thể review.
 ```
 
 ### 7.2 INTERVENTION từ Arbitrator

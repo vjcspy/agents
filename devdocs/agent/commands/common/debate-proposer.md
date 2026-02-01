@@ -27,9 +27,36 @@ Khi được yêu cầu làm **Proposer** trong debate, PHẢI xác định rõ:
 | `aw debate wait` | Chờ response từ Opponent/Arbitrator |
 | `aw debate appeal` | Yêu cầu Arbitrator phán xử |
 | `aw debate request-completion` | Yêu cầu kết thúc debate |
-| `aw docs create` | Tạo document mới (cho tài liệu dài) |
-| `aw docs submit` | Update document version |
+| `aw docs create` | Tạo document mới (lần đầu upload) |
+| `aw docs submit` | **Update document version** (sau khi sửa local) |
 | `aw docs get` | Lấy document content |
+
+### 1.3 Document Management - QUAN TRỌNG
+
+**Nguyên tắc cốt lõi:**
+
+1. **Document sống ở LOCAL** - Proposer làm việc trực tiếp trên file local (ví dụ: `./plan.md`)
+2. **`aw docs` để versioning** - Mỗi khi có thay đổi → submit để lưu version
+3. **Argument chỉ chứa summary + doc_id** - KHÔNG paste toàn bộ content vào argument
+
+**Workflow:**
+
+```
+File local: ./plan.md
+        ↓
+Tạo debate → aw docs create → doc_id=xxx (version 1)
+        ↓
+Opponent feedback → Sửa ./plan.md trực tiếp
+        ↓
+aw docs submit --id xxx --file ./plan.md → version 2
+        ↓
+Submit CLAIM response kèm: "Updated doc_id=xxx to v2"
+```
+
+**LUÔN LUÔN submit version mới sau khi sửa document!** Đây là cách:
+- Giữ audit trail của mọi thay đổi
+- Opponent có thể verify changes
+- Rollback nếu cần
 
 ## 2. Tạo Debate Mới
 
@@ -57,32 +84,39 @@ DEBATE_ID=$(aw debate generate-id | jq -r '.content[0].data.id')
 CLIENT_REQ_ID=$(aw debate generate-id | jq -r '.content[0].data.id')
 ```
 
-**Step 2: Chuẩn bị MOTION Content**
+**Step 2: Chuẩn bị Document và MOTION**
 
-MOTION content PHẢI bao gồm:
-- **Tiêu đề/Vấn đề chính** cần debate
-- **Context đầy đủ** để Opponent hiểu
-- **Nếu có tài liệu dài**: Sử dụng `aw docs create` và include `doc_id` trong content
+**2a. Upload document chính (nếu có):**
 
 ```bash
-# Nếu có tài liệu dài (>5KB), upload trước
-aw docs create --file ./detailed-plan.md --title "Implementation Plan v1"
-# Response: { "doc_id": "xxx-xxx" }
+# Upload file plan đang có ở local
+aw docs create --file ./plan.md --title "Implementation Plan"
+# Response: { "doc_id": "xxx-xxx", "version": 1 }
+```
 
-# MOTION content format
-"""
-## Vấn đề cần debate
+> **LƯU Ý:** File `./plan.md` vẫn giữ ở local - đây là file bạn sẽ edit trực tiếp khi nhận feedback
 
-[Mô tả ngắn gọn vấn đề]
+**2b. Compose MOTION content:**
 
-## Chi tiết
+> **QUAN TRỌNG:** Plan file đã có đầy đủ context, requirements, implementation details (theo template `create-plan.md`). MOTION chỉ cần **summary cực ngắn + yêu cầu đọc full document**.
 
-[Summary của proposal]
+```
+## Request for Review
 
-## Tài liệu tham khảo
+[1-2 câu mô tả mục đích debate]
 
-- Full implementation plan: doc_id=xxx-xxx (use `aw docs get --id xxx-xxx` to view)
-"""
+## Document
+
+- **Plan:** doc_id=xxx-xxx (v1)
+- Command: `aw docs get --id xxx-xxx`
+
+## Action Required
+
+Vui lòng đọc **TOÀN BỘ** document trên và review theo debateType `coding_plan_debate`.
+
+## Focus Areas (optional)
+
+[Nếu muốn Opponent focus vào specific sections]
 ```
 
 **Step 3: Create Debate**
@@ -90,9 +124,24 @@ aw docs create --file ./detailed-plan.md --title "Implementation Plan v1"
 ```bash
 aw debate create \
   --debate-id $DEBATE_ID \
-  --title "Tiêu đề debate" \
+  --title "Review: Implementation Plan for Feature X" \
   --debate-type coding_plan_debate \
-  --file ./motion.md \
+  --content "$(cat <<'EOF'
+## Request for Review
+
+Cần review implementation plan cho Feature X trước khi implement.
+
+## Document
+
+- **Plan:** doc_id=xxx-xxx (v1)
+- Command: `aw docs get --id xxx-xxx`
+
+## Action Required
+
+Vui lòng đọc TOÀN BỘ plan và review.
+
+EOF
+)" \
   --client-request-id $CLIENT_REQ_ID
 ```
 
@@ -185,24 +234,58 @@ ELIF state == "INTERVENTION_PENDING":
 
 1. **Đọc kỹ CLAIM** của Opponent
 2. **Load rule file** theo debateType để xử lý đúng nghiệp vụ
-3. **Đánh giá CLAIM:**
-   - **Hợp lý** → Chấp nhận và revise proposal
-   - **Không hợp lý** → Phản biện lại
+3. **Đánh giá từng issue trong CLAIM:**
+   - **Hợp lý** → **Sửa document ở local** → Submit new version → Ghi nhận trong response
+   - **Không hợp lý** → Phản biện lại với reasoning
    - **Không thể thống nhất** → APPEAL (Section 5)
    - **Đã đồng ý hết** → REQUEST COMPLETION (Section 6)
 
-4. **Submit response:**
+4. **Nếu có sửa document (QUAN TRỌNG):**
+
+```bash
+# 4a. Edit file local trực tiếp (dùng editor/tool của bạn)
+# Ví dụ: sửa ./plan.md theo feedback
+
+# 4b. Submit new version
+aw docs submit --id $DOC_ID --file ./plan.md
+# Response: { "version": 2 }
+```
+
+5. **Submit response (dùng --content):**
 
 ```bash
 aw debate submit \
   --debate-id $DEBATE_ID \
   --role proposer \
   --target-id $OPPONENT_ARG_ID \
-  --file ./response.md \
+  --content "$(cat <<'EOF'
+## Response to Opponent's CLAIM
+
+### Issue C1: [Tên issue]
+**Status:** ✅ Accepted
+
+### Issue M1: [Tên issue]  
+**Status:** ❌ Disagree
+**Reasoning:** [Giải thích ngắn gọn]
+
+## Document Updated
+
+- **doc_id=xxx-xxx:** v1 → **v2**
+
+## Action Required
+
+**Vui lòng đọc lại TOÀN BỘ document đã update** để verify changes và continue review.
+
+Command: `aw docs get --id xxx-xxx`
+
+EOF
+)" \
   --client-request-id $(aw debate generate-id | jq -r '.content[0].data.id')
 ```
 
-5. **Wait tiếp:**
+> **LƯU Ý:** KHÔNG cần giải thích chi tiết đã sửa gì - document đã có đầy đủ. Chỉ cần yêu cầu Opponent đọc lại.
+
+6. **Wait tiếp:**
 
 ```bash
 aw debate wait \
@@ -259,10 +342,32 @@ Khi `action = "align_to_ruling"`:
 ```
 
 ```bash
+# Sử dụng --content (compose trực tiếp, không cần tạo file)
 aw debate appeal \
   --debate-id $DEBATE_ID \
   --target-id $DISPUTED_ARG_ID \
-  --file ./appeal.md \
+  --content "$(cat <<'EOF'
+## Context
+
+[Mô tả ngắn gọn điểm tranh chấp]
+
+## Lập trường Proposer
+
+[Quan điểm của tôi]
+
+## Lập trường Opponent
+
+[Quan điểm của Opponent]
+
+## Các phương án đề xuất
+
+1. **Option A:** [Theo hướng Proposer]
+2. **Option B:** [Theo hướng Opponent]
+3. **Option C:** [Phương án dung hòa]
+4. **Option D:** Arbitrator đưa ra phương án khác
+
+EOF
+)" \
   --client-request-id $(aw debate generate-id | jq -r '.content[0].data.id')
 ```
 
@@ -294,10 +399,32 @@ aw debate appeal \
 ```
 
 ```bash
+# Sử dụng --content (compose trực tiếp)
 aw debate request-completion \
   --debate-id $DEBATE_ID \
   --target-id $LAST_ARG_ID \
-  --file ./resolution.md \
+  --content "$(cat <<'EOF'
+## Summary
+
+[Tóm tắt các điểm đã thống nhất]
+
+## Final Agreement
+
+[Nội dung cuối cùng đã đồng thuận]
+
+## Final Document Versions
+
+| Document | Final Version |
+|----------|---------------|
+| doc_id=xxx | v3 |
+
+## Action Items (nếu có)
+
+- [ ] Item 1
+- [ ] Item 2
+
+EOF
+)" \
   --client-request-id $(aw debate generate-id | jq -r '.content[0].data.id')
 ```
 
@@ -348,23 +475,49 @@ aw debate request-completion \
 
 ## 9. Best Practices
 
-### 9.1 Document Sharing
+### 9.1 Document Management (QUAN TRỌNG)
 
-- **Content ngắn (<5KB):** Include trực tiếp trong argument
-- **Content dài (>5KB):** Dùng `aw docs create`, share doc_id
+**Nguyên tắc:**
+- **Document chính sống ở LOCAL** - Edit trực tiếp, không tạo file mới
+- **Mỗi lần sửa → Submit version** - `aw docs submit` sau mỗi lần edit
+- **Argument chỉ chứa summary** - Reference doc_id, không paste content
 
-### 9.2 Response Quality
+**Workflow khi accept feedback:**
+```
+1. Edit ./plan.md ở local
+2. aw docs submit --id xxx --file ./plan.md → v2
+3. Submit CLAIM response kèm: "Updated doc_id=xxx to v2"
+```
+
+**KHÔNG làm:**
+- ❌ Paste toàn bộ document vào argument
+- ❌ Sửa document mà không submit version mới
+- ❌ Tạo file mới mỗi lần response
+
+### 9.2 Content Submission
+
+**Dùng `--content` cho:**
+- CLAIM responses (compose trực tiếp)
+- APPEAL content
+- Resolution summary
+
+**Dùng `--file` khi:**
+- Đã có file sẵn (ví dụ: MOTION từ existing plan)
+- Content quá dài để compose inline
+
+### 9.3 Response Quality
 
 - Phản hồi có cấu trúc rõ ràng
 - Address từng point của Opponent
 - Đưa ra reasoning cho mỗi quyết định
+- **LUÔN include document version info** khi có update
 
-### 9.3 Khi Không Chắc Chắn
+### 9.4 Khi Không Chắc Chắn
 
 - KHÔNG đoán mò - APPEAL để Arbitrator quyết định
 - Cung cấp đầy đủ context trong APPEAL
 
-### 9.4 Giữ Focus
+### 9.5 Giữ Focus
 
 - Một argument nên tập trung vào một chủ đề
 - Nếu có nhiều điểm, structure rõ ràng theo sections
@@ -374,3 +527,5 @@ aw debate request-completion \
 - [ ] Đã submit response hoặc đang wait?
 - [ ] User có debate_id để resume?
 - [ ] Có outstanding issues cần highlight?
+- [ ] **Document đã submit version mới chưa?** (nếu có edit)
+- [ ] **Opponent được thông báo về version update chưa?**
