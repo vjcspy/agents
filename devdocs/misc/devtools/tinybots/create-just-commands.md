@@ -1,18 +1,20 @@
-# TinyBots DevTools - Centralized Integration Test Infrastructure
+# TinyBots DevTools - Create `just` Commands (Updated Paths)
 
 ## AI Agent Context Document
 
-**Version**: 1.0  
-**Last Updated**: 2025-12-31  
-**Purpose**: Enable AI agents to understand, maintain, and extend the devtools centralized infrastructure
+**Version**: 1.1  
+**Last Updated**: 2026-02-01  
+**Purpose**: Hướng dẫn tạo/cập nhật `just` commands cho TinyBots DevTools theo layout mới
 
 ---
 
 ## 1. Executive Summary
 
-### What is DevTools?
+### What is TinyBots DevTools (local)?
 
-The `devtools/` directory provides a **centralized Docker Compose infrastructure** for running integration tests across multiple TinyBots repositories. It replaces the decentralized approach where each repository managed its own complete Docker setup in its `ci/` folder.
+TinyBots dùng một **centralized Docker Compose + just commands** để chạy integration tests / local infra cho nhiều repo.
+
+Infrastructure này nằm tại `devtools/tinybots/local/` (không còn ở `devtools/` root).
 
 ### Why It Exists
 
@@ -26,19 +28,19 @@ trap '{
 }' EXIT
 ```
 
-**DevTools Solution:**
+**DevTools Solution (pattern):**
 
 ```bash
-# Only removes stateful containers (databases), keeps services running:
-{{compose}} rm -sf mysql-typ-e-db mysql-wonkers-db   # Only DBs
-{{compose}} up -d <required-services>                 # Starts what's needed
-{{compose}} run --rm --use-aliases <repo>            # Runs tests
+# Only removes stateful containers (databases/localstack), keeps services running:
+{{compose}} rm -sf <stateful-containers>
+{{compose}} up -d <required-services>
+{{compose}} run --rm --use-aliases <repo>
 ```
 
-With just command
+Ví dụ gọi từ workspace root:
 
-```dotnetcli
-just start-atlas 2>&1 | head -50
+```bash
+just -f devtools/tinybots/local/Justfile start-atlas 2>&1 | head -50
 ```
 
 ### Key Benefits
@@ -58,31 +60,33 @@ just start-atlas 2>&1 | head -50
 ### 2.1 Directory Structure
 
 ```
-tinybots/
-├── devtools/                               # Centralized infrastructure
-│   ├── docker-compose.yaml                 # ALL service definitions
-│   ├── Justfile                           # Main orchestration (imports)
-│   ├── justfiles/                         # Per-repo command files
-│   │   ├── database.just
-│   │   ├── wonkers-graphql.just
-│   │   ├── megazord-events.just
-│   │   ├── m-o-triggers.just
-│   │   ├── wonkers-ecd.just
-│   │   └── azi-3-status-check-jobs.just
-│   └── localstack/                        # LocalStack init scripts
-│
-├── <repo>/ci/                             # Legacy (per-repo) CI setup
-│   ├── docker-compose.yml                 # Repo-specific containers
-│   ├── test.sh                            # Test runner with TRAP cleanup
-│   ├── local-test.sh                      # Wrapper script
-│   └── node-verify.sh                     # Container entrypoint
+devtools/
+└── tinybots/
+    └── local/                             # Centralized infra for TinyBots
+        ├── docker-compose.yaml            # ALL service definitions
+        ├── Justfile                       # Main orchestration (imports)
+        ├── justfiles/                     # Per-repo command files
+        │   ├── database.just
+        │   ├── atlas.just
+        │   ├── wonkers-graphql.just
+        │   └── ...
+        └── localstack/                    # LocalStack init scripts
+
+projects/
+└── tinybots/
+    └── backend/
+        └── <repo>/ci/                     # Legacy (per-repo) CI setup
+            ├── docker-compose.yml         # Repo-specific containers
+            ├── test.sh                    # Test runner with TRAP cleanup
+            ├── local-test.sh              # Wrapper script (if exists)
+            └── node-verify.sh             # Container entrypoint (if exists)
 ```
 
 ### 2.2 Service Layer Architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│                     devtools/docker-compose.yaml                              │
+│                 devtools/tinybots/local/docker-compose.yaml                   │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  LAYER 1: Database Containers (Stateful - Reset Between Tests)              │
@@ -121,7 +125,7 @@ tinybots/
 
 ### 3.1 Container Name Mapping
 
-When migrating from `ci/docker-compose.yml` to `devtools/docker-compose.yaml`:
+When migrating from `projects/tinybots/backend/<repo>/ci/docker-compose.yml` to `devtools/tinybots/local/docker-compose.yaml`:
 
 | CI Container Name | DevTools Container Name | Purpose | Schema |
 |-------------------|------------------------|---------|--------|
@@ -177,13 +181,13 @@ When copying environment variables from CI to DevTools, update hostnames:
 
 #### Step 1: Read CI Configuration Files
 
-Always read these files first:
+Always read these files first (repo-side CI):
 
 ```
-<repo>/ci/docker-compose.yml    # Service definitions & dependencies
-<repo>/ci/test.sh               # Startup sequence & cleanup logic
-<repo>/ci/local-test.sh         # Entry point wrapper (if exists)
-<repo>/ci/node-verify.sh        # Container entrypoint commands
+projects/tinybots/backend/<repo>/ci/docker-compose.yml    # Service defs & dependencies
+projects/tinybots/backend/<repo>/ci/test.sh               # Startup sequence & cleanup logic
+projects/tinybots/backend/<repo>/ci/local-test.sh         # Wrapper (if exists)
+projects/tinybots/backend/<repo>/ci/node-verify.sh        # Entrypoint (if exists)
 ```
 
 #### Step 2: Extract Dependency Information
@@ -229,15 +233,15 @@ docker-compose up -d checkpoint prowl         # Then services
 docker-compose up -d                          # Finally test runner
 ```
 
-#### Step 3: Verify Service Definition in docker-compose.yaml
+#### Step 3: Verify Service Definition in `docker-compose.yaml`
 
-Check if the test runner service already exists in `devtools/docker-compose.yaml`:
+Check if the test runner service already exists in `devtools/tinybots/local/docker-compose.yaml`:
 
 ```yaml
   <repo-name>:
     image: node:22-alpine
     volumes:
-      - /Users/kai/work/tinybots/tinybots/backend/<repo-name>:/usr/src/app
+      - <PROJECT_ROOT>/projects/tinybots/backend/<repo-name>:/usr/src/app
     labels:
       - <repo-name>
     environment:
@@ -253,7 +257,7 @@ If not, add it.
 
 #### Step 4: Create Justfile Commands
 
-Create `devtools/justfiles/<repo-name>.just`:
+Create `devtools/tinybots/local/justfiles/<repo-name>.just`:
 
 ```just
 # ------------------------------------- <Repository Name> -------------------------------------
@@ -280,17 +284,12 @@ log-<repo-name>:
 # Development mode with hot-reload (optional)
 dev-<repo-name>:
     {{compose}} run --rm --service-ports --use-aliases \
-      --entrypoint "sh -c 'corepack enable && yarn dev'" <repo-name>
-
-# Debug mode with inspector (optional)
-debug-<repo-name>:
-    {{compose}} run --rm --service-ports --use-aliases \
-      --entrypoint "sh -c 'corepack enable && yarn debug'" <repo-name>
+      --entrypoint "sh -c 'export COREPACK_ENABLE_DOWNLOAD_PROMPT=0 && corepack enable && corepack prepare yarn@4.12.0 --activate && yarn install --silent && yarn dev'" <repo-name>
 ```
 
 #### Step 5: Import in Main Justfile
 
-Add to `devtools/Justfile`:
+Add to `devtools/tinybots/local/Justfile`:
 
 ```just
 import 'justfiles/<repo-name>.just'
@@ -456,7 +455,7 @@ docker attach $(docker ps -q --filter=label=micro-manager)
   micro-manager:
     image: node:22-alpine
     volumes:
-      - /Users/kai/work/tinybots/tinybots/backend/micro-manager:/usr/src/app
+      - <PROJECT_ROOT>/projects/tinybots/backend/micro-manager:/usr/src/app
     labels:
       - micro-manager
     environment:
@@ -481,7 +480,7 @@ docker attach $(docker ps -q --filter=label=micro-manager)
 
 ### 6.3 Required Justfile Commands
 
-Create `devtools/justfiles/micro-manager.just`:
+Create `devtools/tinybots/local/justfiles/micro-manager.just`:
 
 ```just
 # ------------------------------------- Micro Manager -------------------------------------
@@ -518,7 +517,7 @@ debug-micro-manager:
 
 ### 6.4 Justfile Import
 
-Add to `devtools/Justfile`:
+Add to `devtools/tinybots/local/Justfile`:
 
 ```just
 import 'justfiles/micro-manager.just'
@@ -593,16 +592,16 @@ import 'justfiles/micro-manager.just'
 docker ps
 
 # View logs for specific service
-docker compose -f devtools/docker-compose.yaml logs -f <service>
+docker compose -f devtools/tinybots/local/docker-compose.yaml logs -f <service>
 
 # Get shell into running container
-docker compose -f devtools/docker-compose.yaml exec <service> sh
+docker compose -f devtools/tinybots/local/docker-compose.yaml exec <service> sh
 
 # Force recreate containers
-docker compose -f devtools/docker-compose.yaml up -d --force-recreate <service>
+docker compose -f devtools/tinybots/local/docker-compose.yaml up -d --force-recreate <service>
 
 # Remove all devtools containers
-docker compose -f devtools/docker-compose.yaml down
+docker compose -f devtools/tinybots/local/docker-compose.yaml down
 ```
 
 ---
@@ -645,7 +644,7 @@ dev-<repo>:
   <repo-name>:
     image: node:22-alpine
     volumes:
-      - /Users/kai/work/tinybots/tinybots/backend/<repo-name>:/usr/src/app
+      - <PROJECT_ROOT>/projects/tinybots/backend/<repo-name>:/usr/src/app
     labels:
       - <repo-name>
     environment:
@@ -666,15 +665,15 @@ dev-<repo>:
 
 When adding a new repository to devtools:
 
-- [ ] Read `<repo>/ci/docker-compose.yml`
-- [ ] Read `<repo>/ci/test.sh`
+- [ ] Read `projects/tinybots/backend/<repo>/ci/docker-compose.yml`
+- [ ] Read `projects/tinybots/backend/<repo>/ci/test.sh`
 - [ ] Identify database dependencies (typ-e, wonkers, or both)
 - [ ] Identify service dependencies (checkpoint, prowl, localstack, etc.)
 - [ ] Map CI container names to devtools names (see Section 3.1)
-- [ ] Verify test runner service exists in `devtools/docker-compose.yaml`
+- [ ] Verify test runner service exists in `devtools/tinybots/local/docker-compose.yaml`
 - [ ] If not, add service definition with corrected hostnames
-- [ ] Create `devtools/justfiles/<repo>.just` with standard commands
-- [ ] Add import to `devtools/Justfile`
+- [ ] Create `devtools/tinybots/local/justfiles/<repo>.just` with standard commands
+- [ ] Add import to `devtools/tinybots/local/Justfile`
 - [ ] Test with `just test-<repo>`
 - [ ] Verify DB containers are removed in test command
 - [ ] Document any special requirements
@@ -685,12 +684,13 @@ When adding a new repository to devtools:
 
 | File | Purpose |
 |------|---------|
-| `devtools/Justfile` | Main orchestration file |
-| `devtools/docker-compose.yaml` | Complete service definitions |
-| `devtools/justfiles/*.just` | Per-repo command files |
-| `devdocs/projects/tinybots/OVERVIEW.md` | Global TinyBots standards |
-| `<repo>/ci/docker-compose.yml` | Original repo CI configs (reference) |
-| `<repo>/ci/test.sh` | Original test scripts (reference) |
+| `devtools/tinybots/local/Justfile` | Main orchestration file |
+| `devtools/tinybots/local/docker-compose.yaml` | Complete service definitions |
+| `devtools/tinybots/local/justfiles/*.just` | Per-repo command files |
+| `devdocs/misc/devtools/tinybots/OVERVIEW.md` | TinyBots DevTools overview |
+| `devdocs/projects/tinybots/OVERVIEW.md` | Global TinyBots overview (repos + testing) |
+| `projects/tinybots/backend/<repo>/ci/docker-compose.yml` | Original repo CI configs (reference) |
+| `projects/tinybots/backend/<repo>/ci/test.sh` | Original test scripts (reference) |
 
 ---
 
