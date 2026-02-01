@@ -216,6 +216,76 @@ Success:
 }
 ```
 
+#### Step 4.1: Response Filtering - Token Optimization for AI Agents
+
+**Nguyên tắc:** CLI filter response từ server để tối ưu token cho AI agents.
+
+**Vấn đề:**
+- Server trả full response bao gồm cả `content` của argument
+- AI agent vừa submit content → đã biết content → đọc lại = tốn token vô ích
+- Estimated: Mỗi argument có thể tốn 500-2000 tokens nếu trả full content
+
+**Giải pháp:** CLI filter response, chỉ giữ metadata cần thiết cho flow tiếp theo.
+
+**Write Commands (create, submit, appeal, request-completion, ruling, intervention):**
+
+```python
+def _filter_write_response(server_data: dict) -> dict:
+    """
+    Filter server response cho write commands.
+    
+    Nguyên tắc:
+    - Giữ: IDs, state, type, seq (metadata cần cho flow)
+    - Bỏ: content (agent vừa submit, đã biết)
+    """
+    argument = server_data.get("argument", {})
+    
+    return {
+        "argument_id": argument.get("id"),
+        "argument_type": argument.get("type"),
+        "argument_seq": argument.get("seq"),
+        "debate_id": server_data.get("debate", {}).get("id") or argument.get("debate_id"),
+        "debate_state": server_data.get("debate", {}).get("state") or server_data.get("debate_state"),
+        "debate_type": server_data.get("debate", {}).get("debate_type"),
+        "client_request_id": server_data.get("client_request_id"),
+    }
+```
+
+**Token Savings Estimate:**
+
+| Command | Before (full) | After (filtered) | Savings |
+|---------|---------------|------------------|---------|
+| `create` với plan 5KB | ~1500 tokens | ~100 tokens | **93%** |
+| `submit` với response 2KB | ~600 tokens | ~80 tokens | **87%** |
+| Full debate (10 rounds) | ~15000 tokens | ~2000 tokens | **87%** |
+
+**Read Commands (get-context, wait) - KHÔNG FILTER nhưng READABLE:**
+- `get-context`: Agent cần full content để resume/rebuild context
+- `wait`: Agent cần đọc response từ đối phương
+- **Readable Content:** Output có actual newlines (không escape thành `\n`) để AI agents đọc markdown trực tiếp
+
+```python
+def _output(response: MCPResponse, fmt: OutputFormat, readable_content: bool = False) -> None:
+    if fmt == OutputFormat.json:
+        json_str = response.to_json()
+        if readable_content:
+            # Replace escaped newlines/tabs with actual characters
+            # This makes content fields readable for AI agents
+            json_str = json_str.replace('\\n', '\n').replace('\\t', '\t')
+        typer.echo(json_str)
+```
+
+**Optional `--verbose` flag (Future):**
+```bash
+# Default: filtered response (cho AI agents)
+aw debate create --debate-id X --title "..." --file ./plan.md
+
+# Verbose: full response (cho debugging)
+aw debate create --debate-id X --title "..." --file ./plan.md --verbose
+```
+
+> **Note:** `--verbose` là nice-to-have, không cần implement ngay. Default minimal là đủ.
+
 Error (Option B - MCPError tối giản + raw server error trong content):
 ```json
 {

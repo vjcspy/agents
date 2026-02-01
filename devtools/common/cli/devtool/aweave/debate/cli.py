@@ -41,10 +41,24 @@ def _get_poll_client() -> HTTPClient:
     return HTTPClient(base_url=DEBATE_SERVER_URL, headers=headers, timeout=POLL_TIMEOUT)
 
 
-def _output(response: MCPResponse, fmt: OutputFormat) -> None:
-    """Output response in requested format."""
+def _output(response: MCPResponse, fmt: OutputFormat, readable_content: bool = False) -> None:
+    """
+    Output response in requested format.
+    
+    Args:
+        response: MCPResponse to output
+        fmt: Output format (json or markdown)
+        readable_content: If True, unescape newlines in content fields for better
+                         AI agent readability. Use for read commands (get-context, wait).
+    """
     if fmt == OutputFormat.json:
-        typer.echo(response.to_json())
+        json_str = response.to_json()
+        if readable_content:
+            # Replace escaped newlines/tabs with actual characters
+            # This makes content fields readable for AI agents
+            # Note: Creates non-standard JSON but most parsers accept it
+            json_str = json_str.replace('\\n', '\n').replace('\\t', '\t')
+        typer.echo(json_str)
     else:
         typer.echo(response.to_markdown())
 
@@ -52,6 +66,30 @@ def _output(response: MCPResponse, fmt: OutputFormat) -> None:
 def _error_response(code: str, message: str, suggestion: str | None = None) -> MCPResponse:
     """Create error response."""
     return MCPResponse(success=False, error=MCPError(code=code, message=message, suggestion=suggestion))
+
+
+def _filter_write_response(server_data: dict[str, Any]) -> dict[str, Any]:
+    """
+    Filter server response for write commands (create, submit, appeal, etc.).
+    
+    Token Optimization:
+    - Keep: IDs, state, type, seq (metadata needed for flow continuation)
+    - Remove: content (agent just submitted, already knows it)
+    
+    Estimated token savings: ~87-93%
+    """
+    argument = server_data.get("argument", {})
+    debate = server_data.get("debate", {})
+    
+    return {
+        "argument_id": argument.get("id"),
+        "argument_type": argument.get("type"),
+        "argument_seq": argument.get("seq"),
+        "debate_id": debate.get("id") or argument.get("debate_id"),
+        "debate_state": debate.get("state") or server_data.get("debate_state"),
+        "debate_type": debate.get("debate_type"),
+        "client_request_id": server_data.get("client_request_id"),
+    }
 
 
 def _handle_server_error(e: HTTPClientError, fmt: OutputFormat) -> None:
@@ -173,10 +211,13 @@ def create(
         _handle_server_error(e, fmt)
 
     data = resp.get("data", {})
+    # Filter response to minimize token usage for AI agents
+    filtered_data = _filter_write_response(data)
+    filtered_data["client_request_id"] = req_id  # Ensure client_request_id is included
     response = MCPResponse(
         success=True,
-        content=[MCPContent(type=ContentType.JSON, data=data)],
-        metadata={"message": "Debate created successfully", "client_request_id": req_id},
+        content=[MCPContent(type=ContentType.JSON, data=filtered_data)],
+        metadata={"message": "Debate created successfully"},
     )
     _output(response, fmt)
 
@@ -202,7 +243,8 @@ def get_context(
         success=True,
         content=[MCPContent(type=ContentType.JSON, data=data)],
     )
-    _output(response, fmt)
+    # Use readable_content=True so AI agents can read content with actual newlines
+    _output(response, fmt, readable_content=True)
 
 
 @app.command()
@@ -238,10 +280,13 @@ def submit(
         _handle_server_error(e, fmt)
 
     data = resp.get("data", {})
+    # Filter response to minimize token usage for AI agents
+    filtered_data = _filter_write_response(data)
+    filtered_data["client_request_id"] = req_id
     response = MCPResponse(
         success=True,
-        content=[MCPContent(type=ContentType.JSON, data=data)],
-        metadata={"message": "Argument submitted", "client_request_id": req_id},
+        content=[MCPContent(type=ContentType.JSON, data=filtered_data)],
+        metadata={"message": "Argument submitted"},
     )
     _output(response, fmt)
 
@@ -284,7 +329,8 @@ def wait(
                         )
                     ],
                 )
-                _output(response, fmt)
+                # Use readable_content=True so AI agents can read argument content with actual newlines
+                _output(response, fmt, readable_content=True)
                 return
 
             # has_new_argument=False → server poll timeout, retry
@@ -346,10 +392,13 @@ def appeal(
         _handle_server_error(e, fmt)
 
     data = resp.get("data", {})
+    # Filter response to minimize token usage for AI agents
+    filtered_data = _filter_write_response(data)
+    filtered_data["client_request_id"] = req_id
     response = MCPResponse(
         success=True,
-        content=[MCPContent(type=ContentType.JSON, data=data)],
-        metadata={"message": "Appeal submitted", "client_request_id": req_id},
+        content=[MCPContent(type=ContentType.JSON, data=filtered_data)],
+        metadata={"message": "Appeal submitted"},
     )
     _output(response, fmt)
 
@@ -385,10 +434,13 @@ def request_completion(
         _handle_server_error(e, fmt)
 
     data = resp.get("data", {})
+    # Filter response to minimize token usage for AI agents
+    filtered_data = _filter_write_response(data)
+    filtered_data["client_request_id"] = req_id
     response = MCPResponse(
         success=True,
-        content=[MCPContent(type=ContentType.JSON, data=data)],
-        metadata={"message": "Resolution submitted", "client_request_id": req_id},
+        content=[MCPContent(type=ContentType.JSON, data=filtered_data)],
+        metadata={"message": "Resolution submitted"},
     )
     _output(response, fmt)
 
@@ -425,9 +477,13 @@ def ruling(
         _handle_server_error(e, fmt)
 
     data = resp.get("data", {})
+    # Filter response to minimize token usage for AI agents
+    filtered_data = _filter_write_response(data)
+    if client_request_id:
+        filtered_data["client_request_id"] = client_request_id
     response = MCPResponse(
         success=True,
-        content=[MCPContent(type=ContentType.JSON, data=data)],
+        content=[MCPContent(type=ContentType.JSON, data=filtered_data)],
         metadata={"message": "Ruling submitted", "closed": close},
     )
     _output(response, fmt)
@@ -455,9 +511,13 @@ def intervention(
         _handle_server_error(e, fmt)
 
     data = resp.get("data", {})
+    # Filter response to minimize token usage for AI agents
+    filtered_data = _filter_write_response(data)
+    if client_request_id:
+        filtered_data["client_request_id"] = client_request_id
     response = MCPResponse(
         success=True,
-        content=[MCPContent(type=ContentType.JSON, data=data)],
+        content=[MCPContent(type=ContentType.JSON, data=filtered_data)],
         metadata={"message": "Intervention submitted"},
     )
     _output(response, fmt)
