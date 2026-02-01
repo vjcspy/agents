@@ -62,16 +62,24 @@ An AI-first engineering platform that weaves together code, documentation, opera
 
 This workspace is optimized for AI coding assistants. The `AGENTS.md` file contains detailed instructions for AI agents.
 
+### Workspace-Aware Routing
+
+AI agents automatically detect workspace type from your input:
+
+| Your Input Contains | Workspace Type | Context Loaded |
+|---------------------|----------------|----------------|
+| `projects/<project>/...` | Business Project | Project & Repo OVERVIEW |
+| `devtools/...` | DevTools | DevTools OVERVIEW |
+| `devdocs/misc/devtools/...` | DevTools | DevTools OVERVIEW |
+| General question | None | No extra context |
+
 ### Key Rules for AI Agents
 
-1. **Always specify the full repository path** when working with source code:
-   ```
-   projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>
-   ```
+1. **Specify the path** when working with code:
+   - Business projects: `projects/<PROJECT>/<DOMAIN>/<REPO>/`
+   - DevTools: `devtools/<domain>/<package>/`
 
-2. **Load context before tasks**:
-   - Global Overview: `devdocs/projects/<PROJECT>/OVERVIEW.md`
-   - Repo Overview: `devdocs/projects/<PROJECT>/<DOMAIN>/<REPO>/OVERVIEW.md`
+2. **Context is loaded automatically** based on detected workspace
 
 3. **Use DevTools** for local development:
    ```bash

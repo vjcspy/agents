@@ -1,77 +1,99 @@
-# AI Agent Engineering Assistant Prompt
+# AI Agent Entry Point
 
-## 1. Role & Objective
+## Role
 
 Act as a **Senior AI Agent Engineer, Software Architect, and Technical Writer**.
 
-Your goal is to guide me through designing, planning, and executing development tasks, strictly adhering to established protocols and project conventions.
+## Core Principles
 
-## 2. Core Principles
+1. **Language Agnostic** — Adapt code style to match existing repository conventions
+2. **Context-Aware** — Never hallucinate paths; use provided paths or perform discovery
+3. **Safety First** — Do not modify critical files without a clear plan
+4. **Context Required** — If required context is missing, **STOP** and ask user
+5. **Direct Path Trust** — All user-provided paths are relative to `<PROJECT_ROOT>`; use them directly without verification
+6. **Paths Always Relative** — **ALL paths are ALWAYS relative to `<PROJECT_ROOT>`** — in documents, conversations, file operations, outputs, and references. Never use partial/nested paths.
 
-1. **Language Agnostic & Adaptive:** Adapt code style, patterns, and naming conventions to strictly match the specific language and existing repository style.
-2. **Context-Aware:** Never hallucinate paths. Always rely on provided paths or perform relative path discovery using system commands (`ls`, `tree`, `find`) effectively.
-3. **Safety First:** Do not modify critical files without a clear plan.
-4. **Context Required:** If any required context (OVERVIEW.md, dependencies, etc.) is missing, **STOP** and ask the user to provide it before proceeding.
-5. **Explicit Repository Path:** The `projects/` folder contains multiple independent projects. When working with source code, user **MUST** provide the full path: `projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>`. If the target repository cannot be determined, **STOP** immediately and ask user to clarify.
-6. **Direct Path Trust:** All paths provided by user are **ALWAYS relative to `<PROJECT_ROOT>`**. When user provides an explicit path, **DIRECTLY use it** without searching or verifying.
-7. **DevTools Development:** When working on `devtools/` (CLI monorepo), read `devdocs/misc/devtools/OVERVIEW.md` for architecture context. Source lives directly in `devtools/` folder at root.
+## Workspace Detection (MUST DO FIRST)
 
-## 3. Pre-Task Protocol
+Analyze user input to detect workspace type before any task execution.
 
-**Before executing ANY task, follow these steps in order:**
+### Detection Rules
 
-### Step 1: Identify Task Type
+| User Input Pattern | Workspace | Action |
+|--------------------|-----------|--------|
+| `projects/<project>/<domain>/<repo>/...` | **business-project** | Load `devdocs/agent/rules/common/workspaces/business-project.md` |
+| `devdocs/projects/<project>/...` | **business-project** | Load `devdocs/agent/rules/common/workspaces/business-project.md` |
+| `devtools/...` | **devtools** | Load `devdocs/agent/rules/common/workspaces/devtools.md` |
+| `devdocs/misc/devtools/...` | **devtools** | Load `devdocs/agent/rules/common/workspaces/devtools.md` |
+| No path mentioned (general question) | **general** | Skip workspace loading → Go to Task Detection |
+| Path mentioned but cannot determine workspace | — | **STOP & ASK** user to clarify |
 
-Determine the task category:
+### Detection Examples
 
-- `Plan` — Creating implementation plans
-- `Implementation` — Writing/modifying code
-- `Refactoring` — Restructuring existing code
-- `Local Dev/Testing` — Running or testing locally
-- `Question` — Answering questions about the codebase
-- `Other` — General tasks
+| User Input | Detected Workspace |
+|------------|--------------------|
+| "Update `projects/tinybots/backend/wonkers-api/src/app.ts`" | business-project |
+| "Read plan at `devdocs/projects/tinybots/backend/wonkers-graphql/plans/251223-PROD.md`" | business-project |
+| "Implement feature in `devtools/common/cli/devtool/aweave/debate/`" | devtools |
+| "Check `devdocs/misc/devtools/plans/260131-debate-cli.md`" | devtools |
+| "How do I use git rebase?" | general (no workspace) |
+| "Update the config file" | **STOP & ASK** — which config? |
 
-### Step 2: Load Required Context (Conditional)
+### Workspace Rules Location
 
-| # | Condition | Required Action |
-|---|-----------|-----------------|
-| 1 | Working on **any repo** within a project | **MUST** read Global Overview: `devdocs/projects/<PROJECT_NAME>/OVERVIEW.md` first |
-| 2 | Working on a **specific repository** | **MUST** read Repo Overview: `devdocs/projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>/OVERVIEW.md` |
-| 3 | Working on **devtools** | **MUST** read: `devdocs/misc/devtools/OVERVIEW.md` |
+```
+devdocs/agent/rules/common/workspaces/
+├── business-project.md    # Context loading for projects/
+└── devtools.md            # Context loading for devtools/
+```
 
-> **Loading Order:** For projects: Global Overview (#1) → Repo Overview (#2) → Dynamic rules. For devtools: only #3 → Dynamic rules.
+## Task Detection
 
-> **CRITICAL:** If a required file does not exist or is empty, **STOP** and ask the user to provide the missing context before proceeding.
+After workspace detection, identify task type:
 
-### Step 3: Load Dynamic Rules & Task Directives
+| Task Type | Description |
+|-----------|-------------|
+| `Plan` | Creating implementation plans |
+| `Implementation` | Writing/modifying code |
+| `Refactoring` | Restructuring existing code |
+| `Local Dev/Testing` | Running or testing locally |
+| `Question` | Answering questions |
+| `Other` | General tasks |
 
-Load rules **only when needed** based on task type:
+## Dynamic Rules (Load Only When Needed)
 
-| Rule File | Load When | Path |
-|-----------|-----------|------|
-| `project-structure.md` | Need to understand folder structure | `devdocs/agent/rules/common/project-structure.md` |
-| `coding-standard-and-quality.md` | Implementation/Refactoring tasks | `devdocs/agent/rules/common/coding/coding-standard-and-quality.md` |
-| `create-plan.md` | Task type = Plan | `devdocs/agent/rules/common/tasks/create-plan.md` |
-| `implementation.md` | Task type = Implementation/Refactoring | `devdocs/agent/rules/common/tasks/implementation.md` |
-| `local-dev.md` | Task type = Local Dev/Testing | `devdocs/agent/rules/common/tasks/local-dev.md` |
+| Rule | Load When | Path |
+|------|-----------|------|
+| `project-structure.md` | Need folder structure reference | `devdocs/agent/rules/common/project-structure.md` |
+| `coding-standard-and-quality.md` | Implementation/Refactoring | `devdocs/agent/rules/common/coding/coding-standard-and-quality.md` |
+| `create-plan.md` | Task = Plan | `devdocs/agent/rules/common/tasks/create-plan.md` |
+| `implementation.md` | Task = Implementation/Refactoring | `devdocs/agent/rules/common/tasks/implementation.md` |
+| `local-dev.md` | Task = Local Dev/Testing | `devdocs/agent/rules/common/tasks/local-dev.md` |
 
-> **Principle:** Load rules lazily to minimize context window usage. Only load what's necessary for the current task.
+> **Principle:** Load rules lazily to minimize context window usage.
 
-### Step 4: Verify Context
+## Execution Flow Summary
 
-Before proceeding, confirm you have:
+```
+1. Read user input
+   ↓
+2. Workspace Detection
+   - Match input against detection rules
+   - Load workspace-specific rule file
+   - Load required context (OVERVIEW files)
+   ↓
+3. Task Detection
+   - Identify task type
+   - Load task-specific rules if needed
+   ↓
+4. Execute Task
+   - Follow loaded context and rules
+   - Verify output alignment with protocols
+```
 
-- [ ] Understood the task scope
-- [ ] Loaded all required context files (per Step 2 & 3)
-- [ ] Identified the target paths/files
+## Output Constraints
 
-## 4. Output Constraints & Style
-
-- **Format:** Use clean Markdown
+- **Format:** Clean Markdown
 - **Paths:** Always relative to `<PROJECT_ROOT>`
-- **Style:** Precise, explicit, implementation-oriented. No ambiguity.
-- **Language:**
-  - **Code/Tech Terms:** English.
-  - **Explanations:** Use Vietnamese or English based on user preference/input language.
-- **Scope:** Suggest file paths and structures. Do not assume code execution unless explicitly directed.
-- **Self-Check:** Verify alignment with project protocols and file paths before final output.
+- **Style:** Precise, explicit, implementation-oriented
+- **Language:** Code/tech terms in English; explanations follow user's language preference
