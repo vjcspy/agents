@@ -1,7 +1,7 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
 
 import { config } from './config.js';
-import { AppError, InvalidInputError, UnauthorizedError } from './errors.js';
+import { ActionNotAllowedError, AppError, InvalidInputError, UnauthorizedError } from './errors.js';
 import type { ErrorResponse, SuccessResponse } from './types.js';
 import type { ArgumentService, DebateService } from './services.js';
 
@@ -18,11 +18,33 @@ function ok<T>(data: T): SuccessResponse<T> {
 
 function errorEnvelope(err: unknown): { statusCode: number; body: ErrorResponse } {
   if (err instanceof AppError) {
+    // Build flat error object (no nested details)
+    const errorObj: Record<string, unknown> = {
+      code: err.code,
+      message: err.message,
+    };
+
+    // Add suggestion if present
+    if (err.suggestion) {
+      errorObj.suggestion = err.suggestion;
+    }
+
+    // Add ActionNotAllowedError specific fields (flat)
+    if (err instanceof ActionNotAllowedError) {
+      errorObj.current_state = err.currentState;
+      errorObj.allowed_roles = err.allowedRoles;
+    }
+
+    // Add extra fields (flat)
+    if (err.extraFields) {
+      Object.assign(errorObj, err.extraFields);
+    }
+
     return {
       statusCode: err.statusCode,
       body: {
         success: false,
-        error: { code: err.code, message: err.message, details: err.details }
+        error: errorObj as ErrorResponse['error']
       }
     };
   }
@@ -54,8 +76,28 @@ export function createHttpApp(services: {
     res.status(200).json(ok({ status: 'ok' }));
   });
 
-  app.get('/debates', (_req, res) => {
-    res.status(200).json(ok({ debates: services.debate.listDebates() }));
+  // GET /debates?state=...&limit=...&offset=...
+  app.get('/debates', (req, res, next) => {
+    try {
+      const state = req.query.state as string | undefined;
+      const limitRaw = req.query.limit as string | undefined;
+      const offsetRaw = req.query.offset as string | undefined;
+
+      const limit = limitRaw ? Number.parseInt(limitRaw, 10) : undefined;
+      const offset = offsetRaw ? Number.parseInt(offsetRaw, 10) : undefined;
+
+      if (limitRaw && (!Number.isFinite(limit) || (limit as number) < 0)) {
+        throw new InvalidInputError('Invalid limit parameter');
+      }
+      if (offsetRaw && (!Number.isFinite(offset) || (offset as number) < 0)) {
+        throw new InvalidInputError('Invalid offset parameter');
+      }
+
+      const result = services.debate.listDebates({ state, limit, offset });
+      res.status(200).json(ok(result));
+    } catch (err) {
+      next(err);
+    }
   });
 
   app.post('/debates', async (req, res, next) => {
@@ -83,21 +125,30 @@ export function createHttpApp(services: {
     }
   });
 
+  // GET /debates/:id?limit=N
+  // motion ALWAYS included (not counted in limit)
+  // limit=N returns N most recent arguments (excluding motion)
+  // limit=0 returns arguments=[]
+  // limit not set returns all arguments
+  // limit negative or invalid → INVALID_INPUT
   app.get('/debates/:id', (req, res, next) => {
     try {
       const debateId = req.params.id;
-      res.status(200).json(ok({ debate: services.debate.getDebate(debateId) }));
-    } catch (err) {
-      next(err);
-    }
-  });
+      const limitRaw = req.query.limit as string | undefined;
 
-  app.get('/debates/:id/context', (req, res, next) => {
-    try {
-      const debateId = req.params.id;
-      const limitRaw = (req.query.argument_limit as string | undefined) ?? '10';
-      const limit = Number.parseInt(limitRaw, 10);
-      res.status(200).json(ok(services.debate.getContext(debateId, Number.isFinite(limit) ? limit : 10)));
+      let limit: number | undefined;
+      if (limitRaw !== undefined) {
+        limit = Number.parseInt(limitRaw, 10);
+        if (!Number.isFinite(limit)) {
+          throw new InvalidInputError('Invalid limit parameter', { limit: limitRaw });
+        }
+        if (limit < 0) {
+          throw new InvalidInputError('limit must be non-negative', { limit });
+        }
+      }
+
+      const result = services.debate.getDebateWithArgs(debateId, limit);
+      res.status(200).json(ok(result));
     } catch (err) {
       next(err);
     }
@@ -174,26 +225,33 @@ export function createHttpApp(services: {
     }
   });
 
+  // DEV-ONLY: Arbitrator intervention
   app.post('/debates/:id/intervention', async (req, res, next) => {
     try {
       const debateId = req.params.id;
-      const body = req.body as Partial<{ content: string }>;
-      const created = await services.argument.submitIntervention({ debate_id: debateId, content: body.content });
+      const body = req.body as Partial<{ content: string; client_request_id: string }>;
+      const created = await services.argument.submitIntervention({
+        debate_id: debateId,
+        content: body.content,
+        client_request_id: body.client_request_id
+      });
       res.status(201).json(ok(created));
     } catch (err) {
       next(err);
     }
   });
 
+  // DEV-ONLY: Arbitrator ruling
   app.post('/debates/:id/ruling', async (req, res, next) => {
     try {
       const debateId = req.params.id;
-      const body = req.body as Partial<{ content: string; close?: boolean }>;
+      const body = req.body as Partial<{ content: string; close?: boolean; client_request_id: string }>;
       if (!body.content) throw new InvalidInputError('Missing required fields');
       const created = await services.argument.submitRuling({
         debate_id: debateId,
         content: body.content,
-        close: body.close
+        close: body.close,
+        client_request_id: body.client_request_id
       });
       res.status(201).json(ok(created));
     } catch (err) {

@@ -4,6 +4,7 @@ import typer
 
 from aweave.core.node_loader import load_node_plugins
 from aweave.core.python_loader import load_python_plugins
+from aweave.debate import app as debate_app
 from aweave.docs import app as docs_app
 
 app = typer.Typer(
@@ -22,6 +23,7 @@ def version():
 
 
 app.add_typer(docs_app, name="docs")
+app.add_typer(debate_app, name="debate")
 
 
 # Load plugins

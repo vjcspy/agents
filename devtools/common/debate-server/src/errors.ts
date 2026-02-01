@@ -1,24 +1,23 @@
 export class AppError extends Error {
   public readonly code: string;
-  public readonly details: Record<string, unknown> | undefined;
   public readonly statusCode: number;
+  public readonly suggestion?: string;
 
   constructor(
     code: string,
     message: string,
     statusCode: number,
-    details?: Record<string, unknown>
+    public readonly extraFields?: Record<string, unknown>
   ) {
     super(message);
     this.code = code;
-    this.details = details;
     this.statusCode = statusCode;
   }
 }
 
 export class NotFoundError extends AppError {
-  constructor(message: string, details?: Record<string, unknown>) {
-    super('NOT_FOUND', message, 404, details);
+  constructor(message: string) {
+    super('NOT_FOUND', message, 404);
   }
 }
 
@@ -35,14 +34,24 @@ export class ArgumentNotFoundError extends AppError {
 }
 
 export class InvalidInputError extends AppError {
-  constructor(message: string, details?: Record<string, unknown>) {
-    super('INVALID_INPUT', message, 400, details);
+  constructor(message: string, extraFields?: Record<string, unknown>) {
+    super('INVALID_INPUT', message, 400, extraFields);
   }
 }
 
 export class ActionNotAllowedError extends AppError {
-  constructor(message: string, details?: Record<string, unknown>) {
-    super('ACTION_NOT_ALLOWED', message, 403, details);
+  public readonly currentState: string;
+  public readonly allowedRoles: string[];
+  public override readonly suggestion?: string;
+
+  constructor(
+    message: string,
+    opts: { current_state: string; allowed_roles: string[]; suggestion?: string }
+  ) {
+    super('ACTION_NOT_ALLOWED', message, 403);
+    this.currentState = opts.current_state;
+    this.allowedRoles = opts.allowed_roles;
+    this.suggestion = opts.suggestion;
   }
 }
 

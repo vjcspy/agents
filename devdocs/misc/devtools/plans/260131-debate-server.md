@@ -62,7 +62,7 @@ devtools/common/debate-server/
 │   │   └── error.ts                # 🚧 TODO - Error handler
 │   └── types/
 │       ├── debate.ts               # 🚧 TODO - Type definitions
-│       └── responses.ts            # 🚧 TODO - MCPResponse format
+│       └── envelope.ts             # 🚧 TODO - Server JSON envelope types (NOT MCP)
 └── tests/                          # 🚧 TODO - Test files
 ```
 
@@ -210,6 +210,13 @@ class LockService {
 - Khi có argument mới, `notifyNewArgument()` wake TẤT CẢ waiters (proposer + opponent + multiple clients)
 - Mỗi waiter sau khi wake phải tự verify `arg.seq > lastSeenSeq` (đã handle trong `waitForResponse`)
 - Tránh "missed signal" race: attach listener TRƯỚC khi check latest (xem Step 7)
+- **Invariant:** Khi wake, luôn trả `latestArg` có `seq > lastSeenSeq`
+
+**Lock/Notifier Lifecycle - Cleanup Strategy:**
+- `locks` và `notifiers` Map sẽ tăng theo số debates
+- **Phase 1:** Dùng TTL/LRU eviction (vd: cleanup sau 30 phút không hoạt động) - đơn giản, không cần track waiters count
+- **Phase 2 (optional):** Cleanup khi debate `CLOSED` + không còn waiters (cần refcount)
+- **Note:** Phase 1 đủ cho MVP, tránh memory leak mà không phức tạp hóa implementation
 
 #### Step 5: Core Services
 
@@ -222,8 +229,10 @@ class LockService {
 - [ ] `submit(debateId, role, targetId, content, clientRequestId)` → CLAIM argument
 - [ ] `submitAppeal(debateId, targetId, content, clientRequestId)` → APPEAL argument
 - [ ] `submitResolution(debateId, targetId, content, clientRequestId)` → RESOLUTION argument
-- [ ] `submitRuling(debateId, content, close?)` → RULING argument (for Arbitrator)
-- [ ] `submitIntervention(debateId)` → INTERVENTION argument (for Arbitrator)
+- [ ] `submitRuling(debateId, content, close?, clientRequestId?)` → RULING argument (DEV-ONLY Arbitrator)
+- [ ] `submitIntervention(debateId, clientRequestId?)` → INTERVENTION argument (DEV-ONLY Arbitrator)
+
+> **Note:** `clientRequestId` optional cho ruling/intervention để giữ nhất quán idempotency across hệ thống. Nếu không cung cấp, server tự generate (không idempotent).
 
 **QUAN TRỌNG - Thứ tự operations trong critical section:**
 
@@ -295,22 +304,84 @@ async submitArgument(debateId, role, targetId, content, clientRequestId) {
 | Method | Endpoint | Handler | Description |
 |--------|----------|---------|-------------|
 | POST | `/debates` | createDebate | Tạo debate mới + MOTION |
-| GET | `/debates/:id` | getDebate | Lấy debate info |
-| GET | `/debates/:id/context` | getContext | Lấy debate + arguments |
+| GET | `/debates/:id` | getDebate | Lấy debate info + arguments (với `?limit=N`) |
 | POST | `/debates/:id/arguments` | submitArgument | Submit CLAIM |
 | POST | `/debates/:id/appeal` | submitAppeal | Submit APPEAL |
 | POST | `/debates/:id/resolution` | requestCompletion | Submit RESOLUTION |
-| POST | `/debates/:id/ruling` | submitRuling | Submit RULING (Arbitrator) |
-| POST | `/debates/:id/intervention` | submitIntervention | Submit INTERVENTION (Arbitrator) |
+| POST | `/debates/:id/ruling` | submitRuling | Submit RULING (DEV-ONLY Arbitrator) |
+| POST | `/debates/:id/intervention` | submitIntervention | Submit INTERVENTION (DEV-ONLY Arbitrator) |
 | GET | `/debates/:id/wait` | waitForResponse | Long polling |
 | GET | `/debates` | listDebates | List all debates |
 | GET | `/health` | healthCheck | Health check |
 
+**API Note:**
+- `GET /debates/:id?limit=N` trả về debate + arguments (đúng spec `debate.md`)
+- KHÔNG tạo endpoint `/context` riêng để tránh 2 source of truth
+
+**GET /debates/:id Response Schema:**
+```json
+{
+  "success": true,
+  "data": {
+    "debate": {
+      "id": "uuid",
+      "title": "string",
+      "debate_type": "coding_plan_debate|general_debate",
+      "state": "AWAITING_OPPONENT|...",
+      "created_at": "YYYY-MM-DD HH:MM:SS",
+      "updated_at": "YYYY-MM-DD HH:MM:SS"
+    },
+    "motion": {
+      "id": "uuid",
+      "seq": 1,
+      "type": "MOTION",
+      "role": "proposer",
+      "content": "string",
+      "created_at": "YYYY-MM-DD HH:MM:SS"
+    },
+    "arguments": [
+      { "id": "...", "seq": 2, "type": "CLAIM", "role": "opponent", "parent_id": "...", "content": "...", "created_at": "..." }
+    ]
+  }
+}
+```
+
+> **debate_type enum:** `coding_plan_debate` | `general_debate` (theo spec `debate.md`)
+>
+> **Datetime format:** `YYYY-MM-DD HH:MM:SS` (SQLite `datetime('now')` format, UTC)
+
+**Semantics của `limit` query param:**
+- `motion` LUÔN được include (không tính vào limit)
+- `limit=N` trả N arguments gần nhất (không tính MOTION)
+- `limit=0` → `arguments=[]` (chỉ debate + motion)
+- `limit` không set → trả tất cả arguments
+- `limit` âm hoặc không phải int → `INVALID_INPUT` error
+- **Invariant:** Agent resume luôn có MOTION để giữ context
+
+**GET /debates (List) Response Schema:**
+```json
+{
+  "success": true,
+  "data": {
+    "debates": [
+      { "id": "...", "title": "...", "state": "...", "created_at": "...", "updated_at": "..." }
+    ],
+    "total": 42
+  }
+}
+```
+
+**List Query Params:**
+- `state`: Filter by state (optional, e.g. `?state=AWAITING_PROPOSER`)
+- `limit`: Max results (optional, default 50)
+- `offset`: Pagination offset (optional, default 0)
+- Order: `updated_at DESC` (most recent first)
+
 **Request/Response Format:**
 
-> **Note:** Server trả JSON format ổn định, KHÔNG dùng MCPResponse. CLI sẽ wrap thành MCPResponse cho AI agents.
+> **Note:** Server trả JSON envelope ổn định, KHÔNG dùng MCPResponse. CLI sẽ wrap thành MCPResponse cho AI agents.
 
-**Success Response:**
+**Success Response (THỐNG NHẤT cho tất cả endpoints, kể cả wait):**
 ```json
 {
   "success": true,
@@ -325,10 +396,20 @@ async submitArgument(debateId, role, targetId, content, clientRequestId) {
   "error": {
     "code": "ACTION_NOT_ALLOWED",
     "message": "Role 'opponent' cannot submit in state 'AWAITING_PROPOSER'",
-    "details": { "current_state": "AWAITING_PROPOSER", "allowed_roles": ["proposer"] }
+    "suggestion": "Wait for proposer to submit their argument",
+    "current_state": "AWAITING_PROPOSER",
+    "allowed_roles": ["proposer"]
   }
 }
 ```
+
+**Error Envelope Structure:**
+- `code`: Error code string
+- `message`: Human-readable message
+- `suggestion`: (Optional) Gợi ý cho user/agent - **top-level trong error object**
+- `current_state`, `allowed_roles`: Các fields context-specific - **top-level trong error object** (không nested trong `details`)
+
+> **Note:** CLI wrap error vào MCPResponse. MCPError chỉ chứa `code/message/suggestion`; raw server error (bao gồm `current_state`, `allowed_roles`) nằm trong `content[0].data.server_error`. Xem CLI plan Option B.
 
 **Error Codes:**
 - `DEBATE_NOT_FOUND` - Debate không tồn tại
@@ -336,6 +417,58 @@ async submitArgument(debateId, role, targetId, content, clientRequestId) {
 - `ACTION_NOT_ALLOWED` - Action không hợp lệ trong state hiện tại
 - `INVALID_INPUT` - Input không hợp lệ
 - `CONTENT_TOO_LARGE` - Content vượt quá max size
+
+**Request Schemas (tất cả endpoints):**
+
+```typescript
+// POST /debates - Create debate
+{
+  debate_id: string,           // Required - client-generated UUID
+  title: string,               // Required
+  debate_type: "coding_plan_debate" | "general_debate",  // Required
+  motion_content: string,      // Required - content của MOTION
+  client_request_id: string    // Required - idempotency key
+}
+
+// POST /debates/:id/arguments - Submit CLAIM
+{
+  role: "proposer" | "opponent",  // Required
+  target_id: string,              // Required - parent argument ID
+  content: string,                // Required
+  client_request_id: string       // Required - idempotency key
+}
+
+// POST /debates/:id/appeal - Submit APPEAL
+{
+  target_id: string,              // Required - argument đang tranh cãi
+  content: string,                // Required - appeal reason + options
+  client_request_id: string       // Required - idempotency key
+}
+
+// POST /debates/:id/resolution - Request completion
+{
+  target_id: string,              // Required - last argument ID
+  content: string,                // Required - summary of agreed points
+  client_request_id: string       // Required - idempotency key
+}
+
+// POST /debates/:id/ruling - DEV-ONLY Arbitrator
+{
+  content: string,                // Required - ruling content
+  close?: boolean,                // Optional - close debate (default: false)
+  client_request_id?: string      // Optional - idempotency key (auto-gen if missing)
+}
+
+// POST /debates/:id/intervention - DEV-ONLY Arbitrator
+{
+  client_request_id?: string      // Optional - idempotency key (auto-gen if missing)
+}
+
+// GET /debates/:id/wait - Long polling (query params)
+// ?argument_id=<uuid>&role=<proposer|opponent>
+// argument_id: Optional - last seen argument ID (empty = from beginning)
+// role: Required
+```
 
 #### Step 7: Long Polling Endpoint
 
@@ -347,13 +480,13 @@ async submitArgument(debateId, role, targetId, content, clientRequestId) {
 
 **Wait Endpoint Semantics:**
 
-**Input:**
-- `argument_id`: ID của argument cuối cùng mà client đã thấy (last seen)
-- `role`: `proposer` hoặc `opponent`
-
-**Input:**
-- `argument_id`: ID của argument cuối cùng mà client đã thấy (last seen). **OPTIONAL** - nếu missing/empty thì treat như chưa thấy gì (lastSeenSeq=0)
-- `role`: `proposer` hoặc `opponent`
+**Input (query params):**
+- `argument_id`: ID của argument cuối cùng mà client đã thấy (last seen). **OPTIONAL**
+  - Missing param (`/wait?role=...`) → `lastSeenSeq=0`
+  - Empty string (`/wait?argument_id=&role=...`) → `lastSeenSeq=0`
+  - Invalid UUID → `INVALID_INPUT` error
+  - UUID không thuộc debate → `INVALID_INPUT` error
+- `role`: `proposer` hoặc `opponent` (**REQUIRED**)
 
 **Logic:**
 ```typescript
@@ -375,19 +508,23 @@ async waitForResponse(debateId: string, lastSeenArgId: string | null, role: stri
   // 3. Check ngay: có argument mới không (seq > lastSeenSeq)
   const latestArg = db.getLatestArgument(debateId);
   if (latestArg && latestArg.seq > lastSeenSeq) {
-    return { has_new_argument: true, ...buildResponse(latestArg, debate.state, role) };
+    // WRAP trong success envelope
+    return { 
+      success: true, 
+      data: buildResponse(latestArg, debate.state, role) 
+    };
   }
   
   // 4. Không có argument mới → attach listener rồi double-check
-  //    (Cách A: attach sau check đầu, double-check sau attach - tránh listener leak)
   const listenerPromise = lockService.waitForArgument(debateId, 60000);
   
   // 5. Double-check ngay sau attach (tránh missed signal race)
   const latestArgAfterAttach = db.getLatestArgument(debateId);
   if (latestArgAfterAttach && latestArgAfterAttach.seq > lastSeenSeq) {
-    // Có argument mới xuất hiện giữa check đầu và attach
-    // Listener sẽ tự timeout sau 60s, không leak vì có setTimeout cleanup
-    return { has_new_argument: true, ...buildResponse(latestArgAfterAttach, debate.state, role) };
+    return { 
+      success: true, 
+      data: buildResponse(latestArgAfterAttach, debate.state, role) 
+    };
   }
   
   // 6. Chờ notifier (max 60s)
@@ -396,12 +533,28 @@ async waitForResponse(debateId: string, lastSeenArgId: string | null, role: stri
   if (newArg) {
     // Re-fetch debate state sau khi có argument mới
     const updatedDebate = db.getDebate(debateId);
-    return { has_new_argument: true, ...buildResponse(newArg, updatedDebate.state, role) };
+    return { 
+      success: true, 
+      data: buildResponse(newArg, updatedDebate.state, role) 
+    };
   }
   
-  // 7. Timeout, không có argument mới
-  return { has_new_argument: false };
+  // 7. Timeout - CŨNG wrap trong success envelope (không phải error)
+  // NOTE: Không kèm debate_state vì timeout chỉ là "không có gì mới"
+  // Agent muốn biết state hiện tại có thể gọi GET /debates/:id
+  return { 
+    success: true, 
+    data: { 
+      has_new_argument: false,
+      debate_id: debateId,
+      last_seen_seq: lastSeenSeq
+    } 
+  };
 }
+
+// DECISION: Timeout response KHÔNG kèm debate_state
+// Lý do: Đơn giản hóa contract; agent cần state thì gọi GET /debates/:id
+// Alternative (future): Thêm debate_state nếu agent feedback cần
 ```
 
 **Note về listener cleanup:**
@@ -413,33 +566,57 @@ async waitForResponse(debateId: string, lastSeenArgId: string | null, role: stri
 ```typescript
 function buildResponse(arg: Argument, debateState: string, role: string) {
   // Handle CLOSED state first (không cần map)
-  if (debateState === 'CLOSED') {
-    return { action: 'debate_closed', argument: arg };
-  }
+  const action = debateState === 'CLOSED' 
+    ? 'debate_closed'
+    : getAction(arg, role);
   
-  const actionMap: Record<string, { action: string }> = {
+  // Return đầy đủ fields để CLI/agent không phải suy luận
+  return {
+    has_new_argument: true,
+    action,
+    debate_state: debateState,
+    argument: {
+      id: arg.id,
+      seq: arg.seq,
+      type: arg.type,
+      role: arg.role,
+      parent_id: arg.parent_id,
+      content: arg.content,
+      created_at: arg.created_at
+    }
+  };
+}
+
+function getAction(arg: Argument, role: string): string {
+  const actionMap: Record<string, string> = {
     // Opponent vừa CLAIM → Proposer respond
-    'CLAIM:opponent:proposer': { action: 'respond' },
+    'CLAIM:opponent:proposer': 'respond',
     // Proposer vừa CLAIM → Opponent respond  
-    'CLAIM:proposer:opponent': { action: 'respond' },
+    'CLAIM:proposer:opponent': 'respond',
     // APPEAL → cả 2 wait for ruling
-    'APPEAL:proposer:proposer': { action: 'wait_for_ruling' },
-    'APPEAL:proposer:opponent': { action: 'wait_for_ruling' },
+    'APPEAL:proposer:proposer': 'wait_for_ruling',
+    'APPEAL:proposer:opponent': 'wait_for_ruling',
     // RESOLUTION → cả 2 wait for ruling
-    'RESOLUTION:proposer:proposer': { action: 'wait_for_ruling' },
-    'RESOLUTION:proposer:opponent': { action: 'wait_for_ruling' },
+    'RESOLUTION:proposer:proposer': 'wait_for_ruling',
+    'RESOLUTION:proposer:opponent': 'wait_for_ruling',
     // RULING → Proposer align, Opponent wait
-    'RULING:arbitrator:proposer': { action: 'align_to_ruling' },
-    'RULING:arbitrator:opponent': { action: 'wait_for_proposer' },
+    'RULING:arbitrator:proposer': 'align_to_ruling',
+    'RULING:arbitrator:opponent': 'wait_for_proposer',
     // INTERVENTION → cả 2 wait for ruling
-    'INTERVENTION:arbitrator:proposer': { action: 'wait_for_ruling' },
-    'INTERVENTION:arbitrator:opponent': { action: 'wait_for_ruling' },
+    'INTERVENTION:arbitrator:proposer': 'wait_for_ruling',
+    'INTERVENTION:arbitrator:opponent': 'wait_for_ruling',
   };
   
   const key = `${arg.type}:${arg.role}:${role}`;
-  return { ...actionMap[key], argument: arg };
+  return actionMap[key] || 'unknown';
 }
 ```
+
+**Wait Response Fields (đầy đủ cho CLI/agent):**
+- `has_new_argument`: boolean
+- `action`: string (respond, wait_for_ruling, align_to_ruling, wait_for_proposer, debate_closed)
+- `debate_state`: string (state SAU khi insert argument)
+- `argument`: object đầy đủ (`id`, `seq`, `type`, `role`, `parent_id`, `content`, `created_at`)
 
 #### Step 8: WebSocket Server (cho Web sau này)
 
@@ -449,10 +626,18 @@ function buildResponse(arg: Argument, debateState: string, role: string) {
 - [ ] Handle `submit_ruling`, `submit_intervention` từ web client
 - [ ] **Note:** WebSocket chủ yếu cho Web UI, CLI dùng Long Polling
 
+**WebSocket Auth Story:**
+- Nếu `DEBATE_AUTH_TOKEN` được set:
+  - WS handshake PHẢI check token (via query param `?token=...` hoặc header)
+  - Reject connection nếu token không match
+- Nếu `DEBATE_AUTH_TOKEN` không set:
+  - WS không require auth (dev mode)
+- **Alternative:** Disable WS hoàn toàn khi auth enabled (simpler, acceptable cho phase 1)
+
 #### Step 9: Middleware
 
 - [ ] Auth middleware: check `Authorization: Bearer <token>` nếu env `DEBATE_AUTH_TOKEN` set
-- [ ] Error handler: format errors theo JSON error envelope (`{ success: false, error: { code, message, details } }`)
+- [ ] Error handler: format errors theo JSON error envelope (`{ success: false, error: { code, message, suggestion?, ...context_fields } }`) - flat, không `details`
 - [ ] Request logger
 
 **Error Handler Example:**
@@ -463,14 +648,23 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     : err instanceof ActionNotAllowedError ? 403
     : 500;
   
-  res.status(statusCode).json({
+  // Error fields flat (không nested trong details)
+  const errorResponse: any = {
     success: false,
     error: {
       code: err.code || 'INTERNAL_ERROR',
       message: err.message,
-      details: err.details || {}
     }
-  });
+  };
+  
+  // Add optional fields flat vào error object
+  if (err.suggestion) errorResponse.error.suggestion = err.suggestion;
+  if (err instanceof ActionNotAllowedError) {
+    errorResponse.error.current_state = err.currentState;
+    errorResponse.error.allowed_roles = err.allowedRoles;
+  }
+  
+  res.status(statusCode).json(errorResponse);
 });
 ```
 
@@ -496,9 +690,18 @@ export const config = {
   host: process.env.DEBATE_SERVER_HOST || '127.0.0.1',
   authToken: process.env.DEBATE_AUTH_TOKEN, // undefined = no auth
   dbPath: expandHome(process.env.DEBATE_DB_PATH || DEFAULT_DB_PATH),
-  pollTimeout: 60, // seconds
+  pollTimeout: 60, // seconds - cho wait endpoint
   maxContentLength: 10 * 1024, // 10KB
+  httpTimeout: 65, // seconds - HTTP keep-alive/timeout (> pollTimeout)
 };
+
+// QUAN TRỌNG: Express/Node default timeout có thể < 60s
+// PHẢI set explicit để đảm bảo long polling hoạt động
+// app.use((req, res, next) => {
+//   res.setTimeout(config.httpTimeout * 1000);
+//   next();
+// });
+// Hoặc set server.timeout = config.httpTimeout * 1000;
 ```
 
 **Startup:**

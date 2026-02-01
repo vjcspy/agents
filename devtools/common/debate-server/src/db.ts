@@ -104,11 +104,29 @@ export class DebateDb {
     return row ?? null;
   }
 
-  listDebates(): Debate[] {
-    const rows = this.db
-      .prepare('SELECT id, title, debate_type, state, created_at, updated_at FROM debates ORDER BY updated_at DESC')
-      .all() as Debate[];
-    return rows;
+  listDebates(opts?: { state?: string; limit?: number; offset?: number }): { debates: Debate[]; total: number } {
+    const state = opts?.state;
+    const limit = opts?.limit ?? 50;
+    const offset = opts?.offset ?? 0;
+
+    // Count total (with optional state filter)
+    const countSql = state
+      ? 'SELECT COUNT(*) as count FROM debates WHERE state = ?'
+      : 'SELECT COUNT(*) as count FROM debates';
+    const countRow = state
+      ? (this.db.prepare(countSql).get(state) as { count: number })
+      : (this.db.prepare(countSql).get() as { count: number });
+    const total = countRow?.count ?? 0;
+
+    // Fetch debates with pagination
+    const selectSql = state
+      ? 'SELECT id, title, debate_type, state, created_at, updated_at FROM debates WHERE state = ? ORDER BY updated_at DESC LIMIT ? OFFSET ?'
+      : 'SELECT id, title, debate_type, state, created_at, updated_at FROM debates ORDER BY updated_at DESC LIMIT ? OFFSET ?';
+    const debates = state
+      ? (this.db.prepare(selectSql).all(state, limit, offset) as Debate[])
+      : (this.db.prepare(selectSql).all(limit, offset) as Debate[]);
+
+    return { debates, total };
   }
 
   getArgument(argumentId: string): Argument | null {
@@ -145,6 +163,34 @@ export class DebateDb {
       )
       .all(debateId, limit) as Argument[];
     return rows.reverse();
+  }
+
+  // Get MOTION argument (always seq=1, type=MOTION)
+  getMotion(debateId: string): Argument | null {
+    const row = this.db
+      .prepare(
+        "SELECT id, debate_id, parent_id, type, role, content, client_request_id, seq, created_at FROM arguments WHERE debate_id = ? AND type = 'MOTION' LIMIT 1"
+      )
+      .get(debateId) as Argument | undefined;
+    return row ?? null;
+  }
+
+  // Get recent arguments EXCLUDING motion (for limit semantics: motion always included, limit applies to non-motion)
+  getRecentArgumentsExcludingMotion(debateId: string, limit: number): Argument[] {
+    const rows = this.db
+      .prepare(
+        "SELECT id, debate_id, parent_id, type, role, content, client_request_id, seq, created_at FROM arguments WHERE debate_id = ? AND type != 'MOTION' ORDER BY seq DESC LIMIT ?"
+      )
+      .all(debateId, limit) as Argument[];
+    return rows.reverse();
+  }
+
+  // Count total arguments for a debate
+  countArguments(debateId: string): number {
+    const row = this.db
+      .prepare('SELECT COUNT(*) as count FROM arguments WHERE debate_id = ?')
+      .get(debateId) as { count: number } | undefined;
+    return row?.count ?? 0;
   }
 
   findArgumentByClientRequestId(debateId: string, clientRequestId: string): Argument | null {

@@ -25,9 +25,15 @@ function toActionNotAllowedError(state: DebateState, role: Role, action: Action)
           ? (['arbitrator'] as Role[])
           : ([] as Role[]);
 
+  const suggestion =
+    state === 'CLOSED'
+      ? 'This debate is closed'
+      : `Wait for ${allowedRoles.join(' or ')} to submit`;
+
   return new ActionNotAllowedError(`Role '${role}' cannot perform '${action}' in state '${state}'`, {
     current_state: state,
-    allowed_roles: allowedRoles
+    allowed_roles: allowedRoles,
+    suggestion
   });
 }
 
@@ -124,6 +130,33 @@ export class DebateService {
     return this.db.ensureDebateExists(debateId);
   }
 
+  // GET /debates/:id?limit=N
+  // motion ALWAYS included (not counted in limit)
+  // limit=N returns N most recent arguments (excluding motion)
+  // limit=0 returns empty arguments array
+  // limit not set returns all arguments
+  getDebateWithArgs(
+    debateId: string,
+    argumentLimit?: number
+  ): { debate: Debate; motion: Argument | null; arguments: Argument[] } {
+    const debate = this.db.ensureDebateExists(debateId);
+    const motion = this.db.getMotion(debateId);
+
+    let args: Argument[];
+    if (argumentLimit === undefined) {
+      // No limit - return all arguments excluding motion
+      args = this.db.getRecentArgumentsExcludingMotion(debateId, 10000);
+    } else if (argumentLimit <= 0) {
+      args = [];
+    } else {
+      const limit = Math.min(500, argumentLimit);
+      args = this.db.getRecentArgumentsExcludingMotion(debateId, limit);
+    }
+
+    return { debate, motion, arguments: args };
+  }
+
+  // Legacy method for backward compatibility
   getContext(debateId: string, argumentLimit: number): { debate: Debate; arguments: Argument[] } {
     const debate = this.db.ensureDebateExists(debateId);
     const limit = Math.max(1, Math.min(500, argumentLimit));
@@ -131,8 +164,8 @@ export class DebateService {
     return { debate, arguments: args };
   }
 
-  listDebates(): Debate[] {
-    return this.db.listDebates();
+  listDebates(opts?: { state?: string; limit?: number; offset?: number }): { debates: Debate[]; total: number } {
+    return this.db.listDebates(opts);
   }
 
   async waitForResponse(input: {
@@ -141,10 +174,10 @@ export class DebateService {
     role: WaiterRole;
     poll_timeout_ms: number;
   }): Promise<
-    | { has_new_argument: false }
-    | { has_new_argument: true; action: WaitAction; argument: Argument; debate: Debate }
+    | { has_new_argument: false; debate_id: string; last_seen_seq: number }
+    | { has_new_argument: true; action: WaitAction; debate_state: DebateState; argument: Argument }
   > {
-    const debate = this.db.ensureDebateExists(input.debate_id);
+    this.db.ensureDebateExists(input.debate_id);
 
     let lastSeenSeq = 0;
     if (input.argument_id) {
@@ -158,8 +191,8 @@ export class DebateService {
       return {
         has_new_argument: true,
         action: buildWaitAction(latest, updatedDebate.state, input.role),
-        argument: latest,
-        debate: updatedDebate
+        debate_state: updatedDebate.state,
+        argument: latest
       };
     }
 
@@ -171,22 +204,27 @@ export class DebateService {
       return {
         has_new_argument: true,
         action: buildWaitAction(latestAfterAttach, updatedDebate.state, input.role),
-        argument: latestAfterAttach,
-        debate: updatedDebate
+        debate_state: updatedDebate.state,
+        argument: latestAfterAttach
       };
     }
 
     const gotSignal = await listenerPromise;
-    if (!gotSignal) return { has_new_argument: false };
+    if (!gotSignal) {
+      // Timeout - return debate_id and last_seen_seq for debugging/resume
+      return { has_new_argument: false, debate_id: input.debate_id, last_seen_seq: lastSeenSeq };
+    }
 
     const updatedLatest = this.db.getLatestArgument(input.debate_id);
-    if (!updatedLatest || updatedLatest.seq <= lastSeenSeq) return { has_new_argument: false };
+    if (!updatedLatest || updatedLatest.seq <= lastSeenSeq) {
+      return { has_new_argument: false, debate_id: input.debate_id, last_seen_seq: lastSeenSeq };
+    }
     const updatedDebate = this.db.ensureDebateExists(input.debate_id);
     return {
       has_new_argument: true,
       action: buildWaitAction(updatedLatest, updatedDebate.state, input.role),
-      argument: updatedLatest,
-      debate: updatedDebate
+      debate_state: updatedDebate.state,
+      argument: updatedLatest
     };
   }
 }
@@ -361,9 +399,11 @@ export class ArgumentService {
     return { debate: result.debate, argument: result.argument };
   }
 
+  // DEV-ONLY: client_request_id optional for idempotency
   async submitIntervention(input: {
     debate_id: string;
     content?: string | null;
+    client_request_id?: string | null;
   }): Promise<{ debate: Debate; argument: Argument }> {
     const content = input.content ?? '';
     validateContentSize(content);
@@ -372,6 +412,15 @@ export class ArgumentService {
       return await withSqliteBusyRetry(() => {
         return this.db.runImmediateTransaction(() => {
           const debate = this.db.ensureDebateExists(input.debate_id);
+
+          // Idempotency check if client_request_id provided
+          if (input.client_request_id) {
+            const existing = this.db.findArgumentByClientRequestId(
+              input.debate_id,
+              input.client_request_id
+            );
+            if (existing) return { debate, argument: existing, isExisting: true };
+          }
 
           if (!isActionAllowed(debate.state, 'arbitrator', 'submit_intervention')) {
             throw toActionNotAllowedError(debate.state, 'arbitrator', 'submit_intervention');
@@ -385,7 +434,7 @@ export class ArgumentService {
             type: 'INTERVENTION',
             role: 'arbitrator',
             content,
-            client_request_id: null,
+            client_request_id: input.client_request_id ?? null,
             seq: nextSeq
           };
 
@@ -398,16 +447,20 @@ export class ArgumentService {
       });
     });
 
-    this.locks.notifyNewArgument(input.debate_id);
-    this.broadcast.newArgument(input.debate_id, result.argument, result.debate);
+    if (!(result as { isExisting: boolean }).isExisting) {
+      this.locks.notifyNewArgument(input.debate_id);
+      this.broadcast.newArgument(input.debate_id, result.argument, result.debate);
+    }
 
     return { debate: result.debate, argument: result.argument };
   }
 
+  // DEV-ONLY: client_request_id optional for idempotency
   async submitRuling(input: {
     debate_id: string;
     content: string;
     close?: boolean;
+    client_request_id?: string | null;
   }): Promise<{ debate: Debate; argument: Argument }> {
     validateContentSize(input.content);
 
@@ -415,6 +468,15 @@ export class ArgumentService {
       return await withSqliteBusyRetry(() => {
         return this.db.runImmediateTransaction(() => {
           const debate = this.db.ensureDebateExists(input.debate_id);
+
+          // Idempotency check if client_request_id provided
+          if (input.client_request_id) {
+            const existing = this.db.findArgumentByClientRequestId(
+              input.debate_id,
+              input.client_request_id
+            );
+            if (existing) return { debate, argument: existing, isExisting: true };
+          }
 
           if (!isActionAllowed(debate.state, 'arbitrator', 'submit_ruling')) {
             throw toActionNotAllowedError(debate.state, 'arbitrator', 'submit_ruling');
@@ -428,7 +490,7 @@ export class ArgumentService {
             type: 'RULING',
             role: 'arbitrator',
             content: input.content,
-            client_request_id: null,
+            client_request_id: input.client_request_id ?? null,
             seq: nextSeq
           };
 
@@ -441,8 +503,10 @@ export class ArgumentService {
       });
     });
 
-    this.locks.notifyNewArgument(input.debate_id);
-    this.broadcast.newArgument(input.debate_id, result.argument, result.debate);
+    if (!(result as { isExisting: boolean }).isExisting) {
+      this.locks.notifyNewArgument(input.debate_id);
+      this.broadcast.newArgument(input.debate_id, result.argument, result.debate);
+    }
 
     return { debate: result.debate, argument: result.argument };
   }

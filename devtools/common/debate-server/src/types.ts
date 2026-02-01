@@ -50,10 +50,16 @@ export type SuccessResponse<T> = {
   data: T;
 };
 
+// Error envelope with flat fields (no nested details)
 export type ErrorEnvelope = {
   code: string;
   message: string;
-  details?: Record<string, unknown>;
+  suggestion?: string;
+  // ActionNotAllowedError specific fields (flat)
+  current_state?: string;
+  allowed_roles?: string[];
+  // Other context fields can be added flat
+  [key: string]: unknown;
 };
 
 export type ErrorResponse = {
@@ -64,11 +70,13 @@ export type ErrorResponse = {
 export type WaitResponse =
   | {
       has_new_argument: false;
+      debate_id: string;
+      last_seen_seq: number;
     }
   | {
       has_new_argument: true;
       action: WaitAction;
+      debate_state: DebateState;
       argument: Argument;
-      debate: Debate;
     };
 

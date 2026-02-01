@@ -40,6 +40,11 @@ argumentService = new ArgumentService(db, locks, broadcast);
 const app = createHttpApp({ debate: debateService, argument: argumentService });
 const server = http.createServer(app);
 
+// Set HTTP timeout > poll timeout to ensure long polling works
+// Express/Node default can be < 60s, causing premature disconnection
+server.timeout = config.httpTimeoutMs;
+server.keepAliveTimeout = config.httpTimeoutMs;
+
 wsHub.attach(server);
 
 server.listen(config.port, config.host, () => {
