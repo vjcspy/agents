@@ -31,13 +31,15 @@
 |-----------|--------|---------|
 | **Database** | ✅ Ready | `hardware_type` table exists with values: `1=ROBOT`, `2=VOICE_ASSISTANT` |
 | **DB Column** | ✅ Ready | `taas_concept_order.hardware_type_id` column exists (migration V52_5), DEFAULT=1 |
-| **wonkers-taas-orders V6 API** | ✅ Ready | `POST /internal/v6/taas-orders/concepts/orders` accepts `hardwareType` field |
+| **wonkers-taas-orders V6 API** | ⚠️ Exists | `POST /internal/v6/taas-orders/concepts/orders` - requires Phase 2 changes to accept `null` |
 | **tiny-internal-services** | ✅ Ready | `HardwareTypeInputDataType` class handles string→id transformation |
 
 ### Required Changes (This Task)
 
 | Component | Status | Details |
 |-----------|--------|---------|
+| **wonkers-taas-orders** | 🚧 TODO | Update V6 DTO to accept optional/null `hardwareType` |
+| **wonkers-db** | 🔍 VERIFY | Confirm `hardware_type_id` is nullable and remove DEFAULT=1 |
 | **wonkers-nedap** | 🚧 TODO | Parse `hardwareType` from survey and call V6 endpoint |
 
 ---
@@ -53,8 +55,8 @@
 | **Question** | What is the exact key/identifier for the hardware type question in the ONS form? |
 | **My Assumption** | The key will be `hardwareType` (matching the DTO field name) |
 | **Expected Format** | e.g., `hardwareType`, `hwType`, `productType` |
-| **Status** | ⬜ PENDING CONFIRMATION |
-| **Stakeholder Response** | _[To be filled by Evan]_ |
+| **Status** | ✅ CONFIRMED |
+| **Stakeholder Response** | **Arno:** The key is `hardwareType` |
 
 ---
 
@@ -79,8 +81,8 @@
 | **Option A** | Default to `ROBOT` (backward compatible) |
 | **Option B** | Leave as `null` (require manual selection in backoffice) |
 | **My Assumption** | Default to `ROBOT` for backward compatibility |
-| **Status** | ⬜ PENDING CONFIRMATION |
-| **Stakeholder Response** | _[To be filled]_ |
+| **Status** | ✅ CONFIRMED |
+| **Stakeholder Response** | **Arno:** Leave as `null` (Option B) |
 
 ---
 
@@ -101,9 +103,29 @@ Implement parsing of the new `hardwareType` survey question in `wonkers-nedap` a
 
 ### ⚠️ Key Considerations
 
-1. **Backward Compatibility**: Existing orders without `hardwareType` should default to `ROBOT`
+1. **Default Behavior**: Orders without `hardwareType` will have `null` value (requires manual selection in backoffice) - confirmed by Arno
 2. **V6 Migration**: Switch from V1 to V6 endpoint for concept orders
 3. **Value Mapping**: May need to map form values to exact `HardwareTypeInputDataType` values
+
+### 🔒 Atomicity Constraint (Critical)
+
+> **Deployment Order** (cần maintain integrity khi default = null):
+>
+> **Step 1: wonkers-taas-orders** (deploy first)
+> - Update `ConceptOrderV6Dto` to accept optional `hardwareType`
+> - Update `createConceptV6` to handle null
+>
+> **Step 2: wonkers-db** (verify/update if needed)
+> - Ensure `hardware_type_id` column is nullable
+> - Remove DEFAULT=1 if present (để null khi không có giá trị)
+>
+> **Step 3: wonkers-nedap** (deploy last)
+> - Add `getHardwareType()` mapper method
+> - Switch URL V1 → V6
+>
+> **Rollback strategy:** 
+> - Rollback wonkers-nedap first (switch V6 → V1)
+> - Then rollback wonkers-taas-orders if needed
 
 ---
 
@@ -111,10 +133,13 @@ Implement parsing of the new `hardwareType` survey question in `wonkers-nedap` a
 
 ### Phase 1: Analysis & Preparation
 
-- [ ] Confirm survey question key from Evan (Assumption 1)
+- [x] ~~Confirm survey question key from Evan (Assumption 1)~~ → ✅ Confirmed: `hardwareType`
 - [ ] Confirm form values from Evan (Assumption 2)
-- [ ] Confirm default behavior (Assumption 3)
+- [x] ~~Confirm default behavior (Assumption 3)~~ → ✅ Confirmed: `null`
 - [ ] Confirm scope (Assumption 4)
+- [ ] **Obtain sample Survey Result JSON** from Evan containing `hardwareType` question
+  - Verify `answeredQuestions[].additionalInfo` contains expected key
+  - Save as test fixture: `wonkers-nedap/test/fixtures/survey-result-with-hardware-type.json`
 - [ ] Review existing `ConceptOrderMapper` implementation
   - **File**: `wonkers-nedap/src/mappers/ConceptOrderMapper.ts`
 - [ ] Review existing `WonkersTaasOrderService` implementation
@@ -122,7 +147,67 @@ Implement parsing of the new `hardwareType` survey question in `wonkers-nedap` a
 
 ---
 
-### Phase 2: Implementation Structure
+### Phase 2: Upstream Changes (wonkers-taas-orders)
+
+> **Required:** V6 API hiện tại không chấp nhận `hardwareType = null`. Cần update trước khi wonkers-nedap có thể gửi null.
+
+#### Task 2.1: Update `ConceptOrderV6Dto` to Accept Optional hardwareType
+
+**File:** `wonkers-taas-orders/src/model/dto/ConceptOrderV6Dto.ts`
+
+**Current:**
+```typescript
+export class ConceptOrderV6Dto extends ConceptOrderDto {
+  @Expose()
+  @IsDefined()
+  @AsHardwareTypeInputDataType
+  hardwareType: HardwareTypeInputDataType
+}
+```
+
+**Proposed Change:**
+```typescript
+export class ConceptOrderV6Dto extends ConceptOrderDto {
+  @Expose()
+  @IsOptional()
+  @AsOptionalHardwareTypeInputDataType  // Use optional variant from tiny-internal-services
+  hardwareType?: HardwareTypeInputDataType | null
+}
+```
+
+**Status:** ⬜ TODO
+
+---
+
+#### Task 2.2: Update `createConceptV6` to Handle null
+
+**File:** `wonkers-taas-orders/src/repository/ConceptOrderRepository.ts` (or similar)
+
+**Current:** `+order.hardwareType` (unary plus assumes non-null)
+
+**Proposed Change:**
+```typescript
+hardwareTypeId: order.hardwareType != null ? +order.hardwareType : null
+```
+
+**Status:** ⬜ TODO
+
+---
+
+#### Task 2.3: Verify Database Schema
+
+**Table:** `taas_concept_order`
+**Column:** `hardware_type_id`
+
+**Verify:**
+- [ ] Column is **nullable** (not `NOT NULL`)
+- [ ] Remove `DEFAULT=1` if present (to allow explicit null)
+
+**Status:** 🔍 VERIFY
+
+---
+
+### Phase 3: Implementation Structure (wonkers-nedap)
 
 ```
 wonkers-nedap/src/
@@ -169,28 +254,48 @@ hardwareType?: 'ROBOT' | 'VOICE_ASSISTANT' | null
 dto.hardwareType = this.getHardwareType(resultProperties, 'hardwareType') // Key TBD from Evan
 ```
 
+**Mapping Configuration (explicit map table):**
+```typescript
+// Explicit mapping table - values TBD from Evan
+const HARDWARE_TYPE_MAP: Record<string, 'ROBOT' | 'VOICE_ASSISTANT'> = {
+  'robot': 'ROBOT',
+  'voice_assistant': 'VOICE_ASSISTANT',
+  // Add Dutch labels if needed:
+  // 'spraakassistent': 'VOICE_ASSISTANT',
+}
+```
+
 **New Method:**
 ```typescript
 static getHardwareType(
   answeredQuestions: SurveyAnsweredQuestion[],
   key: string
-): 'ROBOT' | 'VOICE_ASSISTANT' {
+): 'ROBOT' | 'VOICE_ASSISTANT' | null {
   const data = answeredQuestions.filter((question) =>
     question.additionalInfo?.toLowerCase()?.includes(key.toLowerCase())
   )
   
-  if (!data || data.length === 0 || data.length > 1) {
-    return 'ROBOT' // Default value (TBD from stakeholder)
+  // Edge case: No match - return null (requires manual selection in backoffice)
+  if (!data || data.length === 0) {
+    return null // Confirmed by Arno: leave as null when missing
   }
   
-  const surveyValue = data[0].answer?.text?.toUpperCase()
-  
-  // Value mapping logic (TBD based on form values from Evan)
-  if (surveyValue?.includes('VOICE') || surveyValue?.includes('ASSISTANT')) {
-    return 'VOICE_ASSISTANT'
+  // Edge case: Multiple matches - log warning and use first
+  if (data.length > 1) {
+    console.warn(`[ConceptOrderMapper] Multiple hardwareType questions found: ${data.map(q => q.id).join(', ')}. Using first match.`)
   }
   
-  return 'ROBOT'
+  const surveyValue = data[0].answer?.text?.trim().toLowerCase()
+  
+  // Explicit mapping lookup (deterministic)
+  const mappedValue = HARDWARE_TYPE_MAP[surveyValue]
+  
+  if (!mappedValue) {
+    console.warn(`[ConceptOrderMapper] Unknown hardwareType value: "${surveyValue}". Returning null.`)
+    return null // Unknown values also require manual selection
+  }
+  
+  return mappedValue
 }
 ```
 
@@ -228,23 +333,45 @@ public async addConceptOrder (orderDto: ConceptOrderDto): Promise<ConceptOrderDt
 **Files:**
 - `wonkers-nedap/test/mappers/ConceptOrderMapperTest.ts` (if exists)
 - `wonkers-nedap/test/service/WonkersTaasOrderServiceTest.ts` (if exists)
+- `wonkers-nedap/test/fixtures/survey-result-with-hardware-type.json` (new fixture)
 
 **Test Cases to Add:**
 
 1. **Parse `hardwareType` = ROBOT**
-   - Survey has `hardwareType` question with value indicating robot
+   - Survey has `hardwareType` question with value `robot`
    - Expected: `dto.hardwareType = 'ROBOT'`
+   - **Explicit assertion (Chai):** `expect(dto.hardwareType).to.eq('ROBOT')`
 
 2. **Parse `hardwareType` = VOICE_ASSISTANT**
-   - Survey has `hardwareType` question with value indicating voice assistant
+   - Survey has `hardwareType` question with value `voice_assistant`
    - Expected: `dto.hardwareType = 'VOICE_ASSISTANT'`
+   - **Explicit assertion (Chai):** `expect(dto.hardwareType).to.eq('VOICE_ASSISTANT')`
 
 3. **Default when missing**
    - Survey does NOT have `hardwareType` question
-   - Expected: `dto.hardwareType = 'ROBOT'` (default)
+   - Expected: `dto.hardwareType = null` (requires manual selection)
+   - **Explicit assertion (Chai):** `expect(dto.hardwareType).to.be.null`
 
-4. **V6 Endpoint called**
+4. **Unknown value returns null**
+   - Survey has `hardwareType` question with unknown value (e.g., `foobar`)
+   - Expected: `dto.hardwareType = null` + warning logged
+   - **Explicit assertion (Chai):** `expect(dto.hardwareType).to.be.null`
+
+5. **Multiple matches uses first and logs warning**
+   - Survey has >1 questions with `additionalInfo` containing `hardwareType`
+   - Expected: Uses first match + warning logged
+
+6. **V6 Endpoint called**
    - Verify `WonkersTaasOrderService` calls `/internal/v6/...` instead of `/internal/v1/...`
+
+7. **Existing tests remain stable**
+   - All existing mapper tests should include explicit `hardwareType` expectation
+   - For tests without hardwareType question in survey: expect `null`
+   - Update snapshots/assertions to include new field
+
+**Fixture-based testing:**
+- Use sample JSON from Evan as base fixture
+- Verify `answeredQuestions[].additionalInfo` parsing works correctly with real data
 
 **Status:** ⬜ TODO
 
@@ -264,14 +391,23 @@ public async addConceptOrder (orderDto: ConceptOrderDto): Promise<ConceptOrderDt
 
 ## 📊 Task Breakdown Summary
 
-| Task | File | Description | Depends On | Status |
-|------|------|-------------|------------|--------|
-| 1.0 | - | Confirm assumptions with stakeholder | - | ⬜ BLOCKED |
-| 3.1 | ConceptOrderDto.ts | Add `hardwareType` field | - | ⬜ TODO |
-| 3.2 | ConceptOrderMapper.ts | Add `getHardwareType()` method | Assumption 1, 2 | ⬜ BLOCKED |
-| 3.3 | WonkersTaasOrderService.ts | Change to V6 endpoint | - | ⬜ TODO |
-| 4.0 | Tests | Add/update test cases | 3.1, 3.2, 3.3 | ⬜ TODO |
-| 5.0 | - | Integration testing | 4.0 | ⬜ TODO |
+| Task | Repo | File | Description | Depends On | Status |
+|------|------|------|-------------|------------|--------|
+| 1.0 | - | - | Confirm assumptions with stakeholder | - | ✅ DONE (1, 3) |
+| 1.1 | - | - | Obtain sample Survey Result JSON | Assumption 2 | ⬜ BLOCKED |
+| **2.1** | **wonkers-taas-orders** | ConceptOrderV6Dto.ts | Make `hardwareType` optional | - | ⬜ TODO |
+| **2.2** | **wonkers-taas-orders** | ConceptOrderRepository.ts | Handle null in createConceptV6 | 2.1 | ⬜ TODO |
+| **2.3** | **wonkers-db** | schema | Verify `hardware_type_id` nullable | - | 🔍 VERIFY |
+| 3.1 | wonkers-nedap | ConceptOrderDto.ts | Add `hardwareType` field (nullable) | - | ⬜ TODO |
+| 3.2 | wonkers-nedap | ConceptOrderMapper.ts | Add `getHardwareType()` with explicit map | Sample JSON | ⬜ BLOCKED |
+| 4.0 | wonkers-nedap | Tests | Add/update test cases | 3.1, 3.2 | ⬜ TODO |
+| 3.3 | wonkers-nedap | WonkersTaasOrderService.ts | Change to V6 endpoint | **2.1, 2.2, 3.2, 4.0** | ⬜ BLOCKED |
+| 5.0 | - | - | Integration testing | 3.3 | ⬜ TODO |
+
+> **⚠️ Deployment Order (Atomicity):**
+> 1. **Deploy wonkers-taas-orders** (Task 2.1, 2.2) - V6 accepts null
+> 2. **Verify wonkers-db** (Task 2.3) - column is nullable
+> 3. **Deploy wonkers-nedap** (Task 3.1, 3.2, 3.3, 4.0) - mapper + V6 switch
 
 ---
 
@@ -280,12 +416,12 @@ public async addConceptOrder (orderDto: ConceptOrderDto): Promise<ConceptOrderDt
 After implementation, verify:
 
 - [ ] `hardwareType` is parsed from ONS survey correctly
-- [ ] Default value is applied when question is missing
+- [ ] `null` is returned when question is missing (requires manual selection)
 - [ ] V6 endpoint is called (not V1)
-- [ ] Concept order is created with correct `hardware_type_id` in database
+- [ ] Concept order is created with correct `hardware_type_id` in database (or null)
 - [ ] All existing tests pass
 - [ ] New tests cover hardware type scenarios
-- [ ] Backward compatibility maintained (existing flows still work)
+- [ ] Existing flows still work (with `hardwareType = null` for legacy orders)
 
 ---
 
@@ -303,9 +439,13 @@ After implementation, verify:
 
 ## 🚧 Blockers
 
-1. **Survey Question Key** - Need exact key from Evan (Assumption 1)
+1. ~~**Survey Question Key**~~ - ✅ Confirmed: `hardwareType` (Arno)
 2. **Form Values** - Need exact values from Evan (Assumption 2)
-3. **Default Behavior Confirmation** - Need confirmation (Assumption 3)
+3. ~~**Default Behavior Confirmation**~~ - ✅ Confirmed: `null` when missing (Arno)
+4. **Sample Survey Result JSON** - Need 1 sample payload from Evan to:
+   - Verify `additionalInfo` key pattern
+   - Create test fixture
+   - Confirm mapping table values
 
 ---
 
