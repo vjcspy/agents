@@ -3,3 +3,4 @@ packages:
   # pnpm will only pick up folders with package.json
   - "nab/cli/foo"
   - "common/debate-server"
+  - "common/debate-web"

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Unified development tools monorepo",
-  "packageManager": "pnpm@9.15.0",
+  "packageManager": "pnpm@10.28.2",
   "scripts": {
     "install:all": "./scripts/install-all.sh",
     "build": "pnpm -r build",
