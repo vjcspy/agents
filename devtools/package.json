@@ -7,7 +7,8 @@
   "scripts": {
     "install:all": "./scripts/install-all.sh",
     "build": "pnpm -r build",
-    "generate:registry": "python scripts/generate-registry.py"
+    "generate:registry": "python scripts/generate-registry.py",
+    "debate:dev": "pnpm --parallel --filter @common/debate-server --filter debate-web dev"
   },
   "engines": {
     "node": ">=20.0.0"
