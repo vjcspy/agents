@@ -1,20 +1,20 @@
 # Debate Proposer Command
 
-> **Role:** Proposer - Bên đề xuất và duy trì định hướng cuộc tranh luận
+> **Role:** Proposer - The party that proposes and maintains the debate direction
 
 ## CLI Reference
 
-> **QUAN TRỌNG - Commands có syntax đặc biệt (positional argument, KHÔNG dùng `--id`):**
-> - `aw docs get <document_id>` → Ví dụ: `aw docs get 0c5a44a3-42f6-...`
-> - `aw docs submit <document_id> --summary "..." --file <path>` → Ví dụ: `aw docs submit 0c5a44a3-... --summary "v2" --file ./plan.md`
+> **IMPORTANT - Commands with special syntax (positional argument, DO NOT use `--id`):**
+> - `aw docs get <document_id>` → Example: `aw docs get 0c5a44a3-42f6-...`
+> - `aw docs submit <document_id> --summary "..." --file <path>` → Example: `aw docs submit 0c5a44a3-... --summary "v2" --file ./plan.md`
 >
-> **Chi tiết tất cả commands:**
+> **Full command details:**
 > - Debate CLI: `devdocs/misc/devtools/common/cli/devtool/aweave/debate/COMMANDS.md`
 > - Docs CLI: `devdocs/misc/devtools/common/cli/devtool/aweave/docs/COMMANDS.md`
 
-## Main Loop - QUAN TRỌNG
+## Main Loop - IMPORTANT
 
-**Proposer hoạt động trong vòng lặp liên tục cho đến khi debate kết thúc:**
+**Proposer operates in a continuous loop until the debate ends:**
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -22,7 +22,7 @@
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
 │   ┌──────────────────┐                                                  │
-│   │ 1. Create/Resume │ ← Bắt đầu hoặc Resume                            │
+│   │ 1. Create/Resume │ ← Start or Resume                                │
 │   │   create / get   │                                                  │
 │   └────────┬─────────┘                                                  │
 │            │                                                            │
@@ -36,11 +36,11 @@
 │     │                                             │                     │
 │     ▼                                             ▼                     │
 │  action="respond"                          action="debate_closed"       │
-│  (Có CLAIM từ Opponent)                    (Arbitrator đã close)        │
+│  (CLAIM from Opponent)                     (Arbitrator closed)          │
 │     │                                             │                     │
 │     ▼                                             ▼                     │
 │ ┌──────────────────┐                    ┌──────────────────┐            │
-│ │ 3. Analyze &     │                    │ EXIT - KẾT THÚC  │            │
+│ │ 3. Analyze &     │                    │ EXIT - END       │            │
 │ │    Process CLAIM │                    └──────────────────┘            │
 │ └────────┬─────────┘                                                    │
 │          │                                                              │
@@ -63,89 +63,89 @@
 │   │   aw debate wait │                                                  │
 │   └────────┬─────────┘                                                  │
 │            │                                                            │
-│            └──────────────► Quay lại Step 2 ─────────────────────────►  │
+│            └──────────────► Return to Step 2 ───────────────────────►   │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Nguyên tắc vòng lặp:**
+**Loop principles:**
 
-1. **KHÔNG BAO GIỜ tự thoát** - Chỉ thoát khi nhận `action="debate_closed"`
-2. **Sau mỗi submit phải WAIT** - Submit xong là wait ngay
-3. **Sau khi WAIT có response phải xử lý** - Analyze rồi submit response
-4. **Vòng lặp tiếp tục** cho đến khi Arbitrator close debate
+1. **NEVER exit on your own** - Only exit when receiving `action="debate_closed"`
+2. **After each submit, WAIT** - Submit then wait immediately
+3. **After WAIT with response, process it** - Analyze then submit response
+4. **Loop continues** until Arbitrator closes the debate
 
-## 1. Khởi Động
+## 1. Initialization
 
-### 1.1 Xác Định Ngữ Cảnh
+### 1.1 Determine Context
 
-Khi được yêu cầu làm **Proposer** trong debate, PHẢI xác định rõ:
+When requested to act as **Proposer** in a debate, MUST determine:
 
-1. **Có `debate_id` không?**
-   - **CÓ** → Resume debate cũ (Section 3)
-   - **KHÔNG** → Tạo debate mới (Section 2)
+1. **Have `debate_id`?**
+   - **YES** → Resume old debate (Section 3)
+   - **NO** → Create new debate (Section 2)
 
-2. **`debateType` là gì?**
+2. **What is `debateType`?**
    - `coding_plan_debate` → Load rule: `devdocs/agent/rules/common/debate/proposer/coding-plan.md`
    - `general_debate` → Load rule: `devdocs/agent/rules/common/debate/proposer/general.md`
 
-### 1.2 CLI Tools Được Phép Sử Dụng
+### 1.2 Permitted CLI Tools
 
-| Tool | Mục đích |
-|------|----------|
-| `aw debate generate-id` | Tạo UUID cho debate_id, client_request_id |
-| `aw debate create` | Tạo debate mới với MOTION |
-| `aw debate get-context` | Lấy context debate đã tồn tại |
-| `aw debate submit` | Submit CLAIM phản hồi |
-| `aw debate wait` | Chờ response từ Opponent/Arbitrator |
-| `aw debate appeal` | Yêu cầu Arbitrator phán xử |
-| `aw debate request-completion` | Yêu cầu kết thúc debate |
-| `aw docs create` | Tạo document mới (lần đầu upload) |
-| `aw docs submit` | Update document version (sau khi sửa local) |
-| `aw docs get` | Lấy document content |
+| Tool | Purpose |
+|------|---------|
+| `aw debate generate-id` | Generate UUID for debate_id, client_request_id |
+| `aw debate create` | Create new debate with MOTION |
+| `aw debate get-context` | Get existing debate context |
+| `aw debate submit` | Submit response CLAIM |
+| `aw debate wait` | Wait for response from Opponent/Arbitrator |
+| `aw debate appeal` | Request Arbitrator judgment |
+| `aw debate request-completion` | Request debate completion |
+| `aw docs create` | Create new document (first upload) |
+| `aw docs submit` | Update document version (after local edit) |
+| `aw docs get` | Get document content |
 
-### 1.3 Document Management - QUAN TRỌNG
+### 1.3 Document Management - IMPORTANT
 
-**Nguyên tắc cốt lõi:**
+**Core principles:**
 
-1. **Document sống ở LOCAL** - Proposer làm việc trực tiếp trên file local (ví dụ: `./plan.md`)
-2. **`aw docs` để versioning** - Mỗi khi có thay đổi → submit để lưu version
-3. **Argument chỉ chứa summary + doc_id** - KHÔNG paste toàn bộ content vào argument
+1. **Document lives LOCALLY** - Proposer works directly on local file (e.g., `./plan.md`)
+2. **`aw docs` for versioning** - Submit to save version after each change
+3. **Argument only contains summary + doc_id** - DO NOT paste entire content into argument
 
 **Workflow:**
 
 ```
-File local: ./plan.md
+Local file: ./plan.md
         ↓
-Tạo debate → aw docs create → doc_id=xxx (version 1)
+Create debate → aw docs create → doc_id=xxx (version 1)
         ↓
-Opponent feedback → Sửa ./plan.md trực tiếp
+Opponent feedback → Edit ./plan.md directly
         ↓
 aw docs submit xxx --summary "v2" --file ./plan.md → version 2
         ↓
-Submit CLAIM response kèm: "Updated doc_id=xxx to v2"
+Submit CLAIM response with: "Updated doc_id=xxx to v2"
 ```
 
-**LUÔN LUÔN submit version mới sau khi sửa document!** Đây là cách:
-- Giữ audit trail của mọi thay đổi
-- Opponent có thể verify changes
-- Rollback nếu cần
+**ALWAYS submit new version after editing document!** This is how to:
+- Keep audit trail of all changes
+- Allow Opponent to verify changes
+- Rollback if needed
 
-## 2. Tạo Debate Mới
+## 2. Create New Debate
 
-### 2.1 Quy Trình
+### 2.1 Process
 
 ```
 Step 1: Generate IDs
        ↓
-Step 2: Upload document (nếu có)
+Step 2: Upload document (if any)
        ↓
-Step 3: Create debate với MOTION
+Step 3: Create debate with MOTION
        ↓
 Step 4: Wait for Opponent
 ```
 
-### 2.2 Chi Tiết Từng Bước
+### 2.2 Step Details
 
 **Step 1: Generate debate ID**
 
@@ -153,17 +153,17 @@ Step 4: Wait for Opponent
 aw debate generate-id
 ```
 
-Response chứa `id` - lưu lại làm `DEBATE_ID`.
+Response contains `id` - save as `DEBATE_ID`.
 
-**Step 2: Upload document (nếu có file plan):**
+**Step 2: Upload document (if there's a plan file):**
 
 ```bash
 aw docs create --file ./plan.md --summary "Implementation Plan v1"
 ```
 
-Response chứa:
-- `document_id`: UUID của document → lưu lại làm `DOC_ID`
-- `version`: Version number (= 1 cho document mới)
+Response contains:
+- `document_id`: Document UUID → save as `DOC_ID`
+- `version`: Version number (= 1 for new document)
 
 **Step 3: Create debate**
 
@@ -173,14 +173,14 @@ aw debate create \
   --title "Review: Implementation Plan for Feature X" \
   --type coding_plan_debate \
   --content "<MOTION_CONTENT>" \
-  --client-request-id <generate UUID mới>
+  --client-request-id <generate new UUID>
 ```
 
-**MOTION content mẫu:**
+**Sample MOTION content:**
 ```markdown
 ## Request for Review
 
-Cần review implementation plan cho Feature X trước khi implement.
+Need review of implementation plan for Feature X before implementation.
 
 ## Document
 
@@ -189,12 +189,12 @@ Cần review implementation plan cho Feature X trước khi implement.
 
 ## Action Required
 
-Vui lòng đọc TOÀN BỘ plan và review.
+Please read the ENTIRE plan and review.
 ```
 
-Response chứa `argument_id` → lưu lại làm `MOTION_ID`.
+Response contains `argument_id` → save as `MOTION_ID`.
 
-> **Token Optimization:** Response chỉ chứa IDs và metadata, không chứa content vì agent vừa submit.
+> **Token Optimization:** Response only contains IDs and metadata, not content since agent just submitted.
 
 **Step 4: Wait for Opponent**
 
@@ -205,83 +205,83 @@ aw debate wait \
   --role proposer
 ```
 
-## 3. Resume Debate Cũ
+## 3. Resume Old Debate
 
-### 3.1 Lấy Context
+### 3.1 Get Context
 
 ```bash
 aw debate get-context --debate-id <DEBATE_ID> --limit 20
 ```
 
-Response chứa:
-- `debate.state`: Trạng thái hiện tại của debate
-- `debate.debate_type`: Loại debate (để load rule file)
-- `motion`: Argument MOTION ban đầu
-- `arguments`: Danh sách các arguments gần nhất
+Response contains:
+- `debate.state`: Current debate state
+- `debate.debate_type`: Debate type (to load rule file)
+- `motion`: Original MOTION argument
+- `arguments`: List of most recent arguments
 
 ### 3.2 Decision Tree
 
 ```
 IF state == "CLOSED":
-    → Thông báo debate đã đóng, không cần hành động
+    → Notify debate is closed, no action needed
     
 ELIF state == "AWAITING_OPPONENT":
-    → Đang chờ Opponent, call `aw debate wait`
+    → Waiting for Opponent, call `aw debate wait`
     
 ELIF state == "AWAITING_PROPOSER":
-    → Lượt của mình, đọc argument cuối và phản hồi
+    → My turn, read last argument and respond
     
 ELIF state == "AWAITING_ARBITRATOR":
-    → Cả 2 đang chờ Arbitrator, call `aw debate wait`
+    → Both waiting for Arbitrator, call `aw debate wait`
     
 ELIF state == "INTERVENTION_PENDING":
-    → Arbitrator can thiệp, call `aw debate wait` chờ RULING
+    → Arbitrator intervening, call `aw debate wait` for RULING
 ```
 
-### 3.3 Sau Khi Xác Định
+### 3.3 After Determination
 
-- Nếu cần **chờ**: Call `aw debate wait` với argument_id cuối cùng
-- Nếu là **lượt mình**: → Section 4 để xử lý và phản hồi
+- If need to **wait**: Call `aw debate wait` with last argument_id
+- If it's **my turn**: → Section 4 to process and respond
 
-## 4. Xử Lý Response
+## 4. Response Processing
 
-### 4.1 Đọc Response từ `aw debate wait`
+### 4.1 Read Response from `aw debate wait`
 
-Response chứa:
-- `action`: Hành động cần thực hiện tiếp theo
-- `argument`: Argument mới từ Opponent/Arbitrator (nếu có)
-  - `argument.id`: ID để reference trong response tiếp theo
-  - `argument.type`: Loại argument (CLAIM, RULING, etc.)
-  - `argument.content`: Nội dung argument
+Response contains:
+- `action`: Next action to take
+- `argument`: New argument from Opponent/Arbitrator (if any)
+  - `argument.id`: ID to reference in next response
+  - `argument.type`: Argument type (CLAIM, RULING, etc.)
+  - `argument.content`: Argument content
 
 ### 4.2 Action Mapping
 
-| `action` | Ý nghĩa | Hành động |
-|----------|---------|-----------|
-| `respond` | Lượt phản hồi | Phân tích CLAIM và submit response |
-| `align_to_ruling` | Arbitrator đã phán quyết | Follow ruling và submit |
-| `wait_for_ruling` | Đang chờ Arbitrator | Call `aw debate wait` tiếp |
-| `debate_closed` | Debate kết thúc | Dừng |
+| `action` | Meaning | Action |
+|----------|---------|--------|
+| `respond` | Response turn | Analyze CLAIM and submit response |
+| `align_to_ruling` | Arbitrator has ruled | Follow ruling and submit |
+| `wait_for_ruling` | Waiting for Arbitrator | Call `aw debate wait` again |
+| `debate_closed` | Debate ended | Stop |
 
-### 4.3 Phản Hồi CLAIM từ Opponent
+### 4.3 Responding to CLAIM from Opponent
 
 **Workflow:**
 
-1. **Đọc kỹ CLAIM** của Opponent
-2. **Load rule file** theo debateType để xử lý đúng nghiệp vụ
-3. **Đánh giá từng issue trong CLAIM:**
-   - **Hợp lý** → **Sửa document ở local** → Submit new version → Ghi nhận trong response
-   - **Không hợp lý** → Phản biện lại với reasoning
-   - **Không thể thống nhất** → APPEAL (Section 5)
-   - **Đã đồng ý hết** → REQUEST COMPLETION (Section 6)
+1. **Read Opponent's CLAIM** carefully
+2. **Load rule file** by debateType to process per business logic
+3. **Evaluate each issue in CLAIM:**
+   - **Valid** → **Edit document locally** → Submit new version → Acknowledge in response
+   - **Not valid** → Counter with reasoning
+   - **Cannot agree** → APPEAL (Section 5)
+   - **All agreed** → REQUEST COMPLETION (Section 6)
 
-4. **Nếu có sửa document:**
+4. **If document edited:**
 
 ```bash
 aw docs submit <DOC_ID> --summary "Updated based on feedback" --file ./plan.md
 ```
 
-Response chứa `version` mới (ví dụ: 2).
+Response contains new `version` (e.g., 2).
 
 5. **Submit response:**
 
@@ -291,19 +291,19 @@ aw debate submit \
   --role proposer \
   --target-id <OPPONENT_ARG_ID> \
   --content "<RESPONSE_CONTENT>" \
-  --client-request-id <generate UUID mới>
+  --client-request-id <generate new UUID>
 ```
 
-**Response content mẫu:**
+**Sample response content:**
 ```markdown
 ## Response to Opponent's CLAIM
 
-### Issue C1: [Tên issue]
+### Issue C1: [Issue name]
 **Status:** ✅ Accepted
 
-### Issue M1: [Tên issue]  
+### Issue M1: [Issue name]  
 **Status:** ❌ Disagree
-**Reasoning:** [Giải thích ngắn gọn]
+**Reasoning:** [Brief explanation]
 
 ## Document Updated
 
@@ -311,14 +311,14 @@ aw debate submit \
 
 ## Action Required
 
-**Vui lòng đọc lại TOÀN BỘ document đã update** để verify changes.
+**Please read the ENTIRE updated document** to verify changes.
 ```
 
-Response chứa `argument_id` → lưu lại làm `RESPONSE_ID`.
+Response contains `argument_id` → save as `RESPONSE_ID`.
 
-> **Token Optimization:** Response chỉ chứa IDs và metadata, không chứa content.
+> **Token Optimization:** Response only contains IDs and metadata, not content.
 
-6. **Wait tiếp:**
+6. **Continue waiting:**
 
 ```bash
 aw debate wait \
@@ -327,67 +327,67 @@ aw debate wait \
   --role proposer
 ```
 
-### 4.4 Xử Lý RULING từ Arbitrator
+### 4.4 Processing RULING from Arbitrator
 
-Khi `action = "align_to_ruling"`:
+When `action = "align_to_ruling"`:
 
-1. **Đọc nội dung RULING** trong `argument.content`
-2. **Xác định direction** từ Arbitrator
-3. **Align proposal** theo ruling
-4. **Submit response** với nội dung đã align
-5. **Wait** cho Opponent phản hồi
+1. **Read RULING content** in `argument.content`
+2. **Determine direction** from Arbitrator
+3. **Align proposal** per ruling
+4. **Submit response** with aligned content
+5. **Wait** for Opponent's response
 
 ## 5. Submit APPEAL
 
-### 5.1 Khi Nào APPEAL?
+### 5.1 When to APPEAL?
 
-- Không thể đạt được consensus với Opponent
-- Tranh cãi kéo dài > 3 vòng trên cùng một điểm
-- Cần quyết định từ human (Arbitrator)
+- Cannot reach consensus with Opponent
+- Argument continues > 3 rounds on same point
+- Need decision from human (Arbitrator)
 
-### 5.2 Cách APPEAL
+### 5.2 How to APPEAL
 
-**QUAN TRỌNG:** APPEAL content PHẢI bao gồm:
-- Context đầy đủ của điểm tranh chấp
-- Lập trường của Proposer (mình)
-- Lập trường của Opponent
-- **Các options** cho Arbitrator chọn (LUÔN có option cuối là "Phương án khác")
+**IMPORTANT:** APPEAL content MUST include:
+- Full context of disputed point
+- Proposer's position (mine)
+- Opponent's position
+- **Options** for Arbitrator to choose (ALWAYS have final option as "Alternative approach")
 
 ```bash
 aw debate appeal \
   --debate-id <DEBATE_ID> \
   --target-id <DISPUTED_ARG_ID> \
   --content "<APPEAL_CONTENT>" \
-  --client-request-id <generate UUID mới>
+  --client-request-id <generate new UUID>
 ```
 
-**APPEAL content mẫu:**
+**Sample APPEAL content:**
 ```markdown
 ## Context
 
-[Mô tả ngắn gọn điểm tranh chấp]
+[Brief description of disputed point]
 
-## Lập trường Proposer
+## Proposer's Position
 
-[Quan điểm của tôi]
+[My viewpoint]
 
-## Lập trường Opponent
+## Opponent's Position
 
-[Quan điểm của Opponent]
+[Opponent's viewpoint]
 
-## Các phương án đề xuất
+## Proposed Options
 
-1. **Option A:** [Theo hướng Proposer]
-2. **Option B:** [Theo hướng Opponent]
-3. **Option C:** [Phương án dung hòa]
-4. **Option D:** Arbitrator đưa ra phương án khác
+1. **Option A:** [Follow Proposer's direction]
+2. **Option B:** [Follow Opponent's direction]
+3. **Option C:** [Compromise approach]
+4. **Option D:** Arbitrator provides alternative approach
 ```
 
-Response chứa `argument_id` → lưu lại làm `APPEAL_ID`.
+Response contains `argument_id` → save as `APPEAL_ID`.
 
-> **Token Optimization:** Response chỉ chứa IDs và metadata, không chứa content.
+> **Token Optimization:** Response only contains IDs and metadata, not content.
 
-**Sau APPEAL:** Call `aw debate wait` và chờ RULING
+**After APPEAL:** Call `aw debate wait` and wait for RULING
 
 ```bash
 aw debate wait \
@@ -398,31 +398,31 @@ aw debate wait \
 
 ## 6. Request Completion
 
-### 6.1 Khi Nào Request?
+### 6.1 When to Request?
 
-- Đã đạt được consensus trên tất cả các điểm
-- Opponent đồng ý với proposal cuối cùng
-- Không còn outstanding issues
+- Consensus reached on all points
+- Opponent agrees with final proposal
+- No outstanding issues
 
-### 6.2 Cách Request
+### 6.2 How to Request
 
 ```bash
 aw debate request-completion \
   --debate-id <DEBATE_ID> \
   --target-id <LAST_ARG_ID> \
   --content "<RESOLUTION_CONTENT>" \
-  --client-request-id <generate UUID mới>
+  --client-request-id <generate new UUID>
 ```
 
-**RESOLUTION content mẫu:**
+**Sample RESOLUTION content:**
 ```markdown
 ## Summary
 
-[Tóm tắt các điểm đã thống nhất]
+[Summary of agreed points]
 
 ## Final Agreement
 
-[Nội dung cuối cùng đã đồng thuận]
+[Final agreed content]
 
 ## Final Document Versions
 
@@ -430,17 +430,17 @@ aw debate request-completion \
 |----------|---------------|
 | document_id=xxx | v3 |
 
-## Action Items (nếu có)
+## Action Items (if any)
 
 - [ ] Item 1
 - [ ] Item 2
 ```
 
-Response chứa `argument_id` → lưu lại làm `RESOLUTION_ID`.
+Response contains `argument_id` → save as `RESOLUTION_ID`.
 
-> **Token Optimization:** Response chỉ chứa IDs và metadata, không chứa content.
+> **Token Optimization:** Response only contains IDs and metadata, not content.
 
-**Sau Request:** Call `aw debate wait` chờ Arbitrator confirm close
+**After Request:** Call `aw debate wait` to wait for Arbitrator confirm close
 
 ```bash
 aw debate wait \
@@ -449,9 +449,9 @@ aw debate wait \
   --role proposer
 ```
 
-## 7. Xử Lý Timeout
+## 7. Timeout Handling
 
-### 7.1 Nhận Timeout Response
+### 7.1 Receiving Timeout Response
 
 ```json
 {
@@ -460,110 +460,110 @@ aw debate wait \
 }
 ```
 
-### 7.2 Hành Động
+### 7.2 Action
 
-1. **Thông báo cho user:** "Debate đang pending, Opponent chưa phản hồi sau 5 phút"
-2. **Dừng và hướng dẫn resume:** Cung cấp `debate_id` để user có thể resume sau
-3. **KHÔNG tự động retry** - để user quyết định
+1. **Notify user:** "Debate is pending, Opponent has not responded after 5 minutes"
+2. **Stop and guide resume:** Provide `debate_id` for user to resume later
+3. **DO NOT auto-retry** - let user decide
 
 ## 8. Error Handling
 
 ### 8.1 ACTION_NOT_ALLOWED
 
-**Hành động:** Đang không phải lượt mình → Call `aw debate wait`
+**Action:** Not my turn → Call `aw debate wait`
 
 ### 8.2 DEBATE_NOT_FOUND
 
-- Debate ID không tồn tại hoặc typo
-- Thông báo lỗi và yêu cầu user verify debate_id
+- Debate ID does not exist or typo
+- Notify error and ask user to verify debate_id
 
 ### 8.3 Network/Server Error
 
-- Retry tối đa 3 lần với exponential backoff
-- Nếu vẫn fail, thông báo và dừng
+- Retry up to 3 times with exponential backoff
+- If still failing, notify and stop
 
 ## 9. Best Practices
 
-### 9.1 Main Loop - QUAN TRỌNG NHẤT
+### 9.1 Main Loop - MOST IMPORTANT
 
-**KHÔNG BAO GIỜ tự ý kết thúc debate flow:**
+**NEVER exit the debate flow on your own:**
 
 ```
 WHILE TRUE:
     response = aw debate wait(...)
     
     IF response.action == "debate_closed":
-        BREAK  ← CHỈ THOÁT KHI ARBITRATOR ĐÓNG DEBATE
+        BREAK  ← ONLY EXIT WHEN ARBITRATOR CLOSES DEBATE
     
-    # Xử lý response
+    # Process response
     analyze_and_respond()
     
-    # Quay lại wait
+    # Return to wait
     CONTINUE
 ```
 
-**Các lỗi phổ biến cần tránh:**
-- ❌ Thoát sau khi submit mà không wait
-- ❌ Thoát khi nhận RULING mà không align
-- ❌ Thoát sau khi request-completion mà không chờ confirm
-- ✅ CHỈ thoát khi nhận `action="debate_closed"`
+**Common mistakes to avoid:**
+- ❌ Exiting after submitting without waiting
+- ❌ Exiting when receiving RULING without aligning
+- ❌ Exiting after request-completion without waiting for confirmation
+- ✅ ONLY exit when receiving `action="debate_closed"`
 
-### 9.2 Document Management (QUAN TRỌNG)
+### 9.2 Document Management (IMPORTANT)
 
-**Nguyên tắc:**
-- **Document chính sống ở LOCAL** - Edit trực tiếp, không tạo file mới
-- **Mỗi lần sửa → Submit version** - `aw docs submit` sau mỗi lần edit
-- **Argument chỉ chứa summary** - Reference doc_id, không paste content
+**Principles:**
+- **Main document lives LOCALLY** - Edit directly, don't create new files
+- **Each edit → Submit version** - `aw docs submit` after each edit
+- **Argument only contains summary** - Reference doc_id, don't paste content
 
-**KHÔNG làm:**
-- ❌ Paste toàn bộ document vào argument
-- ❌ Sửa document mà không submit version mới
-- ❌ Tạo file mới mỗi lần response
+**DO NOT:**
+- ❌ Paste entire document into argument
+- ❌ Edit document without submitting new version
+- ❌ Create new file for each response
 
 ### 9.3 Response Quality
 
-- Phản hồi có cấu trúc rõ ràng
-- Address từng point của Opponent
-- Đưa ra reasoning cho mỗi quyết định
-- **LUÔN include document version info** khi có update
+- Respond with clear structure
+- Address each point from Opponent
+- Provide reasoning for each decision
+- **ALWAYS include document version info** when updated
 
-### 9.4 Khi Không Chắc Chắn
+### 9.4 When Uncertain
 
-- KHÔNG đoán mò - APPEAL để Arbitrator quyết định
-- Cung cấp đầy đủ context trong APPEAL
+- DO NOT guess - APPEAL for Arbitrator decision
+- Provide full context in APPEAL
 
-## 10. Checklist Trước Khi Kết Thúc Session
+## 10. Checklist Before Ending Session
 
-**QUAN TRỌNG:** Proposer CHỈ kết thúc khi:
-- [ ] Nhận được `action="debate_closed"` từ `aw debate wait`
+**IMPORTANT:** Proposer ONLY ends when:
+- [ ] Received `action="debate_closed"` from `aw debate wait`
 
-**Nếu chưa close, trước khi tạm dừng session:**
-- [ ] Đã submit response hoặc đang wait?
-- [ ] User có debate_id để resume?
-- [ ] Có outstanding issues cần highlight?
-- [ ] **Document đã submit version mới chưa?** (nếu có edit)
-- [ ] **Opponent được thông báo về version update chưa?**
+**If not yet closed, before pausing session:**
+- [ ] Submitted response or currently waiting?
+- [ ] User has debate_id to resume?
+- [ ] Outstanding issues to highlight?
+- [ ] **Document submitted new version?** (if edited)
+- [ ] **Opponent notified about version update?**
 
 ## 11. CLI Command Quick Reference
 
 ### Debate Commands
 
-| Command | Mô tả | Response chứa |
-|---------|-------|---------------|
-| `aw debate generate-id` | Tạo UUID mới | `id` |
-| `aw debate create --debate-id <id> --title "..." --type <type> --content "..." --client-request-id <id>` | Tạo debate mới | `argument_id` (MOTION) |
-| `aw debate get-context --debate-id <id> --limit 20` | Lấy context debate | `debate.state`, `arguments[]` |
+| Command | Description | Response contains |
+|---------|-------------|-------------------|
+| `aw debate generate-id` | Generate new UUID | `id` |
+| `aw debate create --debate-id <id> --title "..." --type <type> --content "..." --client-request-id <id>` | Create new debate | `argument_id` (MOTION) |
+| `aw debate get-context --debate-id <id> --limit 20` | Get debate context | `debate.state`, `arguments[]` |
 | `aw debate submit --debate-id <id> --role proposer --target-id <arg_id> --content "..." --client-request-id <id>` | Submit CLAIM | `argument_id` |
-| `aw debate wait --debate-id <id> --argument-id <arg_id> --role proposer` | Chờ response | `action`, `argument` |
-| `aw debate appeal --debate-id <id> --target-id <arg_id> --content "..." --client-request-id <id>` | Yêu cầu phán xử | `argument_id` |
-| `aw debate request-completion --debate-id <id> --target-id <arg_id> --content "..." --client-request-id <id>` | Yêu cầu kết thúc | `argument_id` |
+| `aw debate wait --debate-id <id> --argument-id <arg_id> --role proposer` | Wait for response | `action`, `argument` |
+| `aw debate appeal --debate-id <id> --target-id <arg_id> --content "..." --client-request-id <id>` | Request judgment | `argument_id` |
+| `aw debate request-completion --debate-id <id> --target-id <arg_id> --content "..." --client-request-id <id>` | Request completion | `argument_id` |
 
 ### Docs Commands
 
-| Command | Mô tả | Response chứa |
-|---------|-------|---------------|
-| `aw docs create --file <path> --summary "..."` | Tạo document mới | `document_id`, `version` |
+| Command | Description | Response contains |
+|---------|-------------|-------------------|
+| `aw docs create --file <path> --summary "..."` | Create new document | `document_id`, `version` |
 | `aw docs submit <document_id> --file <path> --summary "..."` | Update version | `version` |
-| `aw docs get <document_id>` | Lấy document content | `content`, `version` |
+| `aw docs get <document_id>` | Get document content | `content`, `version` |
 
-> **LƯU Ý:** `aw docs get` và `aw docs submit` dùng **positional argument** cho document_id, KHÔNG có flag `--id`.
+> **NOTE:** `aw docs get` and `aw docs submit` use **positional argument** for document_id, NO `--id` flag.
