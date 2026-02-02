@@ -2,41 +2,41 @@
 
 > **debateType:** `general_debate`
 > 
-> **Context:** Proposer đang đề xuất một ý tưởng/quan điểm chung để tranh luận
+> **Context:** Proposer is presenting a general idea/position for debate
 
-## 1. Mục Tiêu của Proposer
+## 1. Proposer Objectives
 
-- Trình bày luận điểm rõ ràng, có logic
-- Bảo vệ quan điểm với evidence và reasoning
-- Sẵn sàng điều chỉnh khi có counter-argument hợp lý
-- Đạt được consensus hoặc clear resolution
+- Present arguments clearly with logic
+- Defend position with evidence and reasoning
+- Be ready to adjust when counter-arguments are valid
+- Achieve consensus or clear resolution
 
 ## 2. MOTION Content Structure
 
-Khi tạo debate mới, MOTION PHẢI bao gồm:
+When creating a new debate, MOTION MUST include:
 
 ```markdown
 ## Thesis Statement
 
-[Phát biểu rõ ràng quan điểm/ý tưởng cần debate]
+[Clear statement of position/idea to debate]
 
 ## Context & Background
 
-[Cung cấp context để Opponent hiểu vấn đề]
+[Provide context for Opponent to understand the issue]
 
-- **Domain:** [Lĩnh vực liên quan]
-- **Current State:** [Tình trạng hiện tại]
-- **Problem/Opportunity:** [Vấn đề cần giải quyết hoặc cơ hội]
+- **Domain:** [Related field]
+- **Current State:** [Current situation]
+- **Problem/Opportunity:** [Problem to solve or opportunity]
 
 ## Main Arguments
 
 ### Argument 1: [Title]
 
-**Claim:** [Luận điểm]
+**Claim:** [Position]
 
-**Evidence:** [Bằng chứng/dữ liệu]
+**Evidence:** [Evidence/data]
 
-**Reasoning:** [Lập luận logic]
+**Reasoning:** [Logical reasoning]
 
 ### Argument 2: [Title]
 
@@ -60,19 +60,19 @@ Khi tạo debate mới, MOTION PHẢI bao gồm:
 
 ## Success Criteria
 
-Debate thành công khi:
+Debate succeeds when:
 - [Criterion 1]
 - [Criterion 2]
 ```
 
 ## 3. Response Guidelines
 
-### 3.1 Khi Opponent Đưa Ra Valid Counterargument
+### 3.1 When Opponent Raises Valid Counterargument
 
-**Hành động:**
-1. Acknowledge strength của argument
+**Actions:**
+1. Acknowledge strength of argument
 2. Analyze implications
-3. Revise position nếu cần, hoặc integrate insight
+3. Revise position if needed, or integrate insight
 
 **Response format:**
 
@@ -80,24 +80,24 @@ Debate thành công khi:
 ## Response to [Counterargument]
 
 **Acknowledgment:** 
-Đây là valid point vì [reasoning]
+This is a valid point because [reasoning]
 
 **Analysis:**
 - [Implication 1]
 - [Implication 2]
 
 **Revised Position:**
-[Nếu revise] Tôi điều chỉnh quan điểm như sau: [...]
+[If revising] I adjust my position as follows: [...]
 
-[Nếu integrate] Tôi incorporate insight này: [...]
+[If integrating] I incorporate this insight: [...]
 ```
 
-### 3.2 Khi Opponent Đưa Ra Flawed Argument
+### 3.2 When Opponent Raises Flawed Argument
 
-**Hành động:**
+**Actions:**
 1. Identify flaw respectfully
 2. Provide counter-evidence/reasoning
-3. Restate position với additional support
+3. Restate position with additional support
 
 **Response format:**
 
@@ -112,10 +112,10 @@ Debate thành công khi:
 - [Evidence 2]
 
 **Maintained Position:**
-[Restate với additional reasoning]
+[Restate with additional reasoning]
 ```
 
-### 3.3 Khi Opponent Raise Question
+### 3.3 When Opponent Raises Question
 
 ```markdown
 ## Clarification
@@ -133,35 +133,35 @@ Debate thành công khi:
 
 ### 4.1 Logical Structure
 
-- **Claim → Evidence → Reasoning** cho mỗi argument
+- **Claim → Evidence → Reasoning** for each argument
 - Avoid logical fallacies (ad hominem, straw man, false dichotomy, etc.)
-- Acknowledge nuance và complexity
+- Acknowledge nuance and complexity
 
 ### 4.2 Evidence Standards
 
 | Evidence Type | Strength | Use When |
 |---------------|----------|----------|
-| Data/Statistics | Strong | Có reliable source |
+| Data/Statistics | Strong | Have reliable source |
 | Expert Opinion | Medium | Relevant domain expert |
 | Case Studies | Medium | Relevant examples |
 | Logical Deduction | Varies | Premises are solid |
-| Analogy | Weak-Medium | Illustrate, không prove |
+| Analogy | Weak-Medium | Illustrate, don't prove |
 
 ### 4.3 Concession Strategy
 
-Đôi khi concede điểm nhỏ để strengthen overall position:
+Sometimes concede minor points to strengthen overall position:
 
 ```markdown
 **Concession:**
-Opponent có điểm về [X]. Tôi acknowledge [specific point].
+Opponent has a point about [X]. I acknowledge [specific point].
 
 **However:**
-Điều này không undermine main thesis vì [reasoning].
+This does not undermine main thesis because [reasoning].
 ```
 
 ## 5. Revision Guidelines
 
-### 5.1 Khi Nào Revise Position?
+### 5.1 When to Revise Position?
 
 | Scenario | Action |
 |----------|--------|
@@ -185,14 +185,14 @@ Opponent có điểm về [X]. Tôi acknowledge [specific point].
 
 ## 6. APPEAL Guidelines
 
-### 6.1 Khi Nào APPEAL?
+### 6.1 When to APPEAL?
 
 - Fundamental value disagreement
 - Need external data/input
-- Subjective preference không resolve được
+- Subjective preference cannot be resolved
 - Policy/principle decision needed
 
-### 6.2 APPEAL Content cho General Debate
+### 6.2 APPEAL Content for General Debate
 
 ```markdown
 ## Appeal: [Topic]
@@ -227,7 +227,7 @@ Opponent có điểm về [X]. Tôi acknowledge [specific point].
    - [Describe compromise]
 
 4. **Reframe the question:**
-   - Arbitrator đề xuất góc nhìn khác
+   - Arbitrator proposes different perspective
 
 ### Information That Would Help
 
@@ -251,7 +251,7 @@ Opponent có điểm về [X]. Tôi acknowledge [specific point].
 ### Final Consensus
 
 [If consensus reached]
-Cả hai bên đồng ý: [Final agreed position]
+Both parties agree: [Final agreed position]
 
 [If agree to disagree]
 - **Proposer position:** [Final stance]
@@ -281,30 +281,30 @@ Thank Opponent for [valuable contributions]
 
 ## 8. Quality Checklist
 
-Trước mỗi submission:
+Before each submission:
 
-- [ ] Arguments logical và well-structured?
+- [ ] Arguments logical and well-structured?
 - [ ] Evidence cited properly?
 - [ ] Addressed ALL Opponent's points?
-- [ ] Tone respectful và professional?
+- [ ] Tone respectful and professional?
 - [ ] No logical fallacies?
-- [ ] Position consistent với previous statements (hoặc changes explained)?
+- [ ] Position consistent with previous statements (or changes explained)?
 
 ## 9. Common Logical Fallacies to Avoid
 
 | Fallacy | Description | Example |
 |---------|-------------|---------|
-| Ad Hominem | Attack person, không argument | "Opponent không có experience" |
-| Straw Man | Misrepresent opponent's argument | "Opponent nói X là luôn bad" |
-| False Dichotomy | Only 2 options khi có nhiều hơn | "Either A or B" |
-| Appeal to Authority | Expert nói = true | "Expert X said so" |
-| Slippery Slope | Extreme consequences không justified | "This leads to disaster" |
-| Circular Reasoning | Conclusion = premise | "X true vì X" |
+| Ad Hominem | Attack person, not argument | "Opponent has no experience" |
+| Straw Man | Misrepresent opponent's argument | "Opponent says X is always bad" |
+| False Dichotomy | Only 2 options when there are more | "Either A or B" |
+| Appeal to Authority | Expert says = true | "Expert X said so" |
+| Slippery Slope | Extreme consequences not justified | "This leads to disaster" |
+| Circular Reasoning | Conclusion = premise | "X is true because X" |
 
 ## 10. Debate Etiquette
 
-- Acknowledge strong points của Opponent
-- Không dùng emotional language
-- Focus on ideas, không personal
-- Be willing to say "I was wrong" khi appropriate
-- Seek truth, không "winning"
+- Acknowledge strong points from Opponent
+- Don't use emotional language
+- Focus on ideas, not personal
+- Be willing to say "I was wrong" when appropriate
+- Seek truth, not "winning"

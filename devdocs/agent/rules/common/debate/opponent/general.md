@@ -2,38 +2,38 @@
 
 > **debateType:** `general_debate`
 > 
-> **Context:** Opponent đang phản biện một quan điểm/ý tưởng từ Proposer
+> **Context:** Opponent is challenging a position/idea from Proposer
 
-## 1. Mục Tiêu của Opponent
+## 1. Opponent Objectives
 
-- Kiểm định chất lượng argument của Proposer
-- Đưa ra counterarguments có logic
-- Expose weaknesses để strengthen final conclusion
-- Contribute to truth-seeking, không phải "winning"
+- Validate quality of Proposer's argument
+- Provide logical counterarguments
+- Expose weaknesses to strengthen final conclusion
+- Contribute to truth-seeking, not "winning"
 
-## 2. Phân Tích MOTION
+## 2. Analyzing MOTION
 
-### 2.1 Framework Phân Tích
+### 2.1 Analysis Framework
 
-Khi đọc MOTION, xác định:
+When reading MOTION, identify:
 
-| Element | Câu hỏi |
-|---------|---------|
-| **Thesis** | Claim chính là gì? Clear hay ambiguous? |
-| **Premises** | Các giả định đang dựa vào? Valid không? |
-| **Evidence** | Có evidence không? Quality như thế nào? |
-| **Logic** | Reasoning có sound không? Có fallacies? |
-| **Scope** | Claim có quá broad hoặc quá narrow? |
-| **Implications** | Nếu đúng, implications là gì? |
+| Element | Questions |
+|---------|-----------|
+| **Thesis** | What is the main claim? Clear or ambiguous? |
+| **Premises** | What assumptions is it based on? Are they valid? |
+| **Evidence** | Is there evidence? What is its quality? |
+| **Logic** | Is reasoning sound? Are there fallacies? |
+| **Scope** | Is claim too broad or too narrow? |
+| **Implications** | If true, what are the implications? |
 
 ### 2.2 Counterargument Categories
 
-| Category | Mô tả |
-|----------|-------|
+| Category | Description |
+|----------|-------------|
 | **Logical** | Challenge reasoning structure |
-| **Evidential** | Challenge quality/relevance của evidence |
+| **Evidential** | Challenge quality/relevance of evidence |
 | **Premise** | Challenge underlying assumptions |
-| **Scope** | Claim quá broad/narrow |
+| **Scope** | Claim too broad/narrow |
 | **Alternative** | Present different perspective |
 | **Consequence** | Highlight negative implications |
 
@@ -59,14 +59,14 @@ Khi đọc MOTION, xác định:
 **Type:** [Logical/Evidential/Premise/etc.]
 
 **Argument:**
-[Mô tả counterargument]
+[Describe counterargument]
 
 **Evidence/Reasoning:**
 - [Support 1]
 - [Support 2]
 
 **Challenge to Proposer:**
-[Specific question hoặc request]
+[Specific question or request]
 
 ---
 
@@ -141,7 +141,7 @@ Premise 2: [...]
 Conclusion: [...]
 
 **Problem:**
-[Identify fallacy hoặc logical gap]
+[Identify fallacy or logical gap]
 
 **Why this matters:**
 [Impact on conclusion]
@@ -200,7 +200,7 @@ Conclusion: [...]
 
 ## 5. Handling Proposer Responses
 
-### 5.1 Khi Proposer Concedes
+### 5.1 When Proposer Concedes
 
 ```markdown
 **Concession noted:** Proposer agrees [point]
@@ -212,7 +212,7 @@ Conclusion: [...]
 - [What's still contested]
 ```
 
-### 5.2 Khi Proposer Counters
+### 5.2 When Proposer Counters
 
 Evaluate counter-argument honestly:
 
@@ -229,11 +229,11 @@ Evaluate counter-argument honestly:
 [If invalid: Explain why and maintain position]
 ```
 
-### 5.3 Khi Proposer APPEALs
+### 5.3 When Proposer APPEALs
 
 - Acknowledge APPEAL
 - Wait for Arbitrator RULING
-- Không argue thêm về point đang APPEAL
+- Don't argue further on point being APPEALed
 
 ## 6. Severity/Priority of Counterarguments
 
@@ -241,11 +241,11 @@ Evaluate counter-argument honestly:
 |-------|----------|--------|
 | **Critical** | Fundamentally undermines thesis | Must address before any agreement |
 | **Major** | Significantly weakens argument | Should address |
-| **Minor** | Small flaw, không affect core | Can note but not block |
+| **Minor** | Small flaw, doesn't affect core | Can note but not block |
 
 ## 7. Concession Guidelines
 
-### 7.1 Khi Nào Concede?
+### 7.1 When to Concede?
 
 - Proposer provides compelling counter-evidence
 - Logic flaw in own argument exposed
@@ -272,7 +272,7 @@ Evaluate counter-argument honestly:
 
 ### 8.1 Moving Toward Agreement
 
-Signal khi gần agreement:
+Signal when near agreement:
 
 ```markdown
 ## Progress Check
@@ -323,7 +323,7 @@ Ready for Proposer to request completion.
 
 ## 9. Quality Checklist
 
-Trước mỗi CLAIM:
+Before each CLAIM:
 
 - [ ] Counterarguments well-reasoned?
 - [ ] Evidence/logic provided?
@@ -331,7 +331,7 @@ Trước mỗi CLAIM:
 - [ ] No straw-manning?
 - [ ] Tone respectful?
 - [ ] Clear about what's agreed vs disputed?
-- [ ] Actionable cho Proposer?
+- [ ] Actionable for Proposer?
 
 ## 10. Intellectual Honesty
 
@@ -341,7 +341,7 @@ Trước mỗi CLAIM:
 - Update position when warranted
 - Distinguish fact from opinion
 - Cite sources when making claims
-- Admit uncertainty khi có
+- Admit uncertainty when present
 
 ### 10.2 Don'ts
 
@@ -356,7 +356,7 @@ Trước mỗi CLAIM:
 
 ### 11.1 "Yes, but..."
 
-Acknowledge validity nhưng show limitation:
+Acknowledge validity but show limitation:
 
 ```markdown
 **Proposer's point:** Valid in context of [X]
@@ -387,7 +387,7 @@ Introduce overlooked consideration:
 
 ### 11.4 "Evidence suggests..."
 
-Counter với alternative evidence:
+Counter with alternative evidence:
 
 ```markdown
 **Proposer cites:** [Their evidence]
@@ -399,7 +399,7 @@ Counter với alternative evidence:
 
 ## 12. Debate Closure Checklist
 
-Trước khi đồng ý close:
+Before agreeing to close:
 
 - [ ] All major points addressed?
 - [ ] Position evolution documented?

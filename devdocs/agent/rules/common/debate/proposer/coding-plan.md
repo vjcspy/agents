@@ -2,77 +2,77 @@
 
 > **debateType:** `coding_plan_debate`
 > 
-> **Context:** Proposer đang đề xuất một implementation plan để Opponent review
+> **Context:** Proposer is submitting an implementation plan for Opponent review
 
-## 1. Mục Tiêu của Proposer
+## 1. Proposer Objectives
 
-- Trình bày plan rõ ràng, có cấu trúc
-- Defend các quyết định kỹ thuật với reasoning
-- Sẵn sàng revise khi có feedback hợp lý
-- Đảm bảo plan cuối cùng được cả hai bên đồng thuận
+- Present plan clearly with proper structure
+- Defend technical decisions with reasoning
+- Be ready to revise when feedback is valid
+- Ensure final plan achieves consensus from both parties
 
 ## 2. MOTION Content Structure
 
-> **QUAN TRỌNG:** Plan file đã có đầy đủ chi tiết theo template `create-plan.md` (References, Objective, Key Considerations, Implementation Plan phases, etc.). 
+> **IMPORTANT:** Plan file already contains full details per `create-plan.md` template (References, Objective, Key Considerations, Implementation Plan phases, etc.). 
 > 
-> **MOTION chỉ cần summary cực ngắn + yêu cầu đọc full document.**
+> **MOTION only needs a brief summary + request to read full document.**
 
 ```markdown
 ## Request for Review
 
-[1-2 câu mô tả mục đích - ví dụ: "Cần review plan cho Feature X trước khi implement"]
+[1-2 sentences describing purpose - e.g., "Need review of Feature X plan before implementation"]
 
 ## Document
 
 - **Plan:** doc_id=xxx-xxx (v1)
-- Command: `aw docs get --id xxx-xxx`
+- Command: `aw docs get <doc_id>`
 
 ## Action Required
 
-Vui lòng đọc **TOÀN BỘ** plan document và review.
-
-## Focus Areas (optional)
-
-[Nếu muốn Opponent chú ý đặc biệt vào sections nào]
+Please read the **ENTIRE** plan document and review.
 ```
 
-**KHÔNG bao gồm trong MOTION:**
-- ❌ Context, requirements (đã có trong plan)
-- ❌ Implementation steps (đã có trong plan)  
-- ❌ Technical decisions (đã có trong plan)
-- ❌ Risks (đã có trong plan)
+**DO NOT include in MOTION:**
+- ❌ Context, requirements (already in plan)
+- ❌ Implementation steps (already in plan)  
+- ❌ Technical decisions (already in plan)
+- ❌ Risks (already in plan)
+- ❌ Focus Areas / Key Technical Decisions to Review
 
-**Lý do:** Tránh duplicate, giữ argument lean, single source of truth là document
+**Rationale:** 
+- Avoid duplication, keep argument lean, single source of truth is the document
+- **Opponent is the expert** - let them determine what to focus on based on their own due diligence
+- **Avoid bias** - don't direct Opponent to only look where Proposer points, may miss issues elsewhere
 
-## 3. Document Update Workflow (QUAN TRỌNG)
+## 3. Document Update Workflow (IMPORTANT)
 
-### 3.1 Nguyên Tắc Cốt Lõi
+### 3.1 Core Principles
 
-| Rule | Mô tả |
-|------|-------|
-| **Local-first** | Document chính (plan.md) sống ở local, edit trực tiếp |
-| **Version on change** | Mỗi lần sửa document → PHẢI submit version mới |
-| **Notify Opponent** | Response PHẢI include info về version update |
+| Rule | Description |
+|------|-------------|
+| **Local-first** | Main document (plan.md) lives locally, edit directly |
+| **Version on change** | Each document edit → MUST submit new version |
+| **Notify Opponent** | Response MUST include version update info |
 
-### 3.2 Workflow Khi Accept Valid Feedback
+### 3.2 Workflow When Accepting Valid Feedback
 
 ```
-Step 1: Đọc CLAIM từ Opponent
+Step 1: Read CLAIM from Opponent
         ↓
-Step 2: Xác định issues cần address
+Step 2: Identify issues to address
         ↓
-Step 3: Edit file ./plan.md trực tiếp ở local
+Step 3: Edit file ./plan.md directly at local
         ↓
 Step 4: Submit new version
-        $ aw docs submit --id <doc_id> --file ./plan.md
+        $ aw docs submit <doc_id> --file ./plan.md --summary "..."
         → Response: { "version": N }
         ↓
-Step 5: Submit CLAIM response kèm version info
+Step 5: Submit CLAIM response with version info
 ```
 
-### 3.3 Response Format (Có Document Update)
+### 3.3 Response Format (With Document Update)
 
-> **Nguyên tắc:** Response ngắn gọn, KHÔNG giải thích chi tiết đã sửa gì. Document đã có đầy đủ - yêu cầu Opponent đọc lại.
+> **Principle:** Response should be concise, DO NOT explain in detail what was changed. Document has full details - request Opponent to re-read.
 
 ```markdown
 ## Response to Opponent's Review
@@ -83,7 +83,7 @@ Step 5: Submit CLAIM response kèm version info
 |-------|--------|------|
 | C1: [Name] | ✅ Accepted | - |
 | M1: [Name] | ✅ Accepted | - |
-| M2: [Name] | ❌ Disagree | [1 câu lý do ngắn] |
+| M2: [Name] | ❌ Disagree | [1 sentence reason] |
 
 ### Document Updated
 
@@ -91,11 +91,11 @@ Step 5: Submit CLAIM response kèm version info
 
 ### Action Required
 
-**Vui lòng đọc lại TOÀN BỘ document đã update** để:
-1. Verify các issues đã được address
-2. Continue review nếu còn concerns
+**Please re-read the ENTIRE updated document** to:
+1. Verify issues have been addressed
+2. Continue review if there are remaining concerns
 
-Command: `aw docs get --id xxx`
+Command: `aw docs get <doc_id>`
 
 ---
 
@@ -105,19 +105,19 @@ Command: `aw docs get --id xxx`
 |----------|----------|---------|---------|
 | doc_id=xxx (plan.md) | v1 | v2 | Fixed C1, M1 |
 
-**Verify changes:** `aw docs get --id xxx`
+**Verify changes:** `aw docs get <doc_id>`
 ```
 
 ## 4. Response Guidelines
 
-### 4.1 Khi Opponent Raise Valid Issue
+### 4.1 When Opponent Raises Valid Issue
 
-**Hành động (theo thứ tự):**
+**Actions (in order):**
 1. Acknowledge issue
 2. Analyze impact
-3. **Edit document ở local**
+3. **Edit document locally**
 4. **Submit new version** (`aw docs submit`)
-5. Compose response với version info
+5. Compose response with version info
 
 **Response format:**
 
@@ -128,14 +128,14 @@ Command: `aw docs get --id xxx`
 
 **Document:** doc_id=xxx updated to **v2**
 
-**Action Required:** Vui lòng đọc lại document để verify change.
+**Action Required:** Please re-read document to verify change.
 ```
 
-> **KHÔNG cần:** Impact analysis, summary of change, chi tiết đã sửa gì. Document đã có đầy đủ - Opponent đọc trực tiếp sẽ rõ hơn.
+> **NOT needed:** Impact analysis, summary of change, details of what was changed. Document has full details - Opponent reading directly will understand better.
 
-### 3.2 Khi Opponent Raise Invalid/Unclear Issue
+### 4.2 When Opponent Raises Invalid/Unclear Issue
 
-**Hành động:**
+**Actions:**
 1. Clarify understanding
 2. Provide counter-reasoning
 3. Offer to discuss further
@@ -145,44 +145,44 @@ Command: `aw docs get --id xxx`
 ```markdown
 ## Response to [Issue Name]
 
-**My Understanding:** [Tóm tắt issue như tôi hiểu]
+**My Understanding:** [Summarize issue as I understand it]
 
 **Counter-argument:**
-[Giải thích tại sao approach hiện tại vẫn valid]
+[Explain why current approach is still valid]
 
 **Evidence/Reasoning:**
 - [Point 1]
 - [Point 2]
 
-**Open to Discussion:** [Nếu Opponent có thêm context, sẵn sàng xem xét]
+**Open to Discussion:** [If Opponent has additional context, willing to reconsider]
 ```
 
-### 3.3 Khi Cần Clarification từ Opponent
+### 4.3 When Clarification Needed from Opponent
 
 ```markdown
 ## Clarification Needed
 
-Trước khi address [Issue], tôi cần hiểu rõ hơn:
+Before addressing [Issue], I need to understand better:
 
 1. [Question 1]
 2. [Question 2]
 
-Vui lòng clarify để tôi có thể respond accurately.
+Please clarify so I can respond accurately.
 ```
 
-## 5. Revise Guidelines
+## 5. Revision Guidelines
 
-### 5.1 Khi Nào Revise?
+### 5.1 When to Revise?
 
 | Scenario | Action | Submit Version? |
 |----------|--------|-----------------|
-| Technical flaw được point out | Revise immediately | ✅ Yes |
-| Better alternative suggested | Evaluate và revise nếu better | ✅ Yes |
+| Technical flaw pointed out | Revise immediately | ✅ Yes |
+| Better alternative suggested | Evaluate and revise if better | ✅ Yes |
 | Missing edge case | Add handling | ✅ Yes |
-| Unclear documentation | Clarify và update | ✅ Yes |
-| Style preference | Không cần revise trừ khi có strong reason | ❌ No |
+| Unclear documentation | Clarify and update | ✅ Yes |
+| Style preference | No need to revise unless strong reason | ❌ No |
 
-### 5.2 Revise Tracking (trong Response)
+### 5.2 Revision Tracking (in Response)
 
 ```markdown
 ## Changes in This Revision
@@ -195,7 +195,7 @@ Vui lòng clarify để tôi có thể respond accurately.
 ## Document Updates
 
 - **doc_id=xxx (plan.md):** v1 → v2
-- Verify: `aw docs get --id xxx`
+- Verify: `aw docs get <doc_id>`
 
 ## Outstanding Issues
 
@@ -203,45 +203,45 @@ Vui lòng clarify để tôi có thể respond accurately.
 - [x] [Issue resolved in this revision]
 ```
 
-### 5.3 Anti-pattern: Sửa Mà Không Submit Version
+### 5.3 Anti-pattern: Editing Without Submitting Version
 
-❌ **KHÔNG LÀM:**
+❌ **DON'T DO:**
 ```
 1. Edit ./plan.md
-2. Submit response nói "đã sửa"
-3. Quên submit version
-→ Opponent không có cách verify!
+2. Submit response saying "fixed"
+3. Forget to submit version
+→ Opponent has no way to verify!
 ```
 
-✅ **LUÔN LÀM:**
+✅ **ALWAYS DO:**
 ```
 1. Edit ./plan.md
-2. aw docs submit --id xxx --file ./plan.md → v2
-3. Submit response kèm "doc_id=xxx updated to v2"
-→ Opponent có thể verify changes
+2. aw docs submit <doc_id> --file ./plan.md --summary "..." → v2
+3. Submit response with "doc_id=xxx updated to v2"
+→ Opponent can verify changes
 ```
 
 ## 6. APPEAL Guidelines
 
-### 5.1 Khi Nào APPEAL?
+### 6.1 When to APPEAL?
 
-- Tranh cãi về fundamental design decision
-- Không thể reach consensus sau 3 vòng
-- Cần business/product decision (không phải technical)
-- Trade-off cần stakeholder input
+- Dispute over fundamental design decision
+- Cannot reach consensus after 3 rounds
+- Need business/product decision (not technical)
+- Trade-off needs stakeholder input
 
-### 5.2 APPEAL Content cho Coding Plan
+### 6.2 APPEAL Content for Coding Plan
 
 ```markdown
 ## Appeal: [Decision/Issue Name]
 
 ### Context
 
-Đang debate về: [implementation plan for X]
+Debating about: [implementation plan for X]
 
 ### Point of Contention
 
-[Mô tả điểm không thống nhất được]
+[Describe the point of disagreement]
 
 ### Proposer's Position
 
@@ -275,7 +275,7 @@ Vui lòng clarify để tôi có thể respond accurately.
 3. **Option C (Hybrid):**
    - [Describe hybrid approach]
 
-4. **Option D:** Arbitrator đề xuất phương án khác
+4. **Option D:** Arbitrator proposes alternative approach
 
 ### Additional Context
 
@@ -286,20 +286,20 @@ Vui lòng clarify để tôi có thể respond accurately.
 
 ## 7. Request Completion Guidelines
 
-### 6.1 Khi Nào Request?
+### 7.1 When to Request?
 
-- Tất cả Critical/Major issues đã resolved
-- Opponent explicitly agrees hoặc không raise new issues
-- Plan đã stable qua ít nhất 1 vòng
+- All Critical/Major issues resolved
+- Opponent explicitly agrees or raises no new issues
+- Plan has been stable for at least 1 round
 
-### 6.2 Completion Content
+### 7.2 Completion Content
 
 ```markdown
 ## Resolution Summary
 
 ### Agreed Implementation Plan
 
-[Final version của plan]
+[Final version of plan]
 
 ### Changes from Original
 
@@ -317,7 +317,7 @@ Vui lòng clarify để tôi có thể respond accurately.
 
 - Thank Opponent for [specific valuable feedback]
 
-### Next Steps (sau khi debate close)
+### Next Steps (after debate closes)
 
 1. [ ] Start implementation
 2. [ ] [Other action items]
@@ -325,28 +325,28 @@ Vui lòng clarify để tôi có thể respond accurately.
 
 ## 8. Quality Checklist
 
-Trước mỗi submission, verify:
+Before each submission, verify:
 
-- [ ] Response address TẤT CẢ points Opponent raised?
-- [ ] Technical reasoning clear và accurate?
+- [ ] Response addresses ALL points Opponent raised?
+- [ ] Technical reasoning clear and accurate?
 - [ ] Plan sections updated consistently?
-- [ ] No contradictions với previous statements?
+- [ ] No contradictions with previous statements?
 - [ ] Changes tracked properly?
-- [ ] Tone professional và constructive?
-- [ ] **Đã edit document ở local chưa?** (nếu accept feedback)
-- [ ] **Đã `aw docs submit` để tạo version mới chưa?**
-- [ ] **Response có include version info cho Opponent verify?**
+- [ ] Tone professional and constructive?
+- [ ] **Document edited locally?** (if accepting feedback)
+- [ ] **Ran `aw docs submit` to create new version?**
+- [ ] **Response includes version info for Opponent to verify?**
 
 ## 9. Anti-patterns to Avoid
 
 | Anti-pattern | Why Bad | Instead |
 |--------------|---------|---------|
-| Defensive reactions | Không productive | Acknowledge valid points |
-| Ignoring issues | Trust breakdown | Address mọi issue |
-| Vague responses | Không resolve | Be specific |
+| Defensive reactions | Not productive | Acknowledge valid points |
+| Ignoring issues | Trust breakdown | Address every issue |
+| Vague responses | Doesn't resolve | Be specific |
 | Changing without explaining | Confusing | Track all changes |
-| APPEAL quá sớm | Waste Arbitrator time | Try to resolve first |
-| APPEAL quá muộn | Deadlock | APPEAL khi cần |
-| **Sửa doc mà không submit version** | Opponent không verify được | LUÔN `aw docs submit` sau edit |
-| **Paste full doc vào argument** | Bloat, khó track changes | Chỉ summary + doc_id reference |
-| **Tạo file mới mỗi response** | Clutter, khó manage | Dùng `--content` hoặc file cố định |
+| APPEAL too early | Waste Arbitrator time | Try to resolve first |
+| APPEAL too late | Deadlock | APPEAL when needed |
+| **Edit doc without submitting version** | Opponent cannot verify | ALWAYS `aw docs submit` after edit |
+| **Paste full doc into argument** | Bloat, hard to track changes | Only summary + doc_id reference |
+| **Create new file each response** | Clutter, hard to manage | Use `--content` or fixed file |

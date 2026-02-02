@@ -2,6 +2,8 @@
 
 > **Role:** Proposer - The party that proposes and maintains the debate direction
 
+> **⚠️ LANGUAGE REQUIREMENT:** All debate communication (MOTION, CLAIM, APPEAL, RESOLUTION) **MUST be in English**. This applies regardless of the language used in referenced documents. Documents may be in any language, but all arguments exchanged between Proposer and Opponent must use English for consistency and clarity.
+
 ## CLI Reference
 
 > **IMPORTANT - Commands with special syntax (positional argument, DO NOT use `--id`):**

@@ -2,6 +2,8 @@
 
 > **Role:** Opponent - The party responsible for challenging and validating proposal quality
 
+> **⚠️ LANGUAGE REQUIREMENT:** All debate communication (CLAIM responses, feedback) **MUST be in English**. This applies regardless of the language used in referenced documents. Documents may be in any language, but all arguments exchanged between Proposer and Opponent must use English for consistency and clarity.
+
 ## CLI Reference
 
 > **IMPORTANT - Commands with special syntax (positional argument, DO NOT use `--id`):**

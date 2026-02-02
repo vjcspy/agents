@@ -113,7 +113,9 @@ Từ Assessment description:
 
 ```php
 // Show reviewer: We understand dependency management
-if (!class_exists('Vocalmeet_Woo_Api_Rest_Controller')) {
+// NOTE: Use constant check (defined early in Plugin 1) instead of class_exists
+// to avoid false-negative due to plugin load order
+if (!defined('VOCALMEET_WOO_API_VERSION')) {
     add_action('admin_notices', function() {
         echo '<div class="notice notice-error"><p>';
         echo esc_html__('VocalMeet Elementor WooCommerce Widget requires VocalMeet WooCommerce API plugin.', 'vocalmeet-elementor-woo');
@@ -127,17 +129,23 @@ if (!class_exists('Vocalmeet_Woo_Api_Rest_Controller')) {
 
 | Option | Description | Assessment Compliance |
 |--------|-------------|----------------------|
-| Panel button trigger popup | Button trong panel controls | ✅ Fully compliant |
-| **Preview button trigger popup** ✅ | Button trong preview area, click mở popup | ✅ Compliant (popup, not form) |
+| **Panel button trigger popup** ✅ | Button trong panel controls | ✅ Fully compliant (strict) |
+| Preview button trigger popup | Button trong preview area, click mở popup | ✅ Compliant (popup, not form) |
 | Form trong preview | Input fields trực tiếp trong preview | ❌ VIOLATES requirement |
 
-**Decision:** **Preview button triggers popup**.
+**Decision:** **Dual-path approach** - Panel button (primary) + Preview button (secondary).
 
 **Rationale:**
-- Assessment suggests: "shows a button inside the widget that triggers a popup"
-- Button trong preview = OK (it's an action trigger, not data input)
-- Popup = configuration modal, NOT part of preview content
-- After creation → button disappears, product card appears
+- Assessment requirement: "no raw code in preview" + "creates product **before** dragging to page"
+- **Primary path (strict compliance):** Panel control button opens popup → Product created → Widget shows result
+- **Secondary path (suggested in assessment):** Preview button as action trigger (NOT data input) → popup overlay
+- Both compliant: popup is modal overlay, NOT embedded form in preview content
+- After creation → button disappears/changes, product card appears
+
+**Why both paths:**
+- Panel button satisfies strict interpretation ("before interacting with preview")
+- Preview button matches assessment suggestion ("button inside the widget that triggers popup")
+- Gives reviewer flexibility in interpretation
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -280,8 +288,15 @@ define('VOCALMEET_ELEMENTOR_WOO_DIR', __DIR__);
 define('VOCALMEET_ELEMENTOR_WOO_URL', plugin_dir_url(__FILE__));
 
 // Minimum versions
+// NOTE: Elementor 3.0+ uses elementor/widgets/register hook
+// Legacy (< 3.5) uses elementor/widgets/widgets_registered - not needed for 3.0+ target
 define('VOCALMEET_ELEMENTOR_WOO_MIN_ELEMENTOR', '3.0.0');
 define('VOCALMEET_ELEMENTOR_WOO_MIN_PHP', '7.4');
+
+// NOTE: Permission for product creation is handled by Plugin 1 (vocalmeet-woo-api)
+// Currently: is_user_logged_in() check
+// For production: consider add_cap('create_woo_products') or check 'edit_products' capability
+// For assessment: logged-in check is sufficient (matches Task I/II implementation)
 
 /**
  * Check dependencies and initialize plugin
@@ -312,7 +327,8 @@ function vocalmeet_elementor_woo_init() {
     }
 
     // Plugin 1 check (vocalmeet-woo-api)
-    if (!class_exists('Vocalmeet_Woo_Api_Rest_Controller')) {
+    // Use constant check instead of class_exists to avoid plugin load order issues
+    if (!defined('VOCALMEET_WOO_API_VERSION')) {
         add_action('admin_notices', 'vocalmeet_elementor_woo_plugin1_notice');
         return;
     }
@@ -406,18 +422,21 @@ final class Vocalmeet_Elementor_Woo_Plugin {
     }
 
     /**
-     * Enqueue EDITOR-ONLY scripts
-     * Key point: This hook only fires in editor context
+     * REGISTER (not enqueue) EDITOR-ONLY scripts
+     * Key point: Register here, widget declares dependency via get_script_depends()
+     * This ensures assets only load when widget is used
      */
     public function enqueue_editor_scripts() {
-        wp_enqueue_style(
+        // Register editor styles (loaded when widget is in use)
+        wp_register_style(
             'vocalmeet-elementor-woo-editor',
             VOCALMEET_ELEMENTOR_WOO_URL . 'assets/css/editor.css',
             [],
             VOCALMEET_ELEMENTOR_WOO_VERSION
         );
 
-        wp_enqueue_script(
+        // Register editor script (loaded when widget is in use)
+        wp_register_script(
             'vocalmeet-elementor-woo-editor',
             VOCALMEET_ELEMENTOR_WOO_URL . 'assets/js/editor.js',
             ['elementor-editor'],  // Depends on Elementor editor
@@ -447,19 +466,23 @@ final class Vocalmeet_Elementor_Woo_Plugin {
                 ],
             ]
         );
+
+        // NOTE: Actual enqueue happens via widget's get_script_depends() / get_style_depends()
+        // This scopes assets to only load when widget is present on page
     }
 
     /**
-     * Enqueue frontend styles
-     * Widget appearance on live site
+     * REGISTER (not enqueue) frontend styles
+     * Widget appearance on live site - scoped via get_style_depends()
      */
     public function enqueue_frontend_styles() {
-        wp_enqueue_style(
+        wp_register_style(
             'vocalmeet-elementor-woo-widget',
             VOCALMEET_ELEMENTOR_WOO_URL . 'assets/css/widget.css',
             [],
             VOCALMEET_ELEMENTOR_WOO_VERSION
         );
+        // NOTE: Actual enqueue via widget's get_style_depends()
     }
 }
 ```
@@ -532,18 +555,28 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
 
     /**
      * Scripts required by this widget
-     * IMPORTANT: These load in PREVIEW context, not editor panel
+     * KEY: This scopes script loading to only when widget is used
+     * Registered in class-plugin.php, loaded here via dependency declaration
      */
     public function get_script_depends() {
-        // We handle editor scripts separately via hook
+        // Editor script only loads in editor context when widget is present
+        if (\Elementor\Plugin::$instance->editor->is_edit_mode()) {
+            return ['vocalmeet-elementor-woo-editor'];
+        }
         return [];
     }
 
     /**
      * Styles required by this widget
+     * KEY: This scopes style loading to only when widget is used
      */
     public function get_style_depends() {
-        return ['vocalmeet-elementor-woo-widget'];
+        $deps = ['vocalmeet-elementor-woo-widget'];
+        // Editor styles only in editor context
+        if (\Elementor\Plugin::$instance->editor->is_edit_mode()) {
+            $deps[] = 'vocalmeet-elementor-woo-editor';
+        }
+        return $deps;
     }
 
     /**
@@ -778,13 +811,14 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
     protected function render() {
         $settings = $this->get_settings_for_display();
         
-        $product_id   = $settings['product_id'];
-        $product_name = $settings['product_name'];
-        $product_price = $settings['product_price'];
-        $product_url  = $settings['product_url'];
-        $button_text  = $settings['button_text'];
-        $show_price   = $settings['show_price'] === 'yes';
-        $show_link    = $settings['show_link'] === 'yes';
+        // Use null coalescing operator to avoid PHP notices for unset settings
+        $product_id    = (string) ($settings['product_id'] ?? '');
+        $product_name  = (string) ($settings['product_name'] ?? '');
+        $product_price = (string) ($settings['product_price'] ?? '');
+        $product_url   = (string) ($settings['product_url'] ?? '');
+        $button_text   = (string) ($settings['button_text'] ?? __('Create Product', 'vocalmeet-elementor-woo'));
+        $show_price    = ($settings['show_price'] ?? 'yes') === 'yes';
+        $show_link     = ($settings['show_link'] ?? 'yes') === 'yes';
 
         // Get widget ID for JS targeting
         $widget_id = $this->get_id();
@@ -874,6 +908,28 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
         var buttonText = settings.button_text || '<?php echo esc_js(__('Create Product', 'vocalmeet-elementor-woo')); ?>';
         var showPrice = settings.show_price === 'yes';
         var showLink = settings.show_link === 'yes';
+        
+        // Helper to escape HTML (prevent XSS)
+        function escapeHtml(str) {
+            if (!str) return '';
+            var div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+        
+        // Helper to escape URL with scheme allowlist (security: block javascript:, data:, etc.)
+        function escapeUrl(url) {
+            if (!url) return '';
+            // Only allow http/https schemes
+            if (url.startsWith('http://') || url.startsWith('https://')) {
+                try {
+                    return encodeURI(url);
+                } catch(e) {
+                    return '';
+                }
+            }
+            return ''; // Block other schemes (javascript:, data:, etc.)
+        }
         #>
         
         <div class="vocalmeet-product-creator-widget" data-widget-id="{{ view.model.id }}">
@@ -884,7 +940,7 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
                             class="vocalmeet-create-btn"
                             data-action="create-product">
                         <span class="vocalmeet-btn-icon">🛒</span>
-                        <span class="vocalmeet-btn-text">{{{ buttonText }}}</span>
+                        <span class="vocalmeet-btn-text">{{ escapeHtml(buttonText) }}</span>
                     </button>
                 </div>
                 
@@ -892,14 +948,14 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
                 <div class="vocalmeet-product-card">
                     <div class="vocalmeet-product-icon">📦</div>
                     
-                    <h3 class="vocalmeet-product-name">{{{ productName }}}</h3>
+                    <h3 class="vocalmeet-product-name">{{ escapeHtml(productName) }}</h3>
                     
                     <# if (showPrice && productPrice) { #>
                         <div class="vocalmeet-product-price">${{ parseFloat(productPrice).toFixed(2) }}</div>
                     <# } #>
                     
                     <# if (showLink && productUrl) { #>
-                        <a href="{{ productUrl }}" 
+                        <a href="{{ escapeUrl(productUrl) }}" 
                            class="vocalmeet-product-link"
                            target="_blank"
                            rel="noopener noreferrer">
@@ -1012,6 +1068,11 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
         const i18n = vocalmeetElementorWoo.i18n;
 
         // Create popup HTML
+        // NOTE: Use widgetId prefix for all IDs to avoid conflicts with multiple widgets
+        const formId = `vocalmeet-product-form-${widgetId}`;
+        const nameInputId = `vocalmeet-product-name-${widgetId}`;
+        const priceInputId = `vocalmeet-product-price-${widgetId}`;
+        
         const popupHTML = `
             <div class="vocalmeet-popup-overlay" data-widget-id="${widgetId}">
                 <div class="vocalmeet-popup-modal">
@@ -1020,19 +1081,19 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
                         <button type="button" class="vocalmeet-popup-close" aria-label="Close">&times;</button>
                     </div>
                     <div class="vocalmeet-popup-body">
-                        <form id="vocalmeet-product-form">
+                        <form id="${formId}">
                             <div class="vocalmeet-form-group">
-                                <label for="vocalmeet-product-name">${i18n.product_name}</label>
+                                <label for="${nameInputId}">${i18n.product_name}</label>
                                 <input type="text" 
-                                       id="vocalmeet-product-name" 
+                                       id="${nameInputId}" 
                                        name="name" 
                                        required
                                        placeholder="Enter product name">
                             </div>
                             <div class="vocalmeet-form-group">
-                                <label for="vocalmeet-product-price">${i18n.price}</label>
+                                <label for="${priceInputId}">${i18n.price}</label>
                                 <input type="number" 
-                                       id="vocalmeet-product-price" 
+                                       id="${priceInputId}" 
                                        name="price" 
                                        step="0.01" 
                                        min="0.01" 
@@ -1046,7 +1107,7 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
                         <button type="button" class="vocalmeet-btn vocalmeet-btn-cancel">
                             ${i18n.cancel}
                         </button>
-                        <button type="submit" form="vocalmeet-product-form" class="vocalmeet-btn vocalmeet-btn-primary">
+                        <button type="submit" form="${formId}" class="vocalmeet-btn vocalmeet-btn-primary">
                             ${i18n.create}
                         </button>
                     </div>
@@ -1058,14 +1119,14 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
         doc.body.insertAdjacentHTML('beforeend', popupHTML);
 
         const popup = doc.querySelector('.vocalmeet-popup-overlay');
-        const form = doc.getElementById('vocalmeet-product-form');
+        const form = doc.getElementById(formId);
         const closeBtn = popup.querySelector('.vocalmeet-popup-close');
         const cancelBtn = popup.querySelector('.vocalmeet-btn-cancel');
         const submitBtn = popup.querySelector('.vocalmeet-btn-primary');
         const messageDiv = popup.querySelector('.vocalmeet-popup-message');
 
-        // Focus first input
-        doc.getElementById('vocalmeet-product-name').focus();
+        // Focus first input (use scoped ID)
+        doc.getElementById(nameInputId).focus();
 
         // Close popup handlers
         closeBtn.addEventListener('click', () => closePopup(popup));
