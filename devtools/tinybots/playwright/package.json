@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "playwright test",
-    "seed:academy": "playwright test -c playwright.seed.config.ts tests/seed.academy-auth.spec.ts --project=chromium --headed --workers=1",
-    "open:academy": "node scripts/open-academy.js"
+    "seed:academy": "playwright test -c playwright.seed.config.ts tests/seed.academy-auth.spec.ts --project=chromium --headed --workers=1"
   },
   "keywords": [],
   "author": "",
