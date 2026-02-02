@@ -348,6 +348,35 @@ services:
       wonkers-db:
         condition: service_completed_successfully
     
+  eve:
+    image: maven:3-jdk-12
+    platform: linux/amd64
+    volumes:
+      - ../../../projects/tinybots/backend/eve:/usr/src/app
+      - eve-maven-cache:/root/.m2
+      - ${HOME}/.aws:/root/.aws:ro
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:- }
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:- }
+      AWS_PROFILE: ${AWS_PROFILE:-default}
+      AWS_REGION: ${AWS_REGION:-eu-central-1}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-eu-central-1}
+      DB_RW_HOST: mysql-typ-e-db:3306
+      ENVIRONMENT: dev
+      CHECKPOINT_INTERNAL_ADDRESS: http://checkpoint:8080
+      PROWL_INTERNAL_ADDRESS: http://prowl:8080
+      COMMANDER_DATA_ADDRESS: http://localhost:8089
+      ROBOCOP_INTERNAL_ADDRESS: http://localhost:8089
+    working_dir: /usr/src/app
+    entrypoint: ["sh", "-c", "ci/mvn-verify.sh"]
+    depends_on:
+      typ-e:
+        condition: service_completed_successfully
+      checkpoint:
+        condition: service_started
+      prowl:
+        condition: service_started
+
   micro-manager:
     image: node:22-alpine
     volumes:
@@ -438,6 +467,7 @@ volumes:
   typ-e-maven-cache:
   wonkers-db-maven-cache:
   intelligence-maven-cache:
+  eve-maven-cache:
 
 networks:
   default:

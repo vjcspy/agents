@@ -343,6 +343,10 @@ def wait(
             _handle_server_error(e, fmt)
 
     # Overall deadline reached - timeout is expected, not error
+    retry_cmd = f"aw debate wait --debate-id {debate_id} --role {role}"
+    if argument_id:
+        retry_cmd += f" --argument-id {argument_id}"
+
     response = MCPResponse(
         success=True,
         content=[
@@ -350,10 +354,11 @@ def wait(
                 type=ContentType.JSON,
                 data={
                     "status": "timeout",
-                    "message": f"No response after {deadline}s",
+                    "message": f"No response after {deadline}s. Please retry using: {retry_cmd}",
                     "debate_id": debate_id,
                     "last_argument_id": argument_id,
                     "last_seen_seq": last_seen_seq,
+                    "retry_command": retry_cmd,
                 },
             )
         ],
