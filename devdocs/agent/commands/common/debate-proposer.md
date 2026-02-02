@@ -451,22 +451,63 @@ aw debate wait \
   --role proposer
 ```
 
-## 7. Timeout Handling
+## 7. Timeout Handling (IMPORTANT)
 
-### 7.1 Receiving Timeout Response
+### 7.1 Why Timeout Happens
+
+Timeout is **expected and normal** - Opponent may need significant time to:
+- Read and analyze the entire document
+- Perform due diligence (read references, source code, project rules)
+- Formulate thorough CLAIM with suggestions
+
+**DO NOT treat timeout as an error or reason to exit.**
+
+### 7.2 Timeout Response Format
 
 ```json
 {
   "status": "timeout",
-  "message": "No response after 300s"
+  "message": "No response after 300s",
+  "retry": {
+    "debate_id": "<DEBATE_ID>",
+    "argument_id": "<LAST_ARG_ID>",
+    "role": "proposer"
+  }
 }
 ```
 
-### 7.2 Action
+### 7.3 Action: MUST RETRY
 
-1. **Notify user:** "Debate is pending, Opponent has not responded after 5 minutes"
-2. **Stop and guide resume:** Provide `debate_id` for user to resume later
-3. **DO NOT auto-retry** - let user decide
+When receiving timeout, **MUST retry using info from response:**
+
+```bash
+aw debate wait \
+  --debate-id <retry.debate_id> \
+  --argument-id <retry.argument_id> \
+  --role <retry.role>
+```
+
+**Retry loop:**
+```
+WHILE response.status == "timeout":
+    # Use retry info from response
+    response = aw debate wait(
+        debate_id=response.retry.debate_id,
+        argument_id=response.retry.argument_id,
+        role=response.retry.role
+    )
+
+# When status != "timeout", process normally
+process_response(response)
+```
+
+### 7.4 When to Stop Retrying
+
+- ✅ **Keep retrying** until receiving actual response (action != timeout)
+- ❌ **DO NOT** exit or notify user after first timeout
+- ❌ **DO NOT** ask user to resume later just because of timeout
+
+**Only stop if:** User explicitly requests to pause/stop the debate session
 
 ## 8. Error Handling
 
