@@ -37,7 +37,13 @@ const typeColors: Record<ArgumentType, string> = {
 };
 
 function formatTime(dateString: string): { relative: string; absolute: string } {
-  const date = new Date(dateString);
+  // SQLite returns "YYYY-MM-DD HH:MM:SS" which is UTC but missing T/Z
+  // Force it to be treated as UTC
+  const normalized = dateString.includes('T') || dateString.includes('Z') 
+    ? dateString 
+    : dateString.replace(' ', 'T') + 'Z';
+    
+  const date = new Date(normalized);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
