@@ -1,0 +1,43 @@
+---
+description: Cursor tools behavior with gitignored folders
+globs: projects/**
+alwaysApply: true
+---
+
+# Gitignore Tool Behavior
+
+The `projects/` folder is excluded from git tracking (`.gitignore`). This affects some Cursor tools.
+
+## Tool Compatibility for `projects/`
+
+| Tool | Works | Notes |
+|------|-------|-------|
+| `Read` | ✅ | Can read files with full path |
+| `Grep` | ✅ | Can search content |
+| `StrReplace` | ✅ | Can edit files |
+| `Write` | ✅ | Can create/overwrite files |
+| `LS` | ❌ | Shows empty (respects .gitignore) |
+| `Glob` | ❌ | Cannot find files (respects .gitignore) |
+| `Shell` | ✅ | Full access via `ls`, `cat`, `find`, etc. |
+
+## Recommended Workflow
+
+When working with source code in `projects/`:
+
+1. **Discover files** using Shell commands:
+```bash
+ls -la projects/tinybots/backend/<repo>/src/
+find projects/ -name "*.ts" -type f | head -20
+```
+
+2. **Read/Edit** using standard tools with discovered paths:
+```
+Read: projects/tinybots/backend/wonkers-graphql/src/app.ts
+StrReplace: edit with full path
+```
+
+## Why This Happens
+
+Cursor's `LS` and `Glob` tools respect `.gitignore` patterns. Since `projects/**` is gitignored, these tools cannot list or find files in that folder.
+
+Other tools (`Read`, `Grep`, `StrReplace`, `Write`) work with explicit paths regardless of gitignore status.

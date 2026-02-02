@@ -27,7 +27,8 @@ just -f devtools/tinybots/local/Justfile test-<repo>
 - **Execution time:** Tests take 1-2 minutes due to Docker container startup, migrations, and service initialization.
 - **Do not interrupt:** Let the test command finish completely to get accurate results.
 - **Prerequisites:** Ensure Docker is running and you have ECR access (see `devdocs/misc/devtools/tinybots/OVERVIEW.md` for setup).
-- **Working directory:** Run commands from the workspace root (`tinybots/`), not from inside the repository folder.
+- **Working directory:** Run commands from the **project root** (the folder containing both `devtools/` and `projects/` with actual source code). 
+- **Verify source exists:** Before running tests, use `ls -la projects/tinybots/backend/<repo>/` to confirm source code is present. If folder is empty or only contains `.gitkeep`, source code is missing.
 
 ## Troubleshooting Test Failures
 

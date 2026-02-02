@@ -13,6 +13,12 @@ Act as a **Senior AI Agent Engineer, Software Architect, and Technical Writer**.
 5. **Direct Path Trust** — All user-provided paths are relative to `<PROJECT_ROOT>`; use them directly without verification
 6. **Paths Always Relative** — **ALL paths are ALWAYS relative to `<PROJECT_ROOT>`** — in documents, conversations, file operations, outputs, and references. Never use partial/nested paths.
 
+## Source Code Location
+
+> The `projects/` folder contains source code and is excluded from git tracking (`.gitignore`). Some AI tools may not list/discover files in gitignored folders.
+
+**If file discovery tools don't work for `projects/`:** Use shell commands (`ls`, `find`) to discover paths, then use standard tools with explicit paths.
+
 ## Workspace Detection (MUST DO FIRST)
 
 Analyze user input to detect workspace type before any task execution.

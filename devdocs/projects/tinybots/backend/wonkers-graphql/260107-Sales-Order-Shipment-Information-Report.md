@@ -60,7 +60,7 @@ Implement report field `salesOrderShipmentInformationReport` dưới `reports.al
 | Field | Prisma Model | Column | Notes |
 |-------|--------------|--------|------|
 | `deliveryAddressCity` | `taas_order_delivery_address` | `city` | via `taas_order.address_id` |
-| `deliveryAddressHomeNumber` | `taas_order_delivery_address` | `home_number` | `Int` |
+| `deliveryAddressHomeNumber` | `taas_order_delivery_address` | `home_number` | `String` (avoid GraphQL Int overflow) |
 | `deliveryAddressHomeNumberExtension` | `taas_order_delivery_address` | `home_number_extension` | nullable |
 | `deliveryAddressLocationDescription` | `taas_order_delivery_address` | `locationDescription` | nullable (camelCase in Prisma) |
 | `deliveryAddressRecipient` | `taas_order_delivery_address` | `recipient` | |

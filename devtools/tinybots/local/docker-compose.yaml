@@ -247,7 +247,7 @@ services:
     ports:
       - 8882:8080
     volumes:
-      - /Users/kai/work/tinybots/tinybots/backend/wonkers-graphql:/usr/src/app
+      - /Users/kai/work/aweave/projects/tinybots/backend/wonkers-graphql:/usr/src/app
     labels:
       - wonkers-graphql
     environment:
