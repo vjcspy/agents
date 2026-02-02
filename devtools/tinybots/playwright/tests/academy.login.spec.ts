@@ -16,4 +16,8 @@ test('academy dashboard logs in via storageState', async ({ page }) => {
 
   const overviewSearch = page.getByPlaceholder(/search for relation or serial/i);
   await expect(overviewSearch).toBeVisible({ timeout: 15_000 });
+
+  if (process.env.ACADEMY_MANUAL === '1') {
+    await page.pause();
+  }
 });
