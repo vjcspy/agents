@@ -15,7 +15,14 @@ import typer
 from aweave.http.client import HTTPClient, HTTPClientError
 from aweave.mcp.response import ContentType, MCPContent, MCPError, MCPResponse
 
-from .config import DEBATE_AUTH_TOKEN, DEBATE_SERVER_URL, DEBATE_WAIT_DEADLINE, POLL_TIMEOUT
+from .config import (
+    AUTO_START_SERVICES,
+    DEBATE_AUTH_TOKEN,
+    DEBATE_SERVER_URL,
+    DEBATE_WAIT_DEADLINE,
+    POLL_TIMEOUT,
+)
+from .services import ensure_services, get_services_status, stop_services
 
 app = typer.Typer(help="Debate CLI - AI Agent debate management")
 
@@ -189,6 +196,13 @@ def create(
     fmt: Annotated[OutputFormat, typer.Option("--format", help="Output format")] = OutputFormat.json,
 ) -> None:
     """Create a new debate with MOTION."""
+    # Step 0: Ensure services are running (auto-start if needed)
+    if AUTO_START_SERVICES:
+        service_response = ensure_services()
+        if not service_response.success:
+            _output(service_response, fmt)
+            raise typer.Exit(code=3)
+
     motion_content = _read_content(file, content, stdin, fmt)
     if motion_content is None:
         raise typer.Exit(code=4)
@@ -560,6 +574,51 @@ def list_debates(
         has_more=limit is not None and len(debates) == limit,
     )
     _output(response, fmt)
+
+
+# ============================================================================
+# Services subcommand group
+# ============================================================================
+
+services_app = typer.Typer(help="Manage debate services (debate-server, debate-web)")
+
+
+@services_app.command("status")
+def services_status(
+    fmt: Annotated[OutputFormat, typer.Option("--format", help="Output format")] = OutputFormat.json,
+) -> None:
+    """Check status of debate services."""
+    status = get_services_status()
+    response = MCPResponse(
+        success=True,
+        content=[MCPContent(type=ContentType.JSON, data={"services": status})],
+    )
+    _output(response, fmt)
+
+
+@services_app.command("start")
+def services_start(
+    fmt: Annotated[OutputFormat, typer.Option("--format", help="Output format")] = OutputFormat.json,
+) -> None:
+    """Start debate services (build if needed)."""
+    response = ensure_services()
+    _output(response, fmt)
+    if not response.success:
+        raise typer.Exit(code=3)
+
+
+@services_app.command("stop")
+def services_stop(
+    fmt: Annotated[OutputFormat, typer.Option("--format", help="Output format")] = OutputFormat.json,
+) -> None:
+    """Stop debate services."""
+    response = stop_services()
+    _output(response, fmt)
+    if not response.success:
+        raise typer.Exit(code=3)
+
+
+app.add_typer(services_app, name="services")
 
 
 if __name__ == "__main__":

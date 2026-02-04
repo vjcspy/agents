@@ -13,3 +13,11 @@ DEBATE_WAIT_DEADLINE = int(os.getenv("DEBATE_WAIT_DEADLINE", "120"))  # 2 minute
 
 # Poll timeout - must be > server's 60s to avoid premature disconnect
 POLL_TIMEOUT = 65
+
+# Service ports
+DEBATE_SERVER_PORT = int(os.getenv("DEBATE_SERVER_PORT", "3456"))
+DEBATE_WEB_PORT = int(os.getenv("DEBATE_WEB_PORT", "3457"))
+
+# Auto-start services when creating debate
+# Set to 'false' to disable auto-start
+AUTO_START_SERVICES = os.getenv("DEBATE_AUTO_START", "true").lower() == "true"
