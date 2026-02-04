@@ -1,7 +1,7 @@
 # Tinybots Project
 
-- TinyBots is a set of backend services and Wonkers apps for telemetry, automation, and TaaS order flows.
-- This overview lists all 23 discovered repositories grouped by role with links to their repo overviews.
+- TinyBots is a set of backend services, frontend apps, and Wonkers apps for telemetry, automation, and TaaS order flows.
+- This overview lists all discovered repositories grouped by role with links to their repo overviews.
 - Use the coverage table to spot missing repo overviews quickly.
 
 ## Platform Purpose & Landscape
@@ -44,6 +44,16 @@
 - typ-e: MySQL schema and Flyway migrations for robot scheduling and automation data (devdocs/projects/tinybots/backend/typ-e/OVERVIEW.md)
 - wonkers-db: MySQL schema and Flyway migrations for dashboard and TaaS order data (devdocs/projects/tinybots/backend/wonkers-db/OVERVIEW.md)
 
+## Frontend
+
+### Customer Apps
+
+- ui.r2d2: Customer dashboard React app for managing Tessa robots — schedules, music, scripts, speech interactions (devdocs/projects/tinybots/frontend/ui.r2d2/OVERVIEW.md)
+
+### Admin Apps
+
+- wonkers-dash-admin: Internal admin dashboard for TaaS orders, robots, organisations, and device enrollment (devdocs/projects/tinybots/frontend/wonkers-dash-admin/OVERVIEW.md)
+
 ## Cross-Service Data Flows
 
 - Telemetry from Sensara and robots enters sensara-adaptor and megazord-events, then dispatches triggers to m-o-triggers and status workflows.
@@ -56,10 +66,15 @@
 
 ## Operational Notes & Testing
 
-- **Source Code Location:** All backend repositories are located at `projects/tinybots/backend/<repo>/` (following `projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>/` convention).
-- Most services are Node.js/TypeScript (Yarn); schema repos use Java/Maven.
+- **Source Code Location:**
+  - Backend repositories: `projects/tinybots/backend/<repo>/`
+  - Frontend repositories: `projects/tinybots/frontend/<repo>/`
+  - Following `projects/<PROJECT_NAME>/<DOMAIN>/<REPO_NAME>/` convention.
+- Most backend services are Node.js/TypeScript (Yarn); schema repos use Java/Maven.
+- Frontend apps are React/TypeScript with npm.
 - Shared middleware and scaffolding live in tiny-backend-tools; shared clients and DTOs live in tiny-internal-services.
-- Run tests via the centralized DevTools commands from the workspace root: `just -f devtools/tinybots/local/Justfile test-<repo>`.
+- Run backend tests via the centralized DevTools commands from the workspace root: `just -f devtools/tinybots/local/Justfile test-<repo>`.
+- Run frontend tests via npm: `cd projects/tinybots/frontend/<repo> && npm test`.
 - Keep repo overviews under `devdocs/projects/tinybots/<DOMAIN>/<repo>/OVERVIEW.md` up to date; missing overviews should be added when the repo is actively worked on.
 
 ## DevTools Infrastructure
@@ -117,6 +132,8 @@ Load skills **on-demand** when working on related tasks. Do not load proactively
 
 ## Repository Coverage Table
 
+### Backend
+
 | Repository | Service Group | Overview Path | Status |
 | --- | --- | --- | --- |
 | atlas | Shared Libraries, Tooling & Schemas | devdocs/projects/tinybots/backend/atlas/OVERVIEW.md | Present |
@@ -142,3 +159,10 @@ Load skills **on-demand** when working on related tasks. Do not load proactively
 | tiny-specs | Shared Libraries, Tooling & Schemas | devdocs/projects/tinybots/backend/tiny-specs/OVERVIEW.md | Present |
 | typ-e | Shared Libraries, Tooling & Schemas | devdocs/projects/tinybots/backend/typ-e/OVERVIEW.md | Present |
 | wonkers-db | Shared Libraries, Tooling & Schemas | devdocs/projects/tinybots/backend/wonkers-db/OVERVIEW.md | Present |
+
+### Frontend
+
+| Repository | Service Group | Overview Path | Status |
+| --- | --- | --- | --- |
+| ui.r2d2 | Customer Apps | devdocs/projects/tinybots/frontend/ui.r2d2/OVERVIEW.md | Present |
+| wonkers-dash-admin | Admin Apps | devdocs/projects/tinybots/frontend/wonkers-dash-admin/OVERVIEW.md | Present |
