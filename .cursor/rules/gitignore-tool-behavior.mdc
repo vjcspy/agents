@@ -25,12 +25,14 @@ The `projects/` folder is excluded from git tracking (`.gitignore`). This affect
 When working with source code in `projects/`:
 
 1. **Discover files** using Shell commands:
+
 ```bash
 ls -la projects/tinybots/backend/<repo>/src/
 find projects/ -name "*.ts" -type f | head -20
 ```
 
-2. **Read/Edit** using standard tools with discovered paths:
+1. **Read/Edit** using standard tools with discovered paths:
+
 ```
 Read: projects/tinybots/backend/wonkers-graphql/src/app.ts
 StrReplace: edit with full path

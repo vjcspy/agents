@@ -62,7 +62,6 @@ After workspace detection, identify task type:
 | `Plan` | Creating implementation plans |
 | `Implementation` | Writing/modifying code |
 | `Refactoring` | Restructuring existing code |
-| `Local Dev/Testing` | Running or testing locally |
 | `Question` | Answering questions |
 | `Other` | General tasks |
 
@@ -74,7 +73,6 @@ After workspace detection, identify task type:
 | `coding-standard-and-quality.md` | Implementation/Refactoring | `devdocs/agent/rules/common/coding/coding-standard-and-quality.md` |
 | `create-plan.md` | Task = Plan | `devdocs/agent/rules/common/tasks/create-plan.md` |
 | `implementation.md` | Task = Implementation/Refactoring | `devdocs/agent/rules/common/tasks/implementation.md` |
-| `local-dev.md` | Task = Local Dev/Testing | `devdocs/agent/rules/common/tasks/local-dev.md` |
 
 > **Principle:** Load rules lazily to minimize context window usage.
 
