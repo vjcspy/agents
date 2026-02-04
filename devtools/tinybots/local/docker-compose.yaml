@@ -251,6 +251,7 @@ services:
     labels:
       - wonkers-graphql
     environment:
+      NODE_ENV: test
       TINYBOTS_DB_HOST: mysql-typ-e-db
       DASHBOARD_DB_HOST: mysql-wonkers-db
       WONKERS_INTERNAL_ADDRESS: http://wonkers:8080
