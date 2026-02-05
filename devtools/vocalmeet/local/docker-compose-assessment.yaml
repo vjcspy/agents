@@ -60,7 +60,9 @@ services:
         define('WC_API_DEV_MODE', true);
 
         /* Internal base URL for server-to-server WooCommerce REST calls (Docker) */
-        define('VOCALMEET_WOO_API_WC_REST_BASE_URL', 'http://wordpress');
+        define('VOCALMEET_WOO_API_WC_REST_BASE_URL', 'https://nginx');
+        define('VOCALMEET_WOO_API_SSLVERIFY', false);
+        define('WP_ENVIRONMENT_TYPE', 'local');
     volumes:
       # Mount entire WordPress source to local folder for IDE access
       # Configure WORDPRESS_SOURCE_PATH in .env file
