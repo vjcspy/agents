@@ -116,6 +116,7 @@ Popup form       Show product
 **Root cause**: Container không resolve được `vocalmeet.local`, và HTTP không hỗ trợ Basic Auth cho WooCommerce.
 
 **Solution**:
+
 ```yaml
 # docker-compose
 define('VOCALMEET_WOO_API_WC_REST_BASE_URL', 'https://nginx');

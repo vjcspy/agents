@@ -7,6 +7,9 @@
 - [Elementor Widget Guide](https://developers.elementor.com/elementor-widgets/)
 - [Elementor Hello World](https://github.com/pojome/elementor-hello-world)
 - Plugin 1: `vocalmeet-woo-api` (Task I/II) - đã implement
+- **Marionette Lab**: `devdocs/projects/vocalmeet/assessment/plans/260205-marionette-elementor-lab.md`
+- [Backbone.js Docs](https://backbonejs.org/)
+- [Marionette.js Docs](https://marionettejs.com/)
 
 ## User Requirements
 
@@ -43,13 +46,23 @@ The assessment requirement contains ambiguous wording:
 
 This means the original literal interpretation ("create product before dragging") is **not technically feasible** with standard Elementor UI.
 
-### Chosen Approach: Panel-Triggered Popup (WYSIWYG Compliant)
+### Chosen Approach: Dual-Trigger Popup (WYSIWYG Compliant)
 
 **Rationale:**
 
-1. Satisfies "no raw code in preview" requirement
+1. Satisfies "no raw code in preview" requirement (popup is in editor, not preview)
 2. Works within Elementor's technical constraints
-3. Maintains WYSIWYG philosophy (preview = display only)
+3. Maintains WYSIWYG philosophy (preview shows result, popup is config action)
+4. **Addresses assessment expectation** - provides "button inside widget" via editor-only CTA
+
+**Trigger Options (Both Available):**
+
+| Trigger | Location | Context | Purpose |
+|---------|----------|---------|---------|
+| Panel BUTTON control | Panel (left side) | Editor only | Primary, always available |
+| **Preview CTA** (editor-only) | Widget placeholder in preview | Editor only | Satisfies "button inside widget" expectation |
+
+> **Key Distinction:** Both triggers open the SAME popup rendered in the **editor document** (not preview iframe). The preview CTA is a minimal trigger, NOT an embedded form.
 
 **Implemented Flow:**
 
@@ -64,21 +77,26 @@ This means the original literal interpretation ("create product before dragging"
 │  │                 │    │                                                 ││
 │  │  [Product       │───▶│    ┌─────────────────────────────────────┐     ││
 │  │   Creator] 🛒   │    │    │  🛒 No product selected             │     ││
-│  │                 │    │    │  Use panel to create a product      │     ││
+│  │                 │    │    │  [+ Create Product] ← EDITOR-ONLY   │     ││
 │  └─────────────────┘    │    └─────────────────────────────────────┘     ││
 │                         └─────────────────────────────────────────────────┘│
 │                                                                             │
-│  STEP 2: Click "Create New Product" button in PANEL (left side controls)   │
-│  ┌─────────────────┐                                                        │
-│  │    PANEL        │    Popup appears (rendered in EDITOR document,        │
-│  │    (Controls)   │    NOT in preview iframe)                             │
-│  │                 │    ┌─────────────────────────┐                        │
-│  │  [Create New    │───▶│  Create New Product     │                        │
-│  │   Product] btn  │    │  Name: [___________]    │                        │
-│  │                 │    │  Price: [___________]   │                        │
-│  │  Show Price: ✓  │    │  [Cancel] [Create]      │                        │
-│  │  Show Link: ✓   │    └─────────────────────────┘                        │
-│  └─────────────────┘                                                        │
+│  STEP 2: Click CTA in preview OR button in panel → SAME popup opens        │
+│  ┌─────────────────┐    ┌─────────────────────────────────────────────────┐│
+│  │    PANEL        │    │                    PREVIEW                      ││
+│  │    (Controls)   │    │                                                 ││
+│  │                 │    │    ┌────────────────────────────────┐          ││
+│  │  [Create New ─────────────│─▶ Popup (in EDITOR document)  │          ││
+│  │   Product] btn  │    │    │   Name: [___________]         │          ││
+│  │                 │    │    │   Price: [___________]        │          ││
+│  │  Show Price: ✓  │    │    │   [Cancel] [Create]           │          ││
+│  │  Show Link: ✓   │    │    └────────────────────────────────┘          ││
+│  └─────────────────┘    │    ┌─────────────────────────────────────┐     ││
+│                         │    │  🛒 No product selected             │     ││
+│         OR              │    │  [+ Create Product] ←───────────────┼──┐  ││
+│                         │    └─────────────────────────────────────┘  │  ││
+│                         └─────────────────────────────────────────────│──┘│
+│                                                 Both trigger same popup ──┘│
 │                                                                             │
 │  STEP 3: Product created → Widget preview updates to show product           │
 │  ┌─────────────────┐    ┌─────────────────────────────────────────────────┐│
@@ -89,24 +107,44 @@ This means the original literal interpretation ("create product before dragging"
 │  │   Product] btn  │    │    │  💰 $19.99                          │     ││
 │  │                 │    │    │  🔗 View Product →                  │     ││
 │  │  Show Price: ✓  │    │    └─────────────────────────────────────┘     ││
-│  │  Show Link: ✓   │    │                                                 ││
+│  │  Show Link: ✓   │    │   (NO CTA shown - product exists)              ││
 │  └─────────────────┘    └─────────────────────────────────────────────────┘│
 │                                                                             │
 │  KEY POINTS:                                                                │
-│  ✅ Popup triggered from PANEL button (not preview)                         │
-│  ✅ Popup rendered in EDITOR document (not preview iframe)                  │
-│  ✅ Preview area is DISPLAY ONLY (no buttons, no forms)                     │
-│  ✅ Compliant with "no raw code in preview" requirement                     │
+│  ✅ Preview CTA (editor-only) satisfies "button inside widget" expectation  │
+│  ✅ CTA is trigger ONLY - popup renders in EDITOR document (not preview)   │
+│  ✅ Preview CTA hidden when product exists (display-only)                   │
+│  ✅ Frontend: NO CTA rendered - pure display                                │
+│  ✅ Compliant with "no raw code in preview" (form in editor, not preview)  │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **Implementation Details:**
 
-- Popup trigger: BUTTON control in panel → `elementor.channels.editor.on()` event
+- **Primary trigger:** BUTTON control in panel → `elementor.channels.editor.on()` event
+- **Secondary trigger:** Preview CTA (editor-only) → click event listener in `editor.js`
 - Popup rendering: In **editor document** (via `elementorCommon.dialogsManager` or editor-side container), NOT in preview iframe
-- Preview shows: Placeholder (no product) OR product card (has product) - **NO buttons/forms**
+- Preview shows: Placeholder with CTA (no product, editor only) OR product card (has product) - **NO forms**
+- Frontend shows: Placeholder text (no product) OR product card - **NO CTA, NO forms**
 - Settings update: Via `$e.run('document/elements/settings', ...)` after product creation
+
+**Preview CTA Implementation:**
+
+```javascript
+// In content_template() - editor-only CTA
+<# if (!productId && elementor.config.isEditing) { #>
+    <button class="vocalmeet-preview-cta" data-action="create-product">
+        + Create Product
+    </button>
+<# } #>
+
+// In editor.js - listen for preview CTA click
+elementor.$preview.on('click', '.vocalmeet-preview-cta', function(e) {
+    var widgetId = $(this).closest('[data-id]').data('id');
+    showProductPopup(widgetId); // Same popup function
+});
+```
 
 ---
 
@@ -165,7 +203,9 @@ This means the original literal interpretation ("create product before dragging"
 | **Context Separation** | File riêng: `editor.js` (editor only) vs `frontend.js` (frontend only) | Xem Phase 5 |
 | **WYSIWYG Compliance** | Popup triggered từ button, không render form trong `render()` | Xem Phase 4-5 |
 | **Integration Skills** | Reuse REST endpoint từ Plugin 1, không duplicate code | Xem Phase 5 |
-| **Advanced JS** | Sử dụng Elementor JS API (`$e.run()`, `elementor.channels`) | Xem Phase 5 |
+| **🌟 Backbone/Marionette** | `Backbone.Model` cho state, `Marionette.View` cho popup | Xem Phase 5 |
+| **🌟 State Machine** | Explicit state transitions, `transitionTo()` method | Xem Phase 5 |
+| **Advanced JS** | Elementor JS API (`$e.run()`, `elementor.channels`), Marionette lifecycle | Xem Phase 5 |
 | **Security** | Nonce từ `wp_create_nonce('wp_rest')`, output escaping | Xem Phase 3-4 |
 | **UX** | Loading states, error messages, intuitive popup flow | Xem Phase 5-6 |
 
@@ -173,12 +213,16 @@ This means the original literal interpretation ("create product before dragging"
 
 | Bonus | Description | Reviewer sẽ impressed vì |
 |-------|-------------|-------------------------|
+| **🌟 Backbone/Marionette** | Sử dụng đúng chuẩn Elementor production | Shows deep understanding of Elementor internals |
+| **🌟 State Machine Pattern** | Explicit state transitions, no invalid states | Shows software engineering maturity |
 | **Widget Category riêng** | Tạo category "VocalMeet" thay vì dùng "General" | Shows attention to organization |
 | **Dependency Declaration** | Check Elementor + WooCommerce + Plugin 1 active | Shows production mindset |
 | **Live Preview Update** | Widget re-render ngay sau tạo product (không cần refresh) | Shows deep Elementor JS knowledge |
 | **Select Existing Product** | Option để chọn product có sẵn thay vì chỉ tạo mới | Shows thinking beyond requirements |
 | **PHPDoc Comments** | Document tất cả methods | Shows code quality focus |
 | **i18n Ready** | Tất cả strings translatable | Shows internationalization awareness |
+
+> **🌟 = Key differentiators** - Những điểm sẽ làm bạn nổi bật hơn so với candidates khác.
 
 ---
 
@@ -353,30 +397,119 @@ protected function render() {
 - BUTTON control is trigger only, no data saved.
 - Cached values may become stale if product is edited outside Elementor. Frontend render always uses fresh data.
 
-### 2.4 JavaScript Approach: Vanilla JS vs Backbone.js
+### 2.4 JavaScript Approach: Backbone.js + Marionette (Production Standard)
 
 | Option | Pros | Cons |
 |--------|------|------|
-| **Vanilla JS (ES6+)** ✅ | Clean, no extra deps, modern | Less "fancy" |
-| Backbone.js | Shows familiarity with Elementor internals | Overkill for this task, learning curve |
+| Vanilla JS (ES6+) | Clean, no extra deps | Không đúng chuẩn Elementor |
+| **Backbone.js + Marionette** ✅ | Production-ready, đúng chuẩn Elementor | Learning curve |
 
-**Decision:** **Vanilla JS (ES6+)** với Elementor JS API.
+**Decision:** **Backbone.js + Marionette.View** - đúng chuẩn production của Elementor.
 
 **Rationale:**
 
-- Assessment says Backbone is "optional"
-- Vanilla JS đủ để demonstrate JS skills
-- Focus on Elementor JS API (`$e.run()`, `elementor.channels`) - MORE relevant
+- Elementor được build trên Backbone/Marionette → sử dụng đúng patterns
+- Demonstrate **deep understanding** của Elementor internals
+- **State machine pattern** → explicit state management, không có invalid UI states
+- **Event-driven architecture** → loose coupling, maintainable code
+- **Impress reviewer** với production-quality approach
+
+> **Prerequisites:** Hoàn thành Marionette Lab trước khi implement.
+> Xem: `devdocs/projects/vocalmeet/assessment/plans/260205-marionette-elementor-lab.md`
+
+**Architecture Overview:**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                 BACKBONE/MARIONETTE ARCHITECTURE                 │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  WidgetStateModel (Backbone.Model)                              │
+│  ├── state: 'idle' | 'creating' | 'success' | 'error'          │
+│  ├── widgetId: string                                           │
+│  ├── productData: { id, name, price, url }                      │
+│  └── Events: change:state → triggers view updates               │
+│                                                                 │
+│  ProductPopupView (Marionette.View)                             │
+│  ├── template: Underscore template                              │
+│  ├── ui: { name, price, submit, cancel, message }               │
+│  ├── events: DOM event bindings                                 │
+│  ├── modelEvents: listen to state changes                       │
+│  └── Lifecycle: onRender(), onDestroy()                         │
+│                                                                 │
+│  Event Flow:                                                    │
+│  Panel BUTTON → elementor.channels.editor.on()                  │
+│       ↓                                                         │
+│  Create WidgetStateModel → Render PopupView                     │
+│       ↓                                                         │
+│  User submits → model.startCreating() → API call                │
+│       ↓                                                         │
+│  Success → model.complete() → $e.run() update settings          │
+│       ↓                                                         │
+│  View auto-updates via modelEvents → close popup                │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**State Machine Pattern:**
+
+```
+            ┌──────────┐
+            │   IDLE   │◀─────────────────────┐
+            └────┬─────┘                      │
+                 │ startCreating()            │
+                 ▼                            │
+          ┌──────────────┐                    │
+          │   CREATING   │                    │ reset()
+          └──────┬───────┘                    │
+                 │                            │
+        ┌────────┴────────┐                   │
+        ▼                 ▼                   │
+  ┌───────────┐    ┌───────────┐              │
+  │  SUCCESS  │    │   ERROR   │──────────────┘
+  └─────┬─────┘    └───────────┘
+        │
+        └─────────────────────────────────────┘
+```
+
+**Key Code Patterns:**
 
 ```javascript
-// Show reviewer: We understand Elementor JS API
+// 1. State Model with explicit transitions
+var WidgetStateModel = Backbone.Model.extend({
+    defaults: { state: 'idle', widgetId: null, productData: null },
+    
+    transitions: {
+        'idle': ['creating'],
+        'creating': ['success', 'error'],
+        'success': ['idle'],
+        'error': ['idle', 'creating']
+    },
+    
+    transitionTo: function(newState, data) {
+        if (!this.isValidTransition(newState)) return false;
+        this.set({ state: newState, productData: data });
+        return true;
+    }
+});
+
+// 2. Marionette View with lifecycle
+var ProductPopupView = Marionette.View.extend({
+    template: _.template('<form>...</form>'),
+    
+    ui: { name: '[data-ui="name"]', submit: '[data-ui="submit"]' },
+    events: { 'click @ui.submit': 'onSubmit' },
+    modelEvents: { 'change:state': 'onStateChange' },
+    
+    onRender: function() { /* Focus first input */ },
+    onDestroy: function() { /* Cleanup */ },
+    onStateChange: function(model, state) { /* Update UI based on state */ }
+});
+
+// 3. Elementor API integration
 $e.run('document/elements/settings', {
     container: elementor.getContainer(widgetId),
-    settings: {
-        product_id: response.product_id,
-        product_name: response.product_name,
-        // ...
-    }
+    settings: { product_id: data.id, product_name: data.name }
 });
 ```
 
@@ -998,10 +1131,10 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
     /**
      * Render widget output
      * 
-     * CRITICAL: This renders in PREVIEW area
-     * - Do NOT render input forms or action buttons here
-     * - ONLY display: placeholder (no product) OR product card (has product)
-     * - All actions (create/change product) are in PANEL, not preview
+     * CRITICAL: This renders in PREVIEW area (frontend)
+     * - No forms or popup UI in preview iframe
+     * - Editor-only CTA is in content_template(), NOT in render()
+     * - Frontend shows: placeholder text (no product) OR product card (has product)
      * 
      * DATA STRATEGY:
      * - product_id is the SOURCE OF TRUTH
@@ -1116,7 +1249,8 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
      * JavaScript template for live preview updates
      * Uses Backbone.js/Underscore.js template syntax
      * 
-     * NOTE: NO buttons in preview - display only!
+     * NOTE: Editor-only CTA triggers popup (satisfies "button inside widget")
+     *       Frontend: NO CTA rendered - pure display
      */
     protected function content_template() {
         ?>
@@ -1154,14 +1288,20 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
         <div class="vocalmeet-product-creator-widget" data-widget-id="{{ view.model.id }}">
             
             <# if (!productId) { #>
-                <!-- NO buttons - just placeholder message -->
+                <!-- Empty state with EDITOR-ONLY CTA (satisfies "button inside widget") -->
                 <div class="vocalmeet-empty-state">
                     <div class="vocalmeet-empty-icon">🛒</div>
                     <p class="vocalmeet-empty-message">
                         <?php esc_html_e('No product selected.', 'vocalmeet-elementor-woo'); ?>
                     </p>
+                    <!-- EDITOR-ONLY CTA: Triggers popup in editor document -->
+                    <!-- This button is rendered in content_template (editor preview) -->
+                    <!-- NOT rendered in render() (frontend) -->
+                    <button class="vocalmeet-preview-cta" data-action="create-product">
+                        <?php esc_html_e('+ Create Product', 'vocalmeet-elementor-woo'); ?>
+                    </button>
                     <p class="vocalmeet-empty-hint">
-                        <?php esc_html_e('Use the panel to create a product.', 'vocalmeet-elementor-woo'); ?>
+                        <?php esc_html_e('Or use the panel controls.', 'vocalmeet-elementor-woo'); ?>
                     </p>
                 </div>
                 
@@ -1207,332 +1347,562 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
 
 ---
 
-### Phase 5: Editor JavaScript - Popup & AJAX
+### Phase 5: Editor JavaScript - Backbone/Marionette Implementation
 
-**Goal:** Demonstrate advanced JS skills và Elementor JS API.
+**Goal:** Demonstrate production-quality JS using Elementor's native Backbone/Marionette patterns.
 
 **Files:** `assets/js/editor.js`
 
 > **🔴 KEY POINTS:**
 >
-> - Popup triggered from PANEL button (not preview)
-> - **Popup rendered in EDITOR document** (not preview iframe) - via `elementorCommon.dialogsManager`
-> - This completely avoids "raw code in preview" concerns
+> - **Backbone.Model** for state management with explicit state machine
+> - **Marionette.View** for popup with proper lifecycle (onRender, onDestroy)
+> - **Event-driven architecture** using Backbone.Events
+> - Popup triggered from PANEL button, rendered in EDITOR document
+
+> **Prerequisites:** Complete Marionette Lab first.
+> See: `devdocs/projects/vocalmeet/assessment/plans/260205-marionette-elementor-lab.md`
 
 ```javascript
 /**
  * VocalMeet Elementor WooCommerce Widget - Editor Script
  * 
- * Handles:
- * - Popup trigger from PANEL button (via Elementor channel event)
- * - Popup rendered in EDITOR document (NOT preview iframe)
- * - Product creation via REST API
- * - Widget settings update via Elementor JS API
+ * Architecture: Backbone.js + Marionette.js (Elementor production standard)
  * 
- * Key Points for Reviewer:
- * - Listen for PANEL control button event (not preview click)
- * - Use elementorCommon.dialogsManager for popup (editor-side, not preview)
- * - Elementor JS API usage ($e.run)
- * - Proper error handling
- * - i18n support via wp_localize_script
+ * Components:
+ * - WidgetStateModel: Backbone.Model with state machine pattern
+ * - ProductPopupView: Marionette.View with lifecycle management
+ * - Event flow via elementor.channels + Backbone.Events
+ * 
+ * Key Patterns for Reviewer:
+ * - State machine with explicit transitions (idle → creating → success/error)
+ * - Model-View separation (Model handles logic, View handles UI)
+ * - Marionette lifecycle hooks (onRender, onDestroy)
+ * - Elementor JS API integration ($e.run for settings update)
  */
 (function() {
     'use strict';
 
-    // Store current dialog reference for cleanup
-    let currentDialog = null;
+    // ═══════════════════════════════════════════════════════════════════════
+    // SECTION 1: STATE MODEL (Backbone.Model with State Machine)
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    /**
+     * Widget State Model
+     * 
+     * Manages widget state with explicit state machine pattern.
+     * Invalid state transitions are rejected, preventing UI inconsistencies.
+     * 
+     * States: IDLE → CREATING → SUCCESS/ERROR → IDLE
+     */
+    var WidgetStateModel = Backbone.Model.extend({
+        
+        defaults: {
+            state: 'idle',           // Current state
+            widgetId: null,          // Associated Elementor widget ID
+            productData: null,       // Created product data { id, name, price, url }
+            errorMessage: null       // Error message if state is 'error'
+        },
+        
+        // Valid states (constants)
+        STATES: {
+            IDLE: 'idle',
+            CREATING: 'creating',
+            SUCCESS: 'success',
+            ERROR: 'error'
+        },
+        
+        // Valid state transitions (state machine definition)
+        transitions: {
+            'idle': ['creating'],
+            'creating': ['success', 'error'],
+            'success': ['idle', 'creating'],
+            'error': ['idle', 'creating']
+        },
+        
+        /**
+         * Validate and execute state transition
+         * @param {string} newState - Target state
+         * @param {object} data - Optional data to attach
+         * @returns {boolean} - Success/failure
+         */
+        transitionTo: function(newState, data) {
+            var currentState = this.get('state');
+            var validTransitions = this.transitions[currentState] || [];
+            
+            // Validate transition
+            if (validTransitions.indexOf(newState) === -1) {
+                console.error('[WidgetStateModel] Invalid transition:', currentState, '→', newState);
+                return false;
+            }
+            
+            console.log('[WidgetStateModel] Transition:', currentState, '→', newState);
+            
+            // Execute transition
+            var updates = { state: newState };
+            
+            if (newState === this.STATES.SUCCESS) {
+                updates.productData = data;
+                updates.errorMessage = null;
+            } else if (newState === this.STATES.ERROR) {
+                updates.errorMessage = data;
+                updates.productData = null;
+            } else if (newState === this.STATES.IDLE) {
+                // Keep productData if transitioning from SUCCESS to IDLE
+                updates.errorMessage = null;
+            }
+            
+            this.set(updates);
+            return true;
+        },
+        
+        // Convenience methods for common transitions
+        startCreating: function() {
+            return this.transitionTo(this.STATES.CREATING);
+        },
+        
+        complete: function(productData) {
+            return this.transitionTo(this.STATES.SUCCESS, productData);
+        },
+        
+        fail: function(errorMessage) {
+            return this.transitionTo(this.STATES.ERROR, errorMessage);
+        },
+        
+        reset: function() {
+            return this.transitionTo(this.STATES.IDLE);
+        },
+        
+        // State check helpers
+        isIdle: function() { return this.get('state') === this.STATES.IDLE; },
+        isCreating: function() { return this.get('state') === this.STATES.CREATING; },
+        isSuccess: function() { return this.get('state') === this.STATES.SUCCESS; },
+        isError: function() { return this.get('state') === this.STATES.ERROR; }
+    });
 
-    // Wait for Elementor editor to be ready
+    // ═══════════════════════════════════════════════════════════════════════
+    // SECTION 2: POPUP VIEW (Marionette.View with Lifecycle)
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    /**
+     * Product Creation Popup View
+     * 
+     * Marionette.View with:
+     * - Underscore template for form rendering
+     * - UI hash for DOM element references
+     * - Events hash for DOM event bindings
+     * - modelEvents for reacting to state changes
+     * - Lifecycle hooks (onRender, onDestroy) for proper cleanup
+     */
+    var ProductPopupView = Marionette.View.extend({
+        
+        className: 'vocalmeet-popup-overlay',
+        
+        // Underscore.js template
+        template: _.template([
+            '<div class="vocalmeet-popup-modal">',
+            '  <div class="vocalmeet-popup-header">',
+            '    <h3><%= i18n.popup_title %></h3>',
+            '    <button class="vocalmeet-popup-close" data-ui="close">&times;</button>',
+            '  </div>',
+            '  <div class="vocalmeet-popup-body">',
+            '    <div class="vocalmeet-form-group">',
+            '      <label><%= i18n.product_name %></label>',
+            '      <input type="text" data-ui="name" class="elementor-input" placeholder="Enter product name">',
+            '    </div>',
+            '    <div class="vocalmeet-form-group">',
+            '      <label><%= i18n.price %></label>',
+            '      <input type="number" data-ui="price" class="elementor-input" step="0.01" min="0.01" placeholder="0.00">',
+            '    </div>',
+            '    <div class="vocalmeet-popup-message" data-ui="message" style="display:none;"></div>',
+            '  </div>',
+            '  <div class="vocalmeet-popup-footer">',
+            '    <button class="vocalmeet-btn vocalmeet-btn-cancel" data-ui="cancel"><%= i18n.cancel %></button>',
+            '    <button class="vocalmeet-btn vocalmeet-btn-primary" data-ui="submit"><%= i18n.create %></button>',
+            '  </div>',
+            '</div>'
+        ].join('')),
+        
+        // Template data
+        templateContext: function() {
+            return {
+                i18n: vocalmeetElementorWoo.i18n
+            };
+        },
+        
+        // UI element references (accessed via this.ui.name, this.ui.price, etc.)
+        ui: {
+            close: '[data-ui="close"]',
+            name: '[data-ui="name"]',
+            price: '[data-ui="price"]',
+            message: '[data-ui="message"]',
+            cancel: '[data-ui="cancel"]',
+            submit: '[data-ui="submit"]'
+        },
+        
+        // DOM event bindings
+        events: {
+            'click @ui.close': 'onClose',
+            'click @ui.cancel': 'onClose',
+            'click @ui.submit': 'onSubmit',
+            'keypress @ui.name': 'onKeypress',
+            'keypress @ui.price': 'onKeypress'
+        },
+        
+        // Model event bindings (react to state changes)
+        modelEvents: {
+            'change:state': 'onStateChange'
+        },
+        
+        // ─────────────────────────────────────────────────────────────────
+        // Lifecycle Methods (Marionette pattern)
+        // ─────────────────────────────────────────────────────────────────
+        
+        /**
+         * Called after view is rendered
+         * Use for: focusing inputs, setting up additional listeners
+         */
+        onRender: function() {
+            console.log('[ProductPopupView] Rendered');
+            var self = this;
+            
+            // Focus first input after DOM is ready
+            setTimeout(function() {
+                self.ui.name.focus();
+            }, 100);
+        },
+        
+        /**
+         * Called before view is destroyed
+         * Use for: cleanup, unbinding external listeners
+         * Marionette handles most cleanup automatically
+         */
+        onDestroy: function() {
+            console.log('[ProductPopupView] Destroyed - cleanup complete');
+        },
+        
+        // ─────────────────────────────────────────────────────────────────
+        // Event Handlers
+        // ─────────────────────────────────────────────────────────────────
+        
+        onClose: function(e) {
+            e.preventDefault();
+            this.destroy();
+        },
+        
+        onKeypress: function(e) {
+            if (e.keyCode === 13) { // Enter key
+                e.preventDefault();
+                this.onSubmit(e);
+            }
+        },
+        
+        onSubmit: function(e) {
+            e.preventDefault();
+            
+            var name = this.ui.name.val().trim();
+            var price = parseFloat(this.ui.price.val());
+            var i18n = vocalmeetElementorWoo.i18n;
+            
+            // Client-side validation
+            if (!name) {
+                this.showMessage(i18n.name_required, 'error');
+                return;
+            }
+            if (!price || price <= 0) {
+                this.showMessage(i18n.price_required, 'error');
+                return;
+            }
+            
+            // Trigger state transition (Model handles the logic)
+            this.model.startCreating();
+            
+            // Make API call
+            this.createProduct(name, price);
+        },
+        
+        /**
+         * React to model state changes
+         * View updates automatically based on model state
+         */
+        onStateChange: function(model, state) {
+            console.log('[ProductPopupView] State changed to:', state);
+            var i18n = vocalmeetElementorWoo.i18n;
+            
+            switch(state) {
+                case model.STATES.CREATING:
+                    this.ui.submit.prop('disabled', true).text(i18n.creating);
+                    this.ui.submit.addClass('vocalmeet-loading');
+                    break;
+                    
+                case model.STATES.SUCCESS:
+                    var productData = model.get('productData');
+                    this.showMessage(i18n.success + ' (ID: ' + productData.id + ')', 'success');
+                    
+                    // Update Elementor widget settings
+                    this.updateWidgetSettings(productData);
+                    
+                    // Close popup after delay
+                    var self = this;
+                    setTimeout(function() {
+                        self.destroy();
+                    }, 1200);
+                    break;
+                    
+                case model.STATES.ERROR:
+                    this.showMessage(model.get('errorMessage') || i18n.error, 'error');
+                    this.ui.submit.prop('disabled', false).text(i18n.create);
+                    this.ui.submit.removeClass('vocalmeet-loading');
+                    break;
+                    
+                case model.STATES.IDLE:
+                    this.ui.submit.prop('disabled', false).text(i18n.create);
+                    this.ui.submit.removeClass('vocalmeet-loading');
+                    break;
+            }
+        },
+        
+        // ─────────────────────────────────────────────────────────────────
+        // API Methods
+        // ─────────────────────────────────────────────────────────────────
+        
+        /**
+         * Create product via REST API
+         * REUSES Plugin 1's endpoint - no code duplication
+         */
+        createProduct: function(name, price) {
+            var self = this;
+            
+            fetch(vocalmeetElementorWoo.rest_url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-WP-Nonce': vocalmeetElementorWoo.nonce
+                },
+                body: JSON.stringify({ name: name, price: price })
+            })
+            .then(function(response) {
+                return response.json().then(function(data) {
+                    return { ok: response.ok, data: data };
+                });
+            })
+            .then(function(result) {
+                if (result.ok && result.data.product_id) {
+                    // Success - transition model to SUCCESS state
+                    self.model.complete({
+                        id: result.data.product_id,
+                        name: result.data.product_name,
+                        price: price,
+                        url: result.data.product_url
+                    });
+                } else {
+                    // API returned error
+                    self.model.fail(result.data.message || 'Unknown error');
+                }
+            })
+            .catch(function(error) {
+                console.error('[ProductPopupView] API Error:', error);
+                self.model.fail('Network error. Please try again.');
+            });
+        },
+        
+        /**
+         * Update Elementor widget settings via $e.run command
+         * This triggers widget re-render with new product data
+         */
+        updateWidgetSettings: function(productData) {
+            var widgetId = this.model.get('widgetId');
+            var container = elementor.getContainer(widgetId);
+            
+            if (!container) {
+                console.error('[ProductPopupView] Widget container not found:', widgetId);
+                return;
+            }
+            
+            // Use Elementor's command API to update settings
+            $e.run('document/elements/settings', {
+                container: container,
+                settings: {
+                    product_id: String(productData.id),
+                    product_name: productData.name,
+                    product_price: String(productData.price),
+                    product_url: productData.url
+                }
+            });
+            
+            console.log('[ProductPopupView] Widget settings updated:', productData);
+        },
+        
+        // ─────────────────────────────────────────────────────────────────
+        // Helper Methods
+        // ─────────────────────────────────────────────────────────────────
+        
+        showMessage: function(text, type) {
+            this.ui.message
+                .text(text)
+                .removeClass('success error')
+                .addClass(type)
+                .show();
+        }
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SECTION 3: INITIALIZATION & EVENT WIRING
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    // Store models per widget (keyed by widget ID)
+    var widgetModels = {};
+    var currentPopupView = null;
+    
+    /**
+     * Get or create state model for a widget
+     * Models are cached to maintain state across popup open/close
+     */
+    function getOrCreateModel(widgetId) {
+        if (!widgetModels[widgetId]) {
+            widgetModels[widgetId] = new WidgetStateModel({ widgetId: widgetId });
+        }
+        return widgetModels[widgetId];
+    }
+    
+    /**
+     * Show product popup for a widget
+     * Creates Marionette View bound to widget's state model
+     */
+    function showProductPopup(widgetId) {
+        // Destroy existing popup if any (proper cleanup via Marionette)
+        if (currentPopupView) {
+            currentPopupView.destroy();
+            currentPopupView = null;
+        }
+        
+        // Get or create state model for this widget
+        var stateModel = getOrCreateModel(widgetId);
+        
+        // Reset model state for fresh popup
+        if (!stateModel.isIdle()) {
+            stateModel.reset();
+        }
+        
+        // Create and render popup view
+        currentPopupView = new ProductPopupView({
+            model: stateModel
+        });
+        
+        currentPopupView.render();
+        document.body.appendChild(currentPopupView.el);
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // SECTION 4: INITIALIZATION & LIFECYCLE-SAFE BINDING
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    // Guard against duplicate initialization (M2: lifecycle-safe binding)
+    var isInitialized = false;
+    
+    /**
+     * Initialize when Elementor editor is ready
+     * 
+     * LIFECYCLE-SAFE BINDING (addresses M2):
+     * - Uses guard flag to prevent duplicate event handlers
+     * - Panel BUTTON event: bound once on first init
+     * - Preview CTA: uses delegated event on $preview (auto-handles re-renders)
+     * - Cleanup: models keyed by widgetId, popup destroyed on close
+     */
+    function initVocalmeetProductCreator() {
+        // Guard: prevent duplicate initialization on preview reload
+        if (isInitialized) {
+            console.log('[VocalMeet] Already initialized, skipping duplicate init');
+            return;
+        }
+        isInitialized = true;
+        
+        console.log('[VocalMeet] Initializing Product Creator (Backbone/Marionette)');
+        
+        // 1. Listen for PANEL button click event (bound once)
+        elementor.channels.editor.on('vocalmeet:product:create', function(view) {
+            var widgetId = view.model.id;
+            console.log('[VocalMeet] Panel button triggered for widget:', widgetId);
+            showProductPopup(widgetId);
+        });
+        
+        // 2. Listen for PREVIEW CTA click (delegated event - handles re-renders)
+        // Uses delegated binding on $preview to survive widget re-renders
+        elementor.$preview.on('click', '.vocalmeet-preview-cta[data-action="create-product"]', function(e) {
+            e.preventDefault();
+            var $widget = jQuery(this).closest('.elementor-widget');
+            var widgetId = $widget.data('id');
+            if (widgetId) {
+                console.log('[VocalMeet] Preview CTA triggered for widget:', widgetId);
+                showProductPopup(widgetId);
+            }
+        });
+    }
+    
+    /**
+     * Cleanup when document changes (optional hardening)
+     * Clears cached models for widgets that no longer exist
+     */
+    function cleanupOnDocumentChange() {
+        // Clear all widget models on document switch
+        // New document = new widgets = fresh models
+        widgetModels = {};
+        if (currentPopupView) {
+            currentPopupView.destroy();
+            currentPopupView = null;
+        }
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // SECTION 5: BOOTSTRAP
+    // ═══════════════════════════════════════════════════════════════════════
+    
     window.addEventListener('load', function() {
         if (typeof elementor === 'undefined') {
             return;
         }
-
-        // Defensive guard: Ensure elementorCommon and dialogsManager are available
-        // (should be, since we declared 'elementor-common' as script dependency)
-        if (!window.elementorCommon || !elementorCommon.dialogsManager) {
-            console.error('VocalMeet: elementorCommon.dialogsManager not available');
-            return;
-        }
-
-        // Initialize when editor is ready
-        elementor.on('preview:loaded', initVocalmeetProductCreator);
-    });
-
-    function initVocalmeetProductCreator() {
-        // Listen for PANEL button click event
-        // This is triggered by the BUTTON control with event: 'vocalmeet:product:create'
-        // The event is fired via Elementor's channel system when user clicks panel button
-        elementor.channels.editor.on('vocalmeet:product:create', function(view) {
-            // Get widget ID from the view model
-            const widgetId = view.model.id;
-            showProductPopup(widgetId);
-        });
-    }
-
-    /**
-     * Show product creation popup using Elementor's dialog manager
-     * 
-     * CRITICAL: Popup is rendered in EDITOR document (top-level window),
-     * NOT in the preview iframe. This completely avoids any "raw code in preview" issues.
-     * 
-     * Using elementorCommon.dialogsManager ensures:
-     * - Consistent styling with Elementor UI
-     * - Proper z-index management
-     * - No interference with preview content
-     */
-    function showProductPopup(widgetId) {
-        const i18n = vocalmeetElementorWoo.i18n;
-
-        // Close existing dialog if any
-        if (currentDialog) {
-            currentDialog.destroy();
-            currentDialog = null;
-        }
-
-        // Create dialog using Elementor's dialog manager
-        // This renders in the EDITOR document, not preview iframe
-        currentDialog = elementorCommon.dialogsManager.createWidget('lightbox', {
-            id: 'vocalmeet-product-dialog',
-            headerMessage: i18n.popup_title,
-            message: createFormHTML(widgetId, i18n),
-            closeButton: true,
-            closeButtonClass: 'eicon-close',
-            className: 'vocalmeet-product-dialog',
-            onReady: function() {
-                setupFormHandlers(this, widgetId, i18n);
-            },
-            onHide: function() {
-                currentDialog = null;
-            }
-        });
-
-        currentDialog.show();
-    }
-
-    /**
-     * Create form HTML for the dialog
-     * 
-     * IMPORTANT - Editor UI HTML (NOT preview HTML):
-     * - This HTML is rendered in the EDITOR document via dialogsManager
-     * - It is NOT injected into the preview iframe
-     * - Only interpolate TRUSTED localized strings (from wp_localize_script)
-     * - User inputs are handled via JS + REST, not server-rendered HTML
-     * - widgetId is a safe Elementor-generated ID (alphanumeric)
-     */
-    function createFormHTML(widgetId, i18n) {
-        const formId = `vocalmeet-product-form-${widgetId}`;
-        const nameInputId = `vocalmeet-product-name-${widgetId}`;
-        const priceInputId = `vocalmeet-product-price-${widgetId}`;
-
-        // NOTE: Only i18n strings (from wp_localize_script) are interpolated
-        // User-provided data is handled through form inputs, never injected here
-        return `
-            <form id="${formId}" class="vocalmeet-product-form">
-                <div class="vocalmeet-form-group">
-                    <label for="${nameInputId}">${i18n.product_name}</label>
-                    <input type="text" 
-                           id="${nameInputId}" 
-                           name="name" 
-                           class="elementor-input"
-                           required
-                           placeholder="Enter product name">
-                </div>
-                <div class="vocalmeet-form-group">
-                    <label for="${priceInputId}">${i18n.price}</label>
-                    <input type="number" 
-                           id="${priceInputId}" 
-                           name="price" 
-                           class="elementor-input"
-                           step="0.01" 
-                           min="0.01" 
-                           required
-                           placeholder="0.00">
-                </div>
-                <div class="vocalmeet-popup-message" style="display: none;"></div>
-                <div class="vocalmeet-form-actions">
-                    <button type="button" class="elementor-button vocalmeet-btn-cancel">
-                        ${i18n.cancel}
-                    </button>
-                    <button type="submit" class="elementor-button elementor-button-success vocalmeet-btn-submit">
-                        ${i18n.create}
-                    </button>
-                </div>
-            </form>
-        `;
-    }
-
-    /**
-     * Setup form event handlers
-     */
-    function setupFormHandlers(dialog, widgetId, i18n) {
-        const dialogEl = dialog.getElements('widget');
-        const form = dialogEl.find('form')[0];
-        const cancelBtn = dialogEl.find('.vocalmeet-btn-cancel')[0];
-        const submitBtn = dialogEl.find('.vocalmeet-btn-submit')[0];
-        const messageDiv = dialogEl.find('.vocalmeet-popup-message')[0];
-        const nameInput = form.querySelector('[name="name"]');
-
-        // Focus first input
-        setTimeout(() => nameInput.focus(), 100);
-
-        // Cancel button
-        cancelBtn.addEventListener('click', () => dialog.hide());
-
-        // Form submission
-        form.addEventListener('submit', async function(e) {
-            e.preventDefault();
-
-            const name = form.querySelector('[name="name"]').value.trim();
-            const price = parseFloat(form.querySelector('[name="price"]').value);
-
-            // Client-side validation
-            if (!name) {
-                showMessage(messageDiv, i18n.name_required, 'error');
-                return;
-            }
-            if (!price || price <= 0) {
-                showMessage(messageDiv, i18n.price_required, 'error');
-                return;
-            }
-
-            // Disable form during submission
-            setLoading(submitBtn, true, i18n.creating);
-
-            try {
-                const response = await createProduct(name, price);
-                
-                if (response.success) {
-                    // Update widget settings via Elementor JS API
-                    updateWidgetSettings(widgetId, {
-                        product_id: String(response.product_id),
-                        product_name: response.product_name,
-                        product_price: String(price),
-                        product_url: response.product_url,
-                    });
-
-                    showMessage(messageDiv, i18n.success, 'success');
-                    
-                    // Close dialog after short delay
-                    setTimeout(() => dialog.hide(), 1000);
-                } else {
-                    showMessage(messageDiv, response.message || i18n.error, 'error');
-                }
-            } catch (error) {
-                console.error('VocalMeet Product Creation Error:', error);
-                showMessage(messageDiv, i18n.error, 'error');
-            } finally {
-                setLoading(submitBtn, false, i18n.create);
-            }
-        });
-    }
-
-    /**
-     * Create product via REST API
-     * REUSES Plugin 1's endpoint - no code duplication
-     */
-    async function createProduct(name, price) {
-        const response = await fetch(vocalmeetElementorWoo.rest_url, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-WP-Nonce': vocalmeetElementorWoo.nonce,
-            },
-            body: JSON.stringify({ name, price }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            return {
-                success: false,
-                message: data.message || 'Unknown error',
-            };
-        }
-
-        return {
-            success: true,
-            product_id: data.product_id,
-            product_name: data.product_name,
-            product_url: data.product_url,
-        };
-    }
-
-    /**
-     * Update widget settings via Elementor JS API
-     * 
-     * KEY DEMONSTRATION: Understanding of Elementor internals
-     * This triggers widget re-render with new data
-     */
-    function updateWidgetSettings(widgetId, settings) {
-        // Get the widget container
-        const container = elementor.getContainer(widgetId);
         
-        if (!container) {
-            console.error('Widget container not found:', widgetId);
+        // Verify Marionette is available
+        if (typeof Marionette === 'undefined') {
+            console.error('[VocalMeet] Marionette not available');
             return;
         }
-
-        // Use Elementor's $e.run command to update settings
-        // This is the official way to modify widget settings
-        $e.run('document/elements/settings', {
-            container: container,
-            settings: settings,
-        });
-
-        // Alternative method using channels (for reference)
-        // elementor.channels.editor.trigger('change', {
-        //     elementId: widgetId,
-        //     settings: settings
-        // });
-    }
-
-    /**
-     * Helper: Close popup with animation
-     */
-    function closePopup(popup) {
-        popup.classList.add('vocalmeet-popup-closing');
-        setTimeout(() => popup.remove(), 200);
-    }
-
-    /**
-     * Helper: Show message in popup
-     */
-    function showMessage(container, message, type) {
-        container.textContent = message;
-        container.className = `vocalmeet-popup-message vocalmeet-message-${type}`;
-        container.style.display = 'block';
-    }
-
-    /**
-     * Helper: Set loading state
-     */
-    function setLoading(button, loading, text) {
-        button.disabled = loading;
-        button.textContent = text;
-        if (loading) {
-            button.classList.add('vocalmeet-loading');
-        } else {
-            button.classList.remove('vocalmeet-loading');
-        }
-    }
+        
+        // Initialize when preview is loaded (first time only due to guard)
+        elementor.on('preview:loaded', initVocalmeetProductCreator);
+        
+        // Optional: cleanup on document change
+        elementor.on('document:loaded', cleanupOnDocumentChange);
+    });
 
 })();
 ```
 
 **Reviewer sẽ thấy:**
 
-- ✅ ES6+ syntax (arrow functions, async/await, template literals)
-- ✅ **Panel button event listener** via `elementor.channels.editor.on()`
-- ✅ Elementor JS API: `$e.run('document/elements/settings')`
+- ✅ **Backbone.Model** với state machine pattern (explicit state transitions)
+- ✅ **Marionette.View** với proper lifecycle (onRender, onDestroy)
+- ✅ **UI hash** cho DOM element references (Marionette pattern)
+- ✅ **Events hash** cho DOM event bindings (Marionette pattern)
+- ✅ **modelEvents** để react to state changes automatically
+- ✅ **Separation of concerns**: Model handles logic, View handles UI
+- ✅ **Event-driven architecture** via Backbone.Events + elementor.channels
+- ✅ **Elementor JS API**: `$e.run('document/elements/settings')`
 - ✅ REST API call với nonce authentication
-- ✅ Proper error handling
-- ✅ Loading states
+- ✅ Proper error handling và loading states
 - ✅ i18n support
-- ✅ Clean code structure với helper functions
-- ✅ **WYSIWYG compliant**: Popup triggered từ panel, rendered in **editor document** (not preview iframe)
-- ✅ Uses `elementorCommon.dialogsManager` for consistent UI and proper z-index management
+- ✅ **WYSIWYG compliant**: Popup triggered từ panel, rendered in editor document
+
+**Key Patterns Demonstrated:**
+
+| Pattern | Implementation | Benefit |
+|---------|---------------|---------|
+| **State Machine** | `transitions` object, `transitionTo()` method | No invalid UI states |
+| **Model-View Separation** | Model emits events, View listens | Loose coupling |
+| **Marionette Lifecycle** | `onRender()`, `onDestroy()` | Proper cleanup, no memory leaks |
+| **Template Context** | `templateContext()` method | Clean data passing to template |
+| **UI Hash** | `ui: { name: '[data-ui="name"]' }` | Easy DOM references |
 
 ---
 
@@ -1757,8 +2127,8 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
  * VocalMeet Elementor WooCommerce Widget - Widget Styles
  * Used in both editor preview and frontend
  * 
- * NOTE: NO button styles here - preview is display-only
- * All action buttons are in panel (handled by Elementor)
+ * NOTE: Preview CTA is EDITOR-ONLY (rendered via content_template)
+ * Frontend uses render() which does NOT include CTA
  */
 
 /* Container */
@@ -1787,8 +2157,29 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
     font-weight: 500;
 }
 
+/* Preview CTA - EDITOR-ONLY (satisfies "button inside widget" requirement)
+ * This CTA is rendered in content_template (editor preview)
+ * NOT rendered in render() (frontend) */
+.vocalmeet-preview-cta {
+    display: inline-block;
+    margin: 12px 0;
+    padding: 10px 20px;
+    background: #7c3aed;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.vocalmeet-preview-cta:hover {
+    background: #6d28d9;
+}
+
 .vocalmeet-empty-hint {
-    margin: 0;
+    margin: 8px 0 0 0;
     color: #9ca3af;
     font-size: 14px;
 }
@@ -1835,8 +2226,8 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
     text-decoration: underline;
 }
 
-/* NOTE: NO button styles in widget.css
-   All action buttons are in PANEL, not preview */
+/* NOTE: Preview CTA styles are here (editor-only via content_template)
+   CTA is NOT rendered by render() (frontend) - only content_template (editor) */
 ```
 
 **Reviewer sẽ thấy:**
@@ -1845,7 +2236,7 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
 - ✅ Professional design
 - ✅ Proper scoping (`.vocalmeet-` prefix)
 - ✅ Clear separation: Placeholder state vs Product card state
-- ✅ **NO action buttons in preview** - display only
+- ✅ **Editor-only preview CTA** - styled, triggers popup (not on frontend)
 
 ---
 
@@ -1853,59 +2244,90 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
 
 ### Phase 1: Plugin Skeleton
 
-- [x] Create `vocalmeet-elementor-woo.php` với plugin headers
-- [x] Implement dependency checks (PHP, Elementor, WC, Plugin 1)
-- [x] Create admin notices for missing dependencies
+- [ ] Create `vocalmeet-elementor-woo.php` với plugin headers
+- [ ] Implement dependency checks (PHP, Elementor, WC, Plugin 1)
+- [ ] Create admin notices for missing dependencies
 
 ### Phase 2: Elementor Bootstrap
 
-- [x] Create `includes/class-plugin.php` singleton
-- [x] Register custom widget category
-- [x] Register widget với Elementor
-- [x] Enqueue editor scripts/styles
-- [x] Enqueue frontend styles
+- [ ] Create `includes/class-plugin.php` singleton
+- [ ] Register custom widget category
+- [ ] Register widget với Elementor
+- [ ] Enqueue editor scripts/styles
+- [ ] Enqueue frontend styles
 
 ### Phase 3: Widget Controls
 
-- [x] Create `includes/widgets/class-product-creator.php`
-- [x] Implement widget identity methods
-- [x] Add hidden controls (product_id, name, price, url)
-- [x] Add BUTTON control for popup trigger (from panel!)
-- [x] Add display controls (show_price, show_link)
-- [x] Add style controls (placeholder, product card)
+- [ ] Create `includes/widgets/class-product-creator.php`
+- [ ] Implement widget identity methods
+- [ ] Add hidden controls (product_id, name, price, url)
+- [ ] Add BUTTON control for popup trigger (from panel!)
+- [ ] Add display controls (show_price, show_link)
+- [ ] Add style controls (placeholder, product card)
 
 ### Phase 4: Widget Render
 
-- [x] Implement `render()` method với 2 states (placeholder vs product card)
-- [x] **NO buttons in preview** - display only
-- [x] Implement `content_template()` for live preview
-- [x] Proper output escaping
+- [ ] Implement `render()` method với 2 states (placeholder vs product card) - **NO CTA on frontend**
+- [ ] Implement `content_template()` with editor-only CTA in placeholder state
+- [ ] CTA triggers popup (same as panel button), NOT a form in preview
+- [ ] Proper output escaping
 
-### Phase 5: Editor JavaScript
+### Phase 5: Editor JavaScript (Backbone/Marionette)
 
-- [x] Create `assets/js/editor.js`
-- [x] Listen for **panel button event** via `elementor.channels.editor.on()`
-- [x] Create popup modal using `elementorCommon.dialogsManager` (**in editor document, NOT preview iframe**)
-- [x] Implement REST API call (reuse Plugin 1)
-- [x] Update widget settings via Elementor API (`$e.run`)
+> **Prerequisites:** Complete Marionette Lab first!
+> See: `devdocs/projects/vocalmeet/assessment/plans/260205-marionette-elementor-lab.md`
+
+- [ ] Create `assets/js/editor.js`
+- [ ] **WidgetStateModel** (Backbone.Model)
+  - [ ] Define states: IDLE, CREATING, SUCCESS, ERROR
+  - [ ] Define valid transitions in `transitions` object
+  - [ ] Implement `transitionTo()` with validation
+  - [ ] Add convenience methods: `startCreating()`, `complete()`, `fail()`, `reset()`
+- [ ] **ProductPopupView** (Marionette.View)
+  - [ ] Define `template` with Underscore.js syntax
+  - [ ] Define `ui` hash for DOM element references
+  - [ ] Define `events` hash for DOM event bindings
+  - [ ] Define `modelEvents` to react to state changes
+  - [ ] Implement `onRender()` lifecycle hook
+  - [ ] Implement `onDestroy()` lifecycle hook
+  - [ ] Implement `onStateChange()` for UI updates based on state
+- [ ] **Event Wiring (Dual-Trigger + Lifecycle-Safe)**
+  - [ ] Listen for panel button event via `elementor.channels.editor.on()`
+  - [ ] Listen for preview CTA click via delegated `elementor.$preview.on()`
+  - [ ] Add initialization guard (`isInitialized` flag)
+  - [ ] Add cleanup on document change
+  - [ ] Create/reuse WidgetStateModel per widget (keyed by widgetId)
+  - [ ] Create ProductPopupView bound to model
+- [ ] **API Integration**
+  - [ ] Implement REST API call (reuse Plugin 1 endpoint)
+  - [ ] Update widget settings via `$e.run('document/elements/settings')`
 
 ### Phase 6: Styling
 
-- [x] Create `assets/css/editor.css` (popup styles)
-- [x] Create `assets/css/widget.css` (widget styles)
-- [x] Add animations, loading states
+- [ ] Create `assets/css/editor.css` (popup styles)
+- [ ] Create `assets/css/widget.css` (widget styles)
+- [ ] Add animations, loading states
 
 ### Phase 7: Testing
 
-**Basic Functionality:**
+**Basic Functionality (Dual-Trigger):**
 
 - [ ] Widget appears in Elementor panel (VocalMeet category)
-- [ ] Drag widget to page → shows **placeholder message** (no button!)
-- [ ] Click **panel button** "Create New Product" → popup appears (in editor, not preview)
+- [ ] Drag widget to page → shows **placeholder with CTA** (editor-only)
+- [ ] Click **preview CTA** "Create Product" → popup appears (in editor, not preview)
+- [ ] Click **panel button** "Create New Product" → SAME popup appears
 - [ ] Submit form → product created via REST API
-- [ ] Widget re-renders showing product card
+- [ ] Widget re-renders showing product card (CTA hidden when product exists)
 - [ ] Save page → settings persist
-- [ ] Frontend displays product correctly
+- [ ] **Frontend displays product correctly (NO CTA on frontend)**
+
+**Dual-Trigger Specific:**
+
+- [ ] Preview CTA visible only in editor (not on frontend)
+- [ ] Preview CTA triggers same popup as panel button
+- [ ] CTA disappears from preview after product is created
+- [ ] Panel button always available (even when product exists)
+- [ ] Both triggers use same `showProductPopup()` function
 
 **Edge Cases & Error Handling:**
 
@@ -1917,6 +2339,22 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
 - [ ] Nonce expiration (long idle time) → graceful error, suggest page refresh
 - [ ] Product deleted outside Elementor → frontend shows "Product no longer available"
 - [ ] Special characters in product name → properly escaped in display
+
+**Backbone/Marionette Specific:**
+
+- [ ] State transitions work correctly (check console logs)
+- [ ] Invalid state transitions are rejected (e.g., IDLE → SUCCESS)
+- [ ] Model state changes trigger View updates via `modelEvents`
+- [ ] PopupView `onDestroy()` is called when popup closes
+- [ ] No memory leaks after multiple popup open/close cycles
+- [ ] Widget models are cached per widget ID (not recreated each time)
+
+**Lifecycle-Safe Binding (M2 Fix):**
+
+- [ ] Initialization guard prevents duplicate handlers on preview reload
+- [ ] Preview CTA uses delegated event binding (survives re-renders)
+- [ ] Document change triggers cleanup of widget models
+- [ ] No duplicate popups when rapidly clicking triggers
 
 **BUTTON Control Validation (Lab Step):**
 
@@ -1941,12 +2379,12 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
 | # | Requirement | Status |
 |---|-------------|--------|
 | 1 | Widget trong Elementor panel | ⬜ |
-| 2 | Drag & drop vào page → placeholder | ⬜ |
-| 3 | **PANEL button** trigger popup | ⬜ |
+| 2 | Drag & drop vào page → placeholder (with editor-only CTA) | ⬜ |
+| 3 | **Dual-trigger**: panel button OR preview CTA → popup | ⬜ |
 | 4 | Popup tạo product via REST API | ⬜ |
 | 5 | Widget re-render sau tạo product | ⬜ |
-| 6 | Frontend hiển thị product | ⬜ |
-| 7 | **Preview KHÔNG có button/form** | ⬜ |
+| 6 | Frontend hiển thị product (NO CTA) | ⬜ |
+| 7 | **Preview has minimal CTA trigger (editor-only), NO forms** | ⬜ |
 
 ### Assessment Focus Demonstration
 
@@ -1954,11 +2392,13 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
 |---|------------|----------|--------|
 | 1 | Elementor Architecture | Correct hooks, widget lifecycle | ⬜ |
 | 2 | Editor/Frontend Separation | Separate scripts, context checks | ⬜ |
-| 3 | **WYSIWYG Compliance** | **Popup từ panel**, preview chỉ display | ⬜ |
+| 3 | **WYSIWYG Compliance** | **Popup in editor document**, preview CTA is trigger only | ⬜ |
 | 4 | Integration Skills | Reuse Plugin 1 REST API | ⬜ |
-| 5 | Advanced JS | Elementor channels API, $e.run() | ⬜ |
-| 6 | Security | Nonce, escaping, capability checks | ⬜ |
-| 7 | UX | Loading states, error messages | ⬜ |
+| 5 | **🌟 Backbone/Marionette** | `Backbone.Model`, `Marionette.View` | ⬜ |
+| 6 | **🌟 State Machine** | Explicit transitions, no invalid states | ⬜ |
+| 7 | Advanced JS | Elementor channels, $e.run(), modelEvents | ⬜ |
+| 8 | Security | Nonce, escaping, capability checks | ⬜ |
+| 9 | UX | Loading states, error messages | ⬜ |
 
 ### Code Quality
 
@@ -1976,76 +2416,59 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
 
 Khi present cho reviewer, emphasize:
 
-1. **"Tại sao popup từ PANEL và rendered trong editor document?"**
-   > **ĐÂY LÀ POINT QUAN TRỌNG NHẤT!**
-   - Widget controls chỉ available SAU KHI widget đã drag vào canvas (Elementor limitation)
-   - Popup rendered via `elementorCommon.dialogsManager` → trong **editor document**, KHÔNG trong preview iframe
-   - Tuân thủ Elementor WYSIWYG philosophy: Preview = result ONLY
-   - Panel là nơi configuration, Preview là nơi display
-   - Completely avoids "raw code in preview" interpretation issues
+1. **🌟 "Tại sao sử dụng Backbone/Marionette thay vì vanilla JS?"**
+   > **ĐÂY LÀ ĐIỂM NỔI BẬT NHẤT!**
+   - Elementor được build trên Backbone/Marionette → sử dụng đúng patterns
+   - **State Machine Pattern**: Explicit state transitions (idle → creating → success/error)
+   - Không thể có invalid UI states (e.g., button disabled khi không đang loading)
+   - **Model-View Separation**: Model handles logic, View handles UI → loose coupling
+   - **Marionette Lifecycle**: `onRender()`, `onDestroy()` → proper cleanup, no memory leaks
+   - Demonstrate **deep understanding** của Elementor internals
 
-2. **"Tại sao 2 plugins riêng biệt?"**
+2. **"Tại sao dual-trigger (panel + preview CTA) và popup rendered trong editor document?"**
+   - **Dual-trigger**: Panel button always available + preview CTA satisfies "button inside widget" expectation
+   - Preview CTA is **trigger only** (editor-only) - NOT a form, NOT popup UI in preview iframe
+   - Popup rendered in editor document, KHÔNG trong preview iframe
+   - Tuân thủ Elementor WYSIWYG philosophy: Preview shows result + minimal CTA trigger, NOT forms
+   - Frontend renders NO CTA - pure display
+   - Avoids "raw code in preview" while satisfying assessment requirements
+
+3. **"Tại sao 2 plugins riêng biệt?"**
    - Modular architecture
    - Plugin 2 extends Plugin 1's REST API
    - Proper dependency management via `defined('VOCALMEET_WOO_API_VERSION')`
 
-3. **"Làm sao widget update mà không refresh?"**
+4. **"Làm sao widget update mà không refresh?"**
    - Sử dụng Elementor JS API: `$e.run('document/elements/settings')`
+   - Model state change → View auto-update via `modelEvents`
    - Live preview via `content_template()`
 
-4. **"Security considerations?"**
+5. **"Security considerations?"**
    - REST API nonce authentication
    - Output escaping (`esc_html`, `esc_attr`, `esc_url`)
    - Permission check tại REST endpoint (Plugin 1)
    - **Assessment scope:** `is_user_logged_in()` matches Plugin 1 approach
    - **Production note:** Should use `current_user_can('edit_products')`
 
-5. **"Preview chỉ hiển thị 2 states + error state?"**
+6. **"Preview chỉ hiển thị 2 states + error state?"**
    - State 1: Placeholder - "No product selected. Use panel to create."
    - State 2: Product card - Hiển thị product info (fetched fresh via `wc_get_product()`)
    - State 3: Error - "Product no longer available." (if product deleted)
    - KHÔNG có button/form nào trong preview area
 
-6. **"Data freshness strategy?"**
+7. **"State Machine Flow?"**
+   ```
+   IDLE ──[startCreating()]──▶ CREATING ──[complete()]──▶ SUCCESS ──▶ IDLE
+                                    │
+                                    └──[fail()]──▶ ERROR ──▶ IDLE
+   ```
+   - Invalid transitions (e.g., IDLE → SUCCESS) are rejected
+   - Each state has specific UI representation in View
+
+8. **"Data freshness strategy?"**
    - `product_id` is source of truth (saved in widget settings)
    - Editor preview: uses cached values for fast live preview
    - Frontend render: always calls `wc_get_product()` for fresh data
    - Handles product deletion gracefully
 
 ---
-
-## Implementation Notes / As Implemented
-
-### As-built Paths / Files
-
-Plugin 2 (Elementor widget plugin):
-
-- `projects/vocalmeet/assessment/wordpress/wp-content/plugins/vocalmeet-elementor-woo/vocalmeet-elementor-woo.php`
-- `projects/vocalmeet/assessment/wordpress/wp-content/plugins/vocalmeet-elementor-woo/includes/class-plugin.php`
-- `projects/vocalmeet/assessment/wordpress/wp-content/plugins/vocalmeet-elementor-woo/includes/widgets/class-product-creator.php`
-- `projects/vocalmeet/assessment/wordpress/wp-content/plugins/vocalmeet-elementor-woo/assets/js/editor.js`
-- `projects/vocalmeet/assessment/wordpress/wp-content/plugins/vocalmeet-elementor-woo/assets/css/editor.css`
-- `projects/vocalmeet/assessment/wordpress/wp-content/plugins/vocalmeet-elementor-woo/assets/css/widget.css`
-
-Plugin 1 (REST endpoint reused):
-
-- Endpoint: `vocalmeet-woo-api/v1/products`
-- Source: `projects/vocalmeet/assessment/wordpress/wp-content/plugins/vocalmeet-woo-api/includes/class-rest-controller.php`
-
-### Small Deltas vs This Plan
-
-- Constants naming in main plugin file uses `*_PLUGIN_*` (e.g. `VOCALMEET_ELEMENTOR_WOO_PLUGIN_DIR`) instead of `*_DIR`/`*_URL`/`*_FILE` shown in examples, but semantics are identical.
-- Popup UI is implemented purely via `elementorCommon.dialogsManager` with CSS targeting Elementor dialog markup, instead of a fully custom overlay/modal CSS block shown in the plan example.
-- The `product_info` control uses a class-based wrapper (`<div class="vocalmeet-product-info">...`) instead of an `id="vocalmeet-product-info"`; functionally equivalent.
-- `assets/js/frontend.js` was not created because the implementation doesn’t require frontend JS (plan marked it optional).
-- PHPDoc “bonus” was not added; core functionality and i18n are in place.
-
-### Validation Performed
-
-- Started local assessment environment:
-  - `cd devtools/vocalmeet/local && just -f Justfile assessment-start`
-- Activated the new plugin:
-  - `cd devtools/vocalmeet/local && just -f Justfile wp plugin activate vocalmeet-elementor-woo`
-- Verified plugin status via WP-CLI:
-  - `cd devtools/vocalmeet/local && just -f Justfile wp plugin list --name=vocalmeet-elementor-woo`
-- PHP CLI (`php -l`) was not available in the host environment, so syntax lint was not run.
