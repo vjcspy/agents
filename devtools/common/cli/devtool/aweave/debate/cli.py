@@ -368,7 +368,7 @@ def wait(
                 type=ContentType.JSON,
                 data={
                     "status": "timeout",
-                    "message": f"No response after {deadline}s. Please retry using: {retry_cmd}",
+                    "message": f"No response after {deadline}s. you MUST retry by using: {retry_cmd}",
                     "debate_id": debate_id,
                     "last_argument_id": argument_id,
                     "last_seen_seq": last_seen_seq,
