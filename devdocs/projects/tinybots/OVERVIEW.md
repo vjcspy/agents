@@ -107,11 +107,9 @@ just -f devtools/tinybots/local/Justfile log-<repo>
 
 Rules are **mandatory** and must be followed. Load the relevant rule **before** performing the task.
 
-> **⚠️ IMPORTANT:** TinyBots tests run inside Docker containers, NOT via regular `yarn test`. If you intend to run tests, you **MUST** load the `run-tests` rule first to understand the correct execution method.
-
 | Rule | Load When | Path |
 |------|-----------|------|
-| run-tests | **Before running any tests** — tests require Docker, not `yarn test` | `devdocs/agent/rules/tinybots/run-tests.md` |
+| run-tests | Running tests for any repository | `devdocs/agent/rules/tinybots/run-tests.md` |
 
 ## Commands Reference
 

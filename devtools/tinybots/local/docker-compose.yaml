@@ -405,37 +405,6 @@ services:
       typ-e:
         condition: service_completed_successfully
 
-  wonkers-nedap:
-    image: node:22-alpine
-    volumes:
-      - ../../../projects/tinybots/backend/wonkers-nedap:/usr/src/app
-      - ${HOME}/.ssh:/root/.ssh:ro
-    ports:
-      - 8884:8080
-    labels:
-      - wonkers-nedap
-    environment:
-      DB_RW_HOST: mysql-wonkers-db
-      NEDAP_ONS_API_ADDRESS: https://test-ons.tinybots.nl
-      RELATION_ID: 1
-      INTEGRATION_ID: 1
-      SLACK_HOOK: https://test-slack.tinybots.nl/test
-      CONFIG_ENVIRONMENT: dev
-      SMTP_HOST: mailcatcher
-      SMTP_PORT: 1025
-      SMTP_USE_SSL: "false"
-      SMTP_USERNAME: test
-      SMTP_PASSWORD: dummy
-      SOCKET_TIMEOUT: 5000
-      WONKERS_INTERNAL_ADDRESS: http://wonkers:8080
-    working_dir: /usr/src/app
-    entrypoint: ["sh", "-c", "yarn test"]
-    depends_on:
-      wonkers-db:
-        condition: service_completed_successfully
-      wonkers:
-        condition: service_started
-
   atlas:
     image: node:22-alpine
     volumes:
