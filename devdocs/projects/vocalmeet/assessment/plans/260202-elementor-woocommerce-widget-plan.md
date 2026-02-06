@@ -46,23 +46,24 @@ The assessment requirement contains ambiguous wording:
 
 This means the original literal interpretation ("create product before dragging") is **not technically feasible** with standard Elementor UI.
 
-### Chosen Approach: Dual-Trigger Popup (WYSIWYG Compliant)
+### Chosen Approach: Auto-Trigger Popup on Widget Drop (WYSIWYG Compliant)
 
 **Rationale:**
 
-1. Satisfies "no raw code in preview" requirement (popup is in editor, not preview)
-2. Works within Elementor's technical constraints
-3. Maintains WYSIWYG philosophy (preview shows result, popup is config action)
-4. **Addresses assessment expectation** - provides "button inside widget" via editor-only CTA
+1. **Best UX** - Popup appears immediately when user drops widget, no extra click needed
+2. Satisfies "no raw code in preview" requirement (popup is in editor, not preview)
+3. Works within Elementor's technical constraints
+4. Maintains WYSIWYG philosophy (preview shows result, popup is config action)
+5. **Addresses assessment expectation** - user creates product immediately after dropping widget
 
-**Trigger Options (Both Available):**
+**Trigger System (Simplified):**
 
 | Trigger | Location | Context | Purpose |
 |---------|----------|---------|---------|
-| Panel BUTTON control | Panel (left side) | Editor only | Primary, always available |
-| **Preview CTA** (editor-only) | Widget placeholder in preview | Editor only | Satisfies "button inside widget" expectation |
+| **🌟 Auto-trigger on drop** | Automatic | Editor only | **PRIMARY** - Best UX, popup opens immediately |
+| Panel BUTTON control | Panel (left side) | Editor only | **BACKUP** - only shown when no product exists |
 
-> **Key Distinction:** Both triggers open the SAME popup rendered in the **editor document** (not preview iframe). The preview CTA is a minimal trigger, NOT an embedded form.
+> **Key Distinction:** Both triggers open the SAME popup rendered in the **editor document** (not preview iframe). Auto-trigger provides the smoothest UX. Panel button is conditional - hidden after product creation.
 
 **Implemented Flow:**
 
@@ -71,80 +72,165 @@ This means the original literal interpretation ("create product before dragging"
 │                        IMPLEMENTED USER FLOW                                 │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  STEP 1: Drag widget from panel to page (creates widget instance)           │
+│  STEP 1: Drag widget from panel → Drop on page → POPUP AUTO-OPENS! 🎉      │
 │  ┌─────────────────┐    ┌─────────────────────────────────────────────────┐│
 │  │    PANEL        │    │                    PREVIEW                      ││
 │  │                 │    │                                                 ││
 │  │  [Product       │───▶│    ┌─────────────────────────────────────┐     ││
 │  │   Creator] 🛒   │    │    │  🛒 No product selected             │     ││
-│  │                 │    │    │  [+ Create Product] ← EDITOR-ONLY   │     ││
-│  └─────────────────┘    │    └─────────────────────────────────────┘     ││
+│  │                 │    │    │  Use the panel to create a product  │     ││
+│  │  ───────────────│    │    └─────────────────────────────────────┘     ││
+│  │  [Create New    │    │                                                 ││
+│  │   Product] btn  │    │    ┌────────────────────────────────────┐      ││
+│  │  (conditional)  │    │    │  Popup AUTO-OPENS! 🎉              │      ││
+│  └─────────────────┘    │    │  ─────────────────────────────     │      ││
+│          │              │    │  Name: [___________]               │      ││
+│          │              │    │  Price: [___________]              │      ││
+│          └──────────────│───▶│  [Cancel] [Create]                 │      ││
+│     (hook fires on      │    └────────────────────────────────────┘      ││
+│      widget drop)       │                                                 ││
 │                         └─────────────────────────────────────────────────┘│
 │                                                                             │
-│  STEP 2: Click CTA in preview OR button in panel → SAME popup opens        │
-│  ┌─────────────────┐    ┌─────────────────────────────────────────────────┐│
-│  │    PANEL        │    │                    PREVIEW                      ││
-│  │    (Controls)   │    │                                                 ││
-│  │                 │    │    ┌────────────────────────────────┐          ││
-│  │  [Create New ─────────────│─▶ Popup (in EDITOR document)  │          ││
-│  │   Product] btn  │    │    │   Name: [___________]         │          ││
-│  │                 │    │    │   Price: [___________]        │          ││
-│  │  Show Price: ✓  │    │    │   [Cancel] [Create]           │          ││
-│  │  Show Link: ✓   │    │    └────────────────────────────────┘          ││
-│  └─────────────────┘    │    ┌─────────────────────────────────────┐     ││
-│                         │    │  🛒 No product selected             │     ││
-│         OR              │    │  [+ Create Product] ←───────────────┼──┐  ││
-│                         │    └─────────────────────────────────────┘  │  ││
-│                         └─────────────────────────────────────────────│──┘│
-│                                                 Both trigger same popup ──┘│
-│                                                                             │
-│  STEP 3: Product created → Widget preview updates to show product           │
+│  STEP 2: User fills form → Creates product → Widget shows product          │
 │  ┌─────────────────┐    ┌─────────────────────────────────────────────────┐│
 │  │    PANEL        │    │                    PREVIEW                      ││
 │  │                 │    │                                                 ││
-│  │  Product: #123  │    │    ┌─────────────────────────────────────┐     ││
-│  │  [Create New    │    │    │  📦 My Product                      │     ││
-│  │   Product] btn  │    │    │  💰 $19.99                          │     ││
-│  │                 │    │    │  🔗 View Product →                  │     ││
-│  │  Show Price: ✓  │    │    └─────────────────────────────────────┘     ││
-│  │  Show Link: ✓   │    │   (NO CTA shown - product exists)              ││
+│  │  ✓ Product      │    │    ┌─────────────────────────────────────┐     ││
+│  │    Created!     │    │    │  📦 My Product                      │     ││
+│  │  ───────────────│    │    │  💰 $19.99                          │     ││
+│  │  Show Price: ✓  │    │    │  🔗 View Product →                  │     ││
+│  │  Show Link: ✓   │    │    └─────────────────────────────────────┘     ││
+│  │                 │    │                                                 ││
 │  └─────────────────┘    └─────────────────────────────────────────────────┘│
+│  (Button HIDDEN after product created - shows success message instead)      │
+│                                                                             │
+│  BACKUP: If user cancels popup, Panel button available to retry            │
+│  (Button only visible when no product exists - uses condition)              │
 │                                                                             │
 │  KEY POINTS:                                                                │
-│  ✅ Preview CTA (editor-only) satisfies "button inside widget" expectation  │
-│  ✅ CTA is trigger ONLY - popup renders in EDITOR document (not preview)   │
-│  ✅ Preview CTA hidden when product exists (display-only)                   │
-│  ✅ Frontend: NO CTA rendered - pure display                                │
-│  ✅ Compliant with "no raw code in preview" (form in editor, not preview)  │
+│  ✅ Popup AUTO-OPENS when widget dropped (best UX!)                         │
+│  ✅ No extra click needed - immediate product creation flow                 │
+│  ✅ Popup renders in EDITOR document (not preview iframe)                   │
+│  ✅ Panel button conditional (only when no product)                         │
+│  ✅ Preview: Clean placeholder text only (NO buttons)                       │
+│  ✅ Frontend: NO popup, NO buttons - pure display                           │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **Implementation Details:**
 
-- **Primary trigger:** BUTTON control in panel → `elementor.channels.editor.on()` event
-- **Secondary trigger:** Preview CTA (editor-only) → click event listener in `editor.js`
-- Popup rendering: In **editor document** (via `elementorCommon.dialogsManager` or editor-side container), NOT in preview iframe
-- Preview shows: Placeholder with CTA (no product, editor only) OR product card (has product) - **NO forms**
-- Frontend shows: Placeholder text (no product) OR product card - **NO CTA, NO forms**
+- **🌟 Primary trigger (AUTO):** Generic `panel/open_editor/widget` hook (filter by `widgetType`)
+- **Backup trigger:** Panel BUTTON control with `condition` (only shows when `product_id` is empty)
+- Popup rendering: In **editor document** (NOT in preview iframe)
+- Preview shows: Placeholder text only (no buttons) OR product card
+- Frontend shows: Placeholder text (no product) OR product card - **NO buttons, NO forms**
 - Settings update: Via `$e.run('document/elements/settings', ...)` after product creation
+- Panel shows: "✓ Product Created" RAW_HTML message when product exists
 
-**Preview CTA Implementation:**
+**Auto-Trigger Implementation (KEY!):**
 
 ```javascript
-// In content_template() - editor-only CTA
-<# if (!productId && elementor.config.isEditing) { #>
-    <button class="vocalmeet-preview-cta" data-action="create-product">
-        + Create Product
-    </button>
-<# } #>
+// AUTO-TRIGGER: Popup opens immediately when widget is dropped/selected
+// Uses GENERIC hook and filters by widgetType (more reliable across Elementor versions)
+elementor.hooks.addAction(
+    'panel/open_editor/widget',  // Generic hook for ALL widgets
+    function(panel, model, view) {
+        var widgetType = model.get('widgetType');
+        
+        // Filter: Only handle our widget
+        if (widgetType !== 'vocalmeet-product-creator') {
+            return;
+        }
+        
+        // Only auto-trigger for NEW widgets (no product selected yet)
+        var productId = model.getSetting('product_id');
+        
+        if (!productId) {
+            // Small delay to let panel render first
+            setTimeout(function() {
+                openPopupForWidget(model.id);
+            }, 150);
+        }
+    }
+);
+```
 
-// In editor.js - listen for preview CTA click
-elementor.$preview.on('click', '.vocalmeet-preview-cta', function(e) {
-    var widgetId = $(this).closest('[data-id]').data('id');
-    showProductPopup(widgetId); // Same popup function
+**Backup Trigger Implementation (Panel Button):**
+
+```javascript
+// BACKUP: Panel BUTTON control (conditional - only shown when no product)
+// Gets widgetId from current selection
+elementor.channels.editor.on('vocalmeet:product:create', function() {
+    var widgetId = null;
+    
+    // Get from selection
+    if (elementor.selection) {
+        var selected = elementor.selection.getElements();
+        if (selected && selected.length > 0) {
+            widgetId = selected[0].id || (selected[0].model && selected[0].model.id);
+        }
+    }
+    
+    if (widgetId) {
+        openPopupForWidget(widgetId);
+    }
 });
 ```
+
+**Panel Button Conditional (PHP):**
+
+```php
+// Button only shows when product_id is empty
+$this->add_control('create_product_button', array(
+    'type'        => \Elementor\Controls_Manager::BUTTON,
+    'text'        => 'Create New Product',
+    'event'       => 'vocalmeet:product:create',
+    'button_type' => 'success',
+    'condition'   => array(
+        'product_id' => '',  // Only show when empty
+    ),
+));
+
+// Show success message when product exists
+$this->add_control('product_info_heading', array(
+    'type'      => \Elementor\Controls_Manager::RAW_HTML,
+    'raw'       => '<div style="...">✓ Product Created</div>',
+    'condition' => array(
+        'product_id!' => '',  // Only show when NOT empty
+    ),
+));
+```
+
+### ⚠️ Implementation Gotchas & Discoveries
+
+Những vấn đề phát hiện và giải quyết trong quá trình implement thực tế:
+
+| # | Issue | Root Cause | Solution |
+|---|-------|------------|----------|
+| 1 | **Script không load** | `wp_register_script()` chỉ khai báo, không load. Widget's `get_script_depends()` chỉ hoạt động khi widget đã render - quá muộn cho auto-trigger | Dùng `wp_enqueue_script()` trong hook `elementor/editor/after_enqueue_scripts` |
+| 2 | **Specific hook không fire** | Hook `panel/open_editor/widget/vocalmeet-product-creator` không fire đáng tin cậy | Dùng generic hook `panel/open_editor/widget` rồi filter bằng `model.get('widgetType')` |
+| 3 | **Marionette template không render** | Elementor dùng Marionette version khác, `template` property không được gọi tự động | Override `render()` method để manually compile template và set `innerHTML` |
+| 4 | **Panel button không có widgetId** | `view.model.id` trả về undefined trong button event | Lấy widgetId từ `elementor.selection.getElements()` |
+
+**Key Learnings:**
+
+1. **Asset Loading Strategy:**
+   - Editor scripts cần `wp_enqueue_script()` (không phải `wp_register_script()`) nếu muốn chạy trước khi widget render
+   - `get_script_depends()` trong widget class chỉ hữu ích cho scripts cần SAU khi widget đã trên canvas
+
+2. **Elementor Hooks:**
+   - Generic hooks (`panel/open_editor/widget`) đáng tin cậy hơn specific hooks (`panel/open_editor/widget/{name}`)
+   - Luôn filter bằng `widgetType` trong generic hook
+
+3. **Marionette in Elementor:**
+   - Không assume Marionette standard behavior
+   - Override `render()` method cho control hoàn toàn
+   - Call `bindUIElements()` manually sau khi set innerHTML
+
+4. **Getting Widget Context:**
+   - Trong button events, dùng `elementor.selection.getElements()` để lấy selected widget
+   - Fallback: `elementor.getPanelView().getCurrentPageView().model.id`
 
 ---
 
@@ -1288,20 +1374,15 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
         <div class="vocalmeet-product-creator-widget" data-widget-id="{{ view.model.id }}">
             
             <# if (!productId) { #>
-                <!-- Empty state with EDITOR-ONLY CTA (satisfies "button inside widget") -->
+                <!-- Empty state: Clean placeholder with text only (WYSIWYG compliant) -->
+                <!-- NOTE: No CTA button here - simplified to auto-trigger + panel button only -->
                 <div class="vocalmeet-empty-state">
                     <div class="vocalmeet-empty-icon">🛒</div>
                     <p class="vocalmeet-empty-message">
                         <?php esc_html_e('No product selected.', 'vocalmeet-elementor-woo'); ?>
                     </p>
-                    <!-- EDITOR-ONLY CTA: Triggers popup in editor document -->
-                    <!-- This button is rendered in content_template (editor preview) -->
-                    <!-- NOT rendered in render() (frontend) -->
-                    <button class="vocalmeet-preview-cta" data-action="create-product">
-                        <?php esc_html_e('+ Create Product', 'vocalmeet-elementor-woo'); ?>
-                    </button>
                     <p class="vocalmeet-empty-hint">
-                        <?php esc_html_e('Or use the panel controls.', 'vocalmeet-elementor-woo'); ?>
+                        <?php esc_html_e('Use the panel to create a product.', 'vocalmeet-elementor-woo'); ?>
                     </p>
                 </div>
                 
@@ -1806,8 +1887,9 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
      * 
      * LIFECYCLE-SAFE BINDING (addresses M2):
      * - Uses guard flag to prevent duplicate event handlers
-     * - Panel BUTTON event: bound once on first init
-     * - Preview CTA: uses delegated event on $preview (auto-handles re-renders)
+     * - Auto-trigger: fires when widget panel opens (best UX!)
+     * - Panel BUTTON event: bound once on first init (backup)
+     * - Preview CTA: REMOVED (simplified to auto-trigger + panel button only)
      * - Cleanup: models keyed by widgetId, popup destroyed on close
      */
     function initVocalmeetProductCreator() {
@@ -1820,24 +1902,39 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
         
         console.log('[VocalMeet] Initializing Product Creator (Backbone/Marionette)');
         
-        // 1. Listen for PANEL button click event (bound once)
+        // ═══════════════════════════════════════════════════════════════════
+        // 🌟 PRIMARY: AUTO-TRIGGER when widget is dropped/clicked
+        // This provides the BEST UX - popup opens immediately!
+        // ═══════════════════════════════════════════════════════════════════
+        elementor.hooks.addAction(
+            'panel/open_editor/widget/vocalmeet-product-creator',
+            function(panel, model, view) {
+                // Only auto-trigger for NEW widgets (no product selected yet)
+                var productId = model.getSetting('product_id');
+                
+                if (!productId) {
+                    console.log('[VocalMeet] Auto-trigger popup for new widget:', model.id);
+                    // Small delay to let panel render first
+                    setTimeout(function() {
+                        showProductPopup(model.id);
+                    }, 100);
+                }
+            }
+        );
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // BACKUP 1: Panel BUTTON control (for creating another product)
+        // ═══════════════════════════════════════════════════════════════════
         elementor.channels.editor.on('vocalmeet:product:create', function(view) {
             var widgetId = view.model.id;
             console.log('[VocalMeet] Panel button triggered for widget:', widgetId);
             showProductPopup(widgetId);
         });
         
-        // 2. Listen for PREVIEW CTA click (delegated event - handles re-renders)
-        // Uses delegated binding on $preview to survive widget re-renders
-        elementor.$preview.on('click', '.vocalmeet-preview-cta[data-action="create-product"]', function(e) {
-            e.preventDefault();
-            var $widget = jQuery(this).closest('.elementor-widget');
-            var widgetId = $widget.data('id');
-            if (widgetId) {
-                console.log('[VocalMeet] Preview CTA triggered for widget:', widgetId);
-                showProductPopup(widgetId);
-            }
-        });
+        // ═══════════════════════════════════════════════════════════════════
+        // NOTE: Preview CTA was REMOVED for simpler UX
+        // Only auto-trigger + panel button are implemented
+        // ═══════════════════════════════════════════════════════════════════
     }
     
     /**
@@ -2127,7 +2224,7 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
  * VocalMeet Elementor WooCommerce Widget - Widget Styles
  * Used in both editor preview and frontend
  * 
- * NOTE: Preview CTA is EDITOR-ONLY (rendered via content_template)
+ * NOTE: Preview CTA was REMOVED (simplified to auto-trigger + panel button)
  * Frontend uses render() which does NOT include CTA
  */
 
@@ -2157,26 +2254,9 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
     font-weight: 500;
 }
 
-/* Preview CTA - EDITOR-ONLY (satisfies "button inside widget" requirement)
- * This CTA is rendered in content_template (editor preview)
- * NOT rendered in render() (frontend) */
-.vocalmeet-preview-cta {
-    display: inline-block;
-    margin: 12px 0;
-    padding: 10px 20px;
-    background: #7c3aed;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.vocalmeet-preview-cta:hover {
-    background: #6d28d9;
-}
+/* NOTE: Preview CTA was REMOVED in final implementation for simpler UX
+ * Only auto-trigger + conditional panel button are used
+ * Keeping this comment for reference only */
 
 .vocalmeet-empty-hint {
     margin: 8px 0 0 0;
@@ -2226,8 +2306,8 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
     text-decoration: underline;
 }
 
-/* NOTE: Preview CTA styles are here (editor-only via content_template)
-   CTA is NOT rendered by render() (frontend) - only content_template (editor) */
+/* NOTE: Preview CTA was REMOVED - simpler implementation uses only
+   auto-trigger (on widget drop) + conditional panel button */
 ```
 
 **Reviewer sẽ thấy:**
@@ -2236,7 +2316,7 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
 - ✅ Professional design
 - ✅ Proper scoping (`.vocalmeet-` prefix)
 - ✅ Clear separation: Placeholder state vs Product card state
-- ✅ **Editor-only preview CTA** - styled, triggers popup (not on frontend)
+- ✅ **Clean preview placeholder** - no buttons, just text (WYSIWYG compliant)
 
 ---
 
@@ -2291,9 +2371,11 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
   - [ ] Implement `onRender()` lifecycle hook
   - [ ] Implement `onDestroy()` lifecycle hook
   - [ ] Implement `onStateChange()` for UI updates based on state
-- [ ] **Event Wiring (Dual-Trigger + Lifecycle-Safe)**
-  - [ ] Listen for panel button event via `elementor.channels.editor.on()`
-  - [ ] Listen for preview CTA click via delegated `elementor.$preview.on()`
+- [ ] **Event Wiring (Auto-Trigger + Backups + Lifecycle-Safe)**
+  - [ ] 🌟 **Auto-trigger** via `elementor.hooks.addAction('panel/open_editor/widget/...')`
+  - [ ] Check `product_id` to only auto-trigger for NEW widgets
+  - [ ] Backup 1: Panel button via `elementor.channels.editor.on()`
+  - [x] ~~Backup 2: Preview CTA~~ (REMOVED - simplified to panel button only)
   - [ ] Add initialization guard (`isInitialized` flag)
   - [ ] Add cleanup on document change
   - [ ] Create/reuse WidgetStateModel per widget (keyed by widgetId)
@@ -2310,24 +2392,25 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
 
 ### Phase 7: Testing
 
-**Basic Functionality (Dual-Trigger):**
+**🌟 Auto-Trigger Functionality (PRIMARY):**
 
 - [ ] Widget appears in Elementor panel (VocalMeet category)
-- [ ] Drag widget to page → shows **placeholder with CTA** (editor-only)
-- [ ] Click **preview CTA** "Create Product" → popup appears (in editor, not preview)
-- [ ] Click **panel button** "Create New Product" → SAME popup appears
+- [ ] **Drag widget to page → POPUP AUTO-OPENS immediately!** 🎉
+- [ ] Auto-trigger only fires for NEW widgets (no product_id)
+- [ ] Auto-trigger does NOT fire if widget already has product
 - [ ] Submit form → product created via REST API
-- [ ] Widget re-renders showing product card (CTA hidden when product exists)
+- [ ] Widget re-renders showing product card
 - [ ] Save page → settings persist
-- [ ] **Frontend displays product correctly (NO CTA on frontend)**
+- [ ] **Frontend displays product correctly (NO popup, NO CTA)**
 
-**Dual-Trigger Specific:**
+**Backup Triggers:**
 
-- [ ] Preview CTA visible only in editor (not on frontend)
-- [ ] Preview CTA triggers same popup as panel button
+- [ ] If user cancels auto-popup, can click **panel button** to reopen
+- [ ] **Panel button** "Create New Product" opens same popup
+- [ ] All 3 triggers use same `showProductPopup()` function
+- [ ] Preview shows clean placeholder text (no buttons)
 - [ ] CTA disappears from preview after product is created
 - [ ] Panel button always available (even when product exists)
-- [ ] Both triggers use same `showProductPopup()` function
 
 **Edge Cases & Error Handling:**
 
@@ -2352,9 +2435,11 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
 **Lifecycle-Safe Binding (M2 Fix):**
 
 - [ ] Initialization guard prevents duplicate handlers on preview reload
-- [ ] Preview CTA uses delegated event binding (survives re-renders)
+- [ ] Auto-trigger hook registered only once (via guard)
+- [x] ~~Preview CTA~~ (REMOVED - no buttons in preview for cleaner UX)
 - [ ] Document change triggers cleanup of widget models
-- [ ] No duplicate popups when rapidly clicking triggers
+- [ ] No duplicate popups when rapidly clicking/dropping widgets
+- [ ] Auto-trigger respects existing `product_id` (doesn't popup if product exists)
 
 **BUTTON Control Validation (Lab Step):**
 
@@ -2379,12 +2464,12 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
 | # | Requirement | Status |
 |---|-------------|--------|
 | 1 | Widget trong Elementor panel | ⬜ |
-| 2 | Drag & drop vào page → placeholder (with editor-only CTA) | ⬜ |
-| 3 | **Dual-trigger**: panel button OR preview CTA → popup | ⬜ |
-| 4 | Popup tạo product via REST API | ⬜ |
-| 5 | Widget re-render sau tạo product | ⬜ |
-| 6 | Frontend hiển thị product (NO CTA) | ⬜ |
-| 7 | **Preview has minimal CTA trigger (editor-only), NO forms** | ⬜ |
+| 2 | **🌟 Drag & drop → POPUP AUTO-OPENS immediately** | ⬜ |
+| 3 | Popup tạo product via REST API | ⬜ |
+| 4 | Widget re-render sau tạo product | ⬜ |
+| 5 | Backup trigger: Conditional panel button | ⬜ |
+| 6 | Frontend hiển thị product (NO popup, NO CTA) | ⬜ |
+| 7 | **Popup in editor document, NOT in preview iframe** | ⬜ |
 
 ### Assessment Focus Demonstration
 
@@ -2392,7 +2477,7 @@ class Vocalmeet_Product_Creator_Widget extends \Elementor\Widget_Base {
 |---|------------|----------|--------|
 | 1 | Elementor Architecture | Correct hooks, widget lifecycle | ⬜ |
 | 2 | Editor/Frontend Separation | Separate scripts, context checks | ⬜ |
-| 3 | **WYSIWYG Compliance** | **Popup in editor document**, preview CTA is trigger only | ⬜ |
+| 3 | **WYSIWYG Compliance** | **Popup in editor document**, preview shows result only | ⬜ |
 | 4 | Integration Skills | Reuse Plugin 1 REST API | ⬜ |
 | 5 | **🌟 Backbone/Marionette** | `Backbone.Model`, `Marionette.View` | ⬜ |
 | 6 | **🌟 State Machine** | Explicit transitions, no invalid states | ⬜ |
@@ -2425,13 +2510,14 @@ Khi present cho reviewer, emphasize:
    - **Marionette Lifecycle**: `onRender()`, `onDestroy()` → proper cleanup, no memory leaks
    - Demonstrate **deep understanding** của Elementor internals
 
-2. **"Tại sao dual-trigger (panel + preview CTA) và popup rendered trong editor document?"**
-   - **Dual-trigger**: Panel button always available + preview CTA satisfies "button inside widget" expectation
-   - Preview CTA is **trigger only** (editor-only) - NOT a form, NOT popup UI in preview iframe
+2. **"🌟 Tại sao popup tự động mở khi drop widget?"**
+   - **Best UX** - User không cần click thêm, popup hiện ngay lập tức
+   - Sử dụng Elementor hook `panel/open_editor/widget/{widget-name}`
+   - Hook fires khi widget panel opens (sau khi drop hoặc click vào widget)
+   - Chỉ auto-trigger cho widget MỚI (chưa có `product_id`)
+   - **Backup trigger**: Conditional panel button (only visible when no product)
    - Popup rendered in editor document, KHÔNG trong preview iframe
-   - Tuân thủ Elementor WYSIWYG philosophy: Preview shows result + minimal CTA trigger, NOT forms
-   - Frontend renders NO CTA - pure display
-   - Avoids "raw code in preview" while satisfying assessment requirements
+   - Frontend renders NO popup, NO CTA - pure display
 
 3. **"Tại sao 2 plugins riêng biệt?"**
    - Modular architecture
