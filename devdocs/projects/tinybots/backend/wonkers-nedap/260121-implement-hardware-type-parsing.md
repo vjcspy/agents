@@ -9,12 +9,12 @@
 ## User Requirements
 
 > From stakeholder:
-> 
+>
 > **Relevance:**
 > People can order either a voice assistant or a robot. This question needs to be added to the forms where people order Tessa and then parsed by us.
-> 
+>
 > **Contact for forms:** Evan has created new ONS ECD form question
-> 
+>
 > **Tasks:**
 > 1. Get the parameter `hardwareType` - values will be provided by Evan later
 > 2. Implement parsing the new question in `wonkers-nedap`
@@ -123,7 +123,7 @@ Implement parsing of the new `hardwareType` survey question in `wonkers-nedap` a
 > - Add `getHardwareType()` mapper method
 > - Switch URL V1 → V6
 >
-> **Rollback strategy:** 
+> **Rollback strategy:**
 > - Rollback wonkers-nedap first (switch V6 → V1)
 > - Then rollback wonkers-taas-orders if needed
 
@@ -138,12 +138,12 @@ Implement parsing of the new `hardwareType` survey question in `wonkers-nedap` a
 - [x] ~~Confirm default behavior (Assumption 3)~~ → ✅ Confirmed: `null`
 - [ ] Confirm scope (Assumption 4)
 - [ ] **Obtain sample Survey Result JSON** from Evan containing `hardwareType` question
-  - Verify `answeredQuestions[].additionalInfo` contains expected key
-  - Save as test fixture: `wonkers-nedap/test/fixtures/survey-result-with-hardware-type.json`
+   - Verify `answeredQuestions[].additionalInfo` contains expected key
+   - Save as test fixture: `wonkers-nedap/test/fixtures/survey-result-with-hardware-type.json`
 - [ ] Review existing `ConceptOrderMapper` implementation
-  - **File**: `wonkers-nedap/src/mappers/ConceptOrderMapper.ts`
+   - **File**: `wonkers-nedap/src/mappers/ConceptOrderMapper.ts`
 - [ ] Review existing `WonkersTaasOrderService` implementation
-  - **File**: `wonkers-nedap/src/service/WonkersTaasOrderService.ts`
+   - **File**: `wonkers-nedap/src/service/WonkersTaasOrderService.ts`
 
 ---
 
@@ -158,20 +158,20 @@ Implement parsing of the new `hardwareType` survey question in `wonkers-nedap` a
 **Current:**
 ```typescript
 export class ConceptOrderV6Dto extends ConceptOrderDto {
-  @Expose()
-  @IsDefined()
-  @AsHardwareTypeInputDataType
-  hardwareType: HardwareTypeInputDataType
+   @Expose()
+   @IsDefined()
+   @AsHardwareTypeInputDataType
+   hardwareType: HardwareTypeInputDataType
 }
 ```
 
 **Proposed Change:**
 ```typescript
 export class ConceptOrderV6Dto extends ConceptOrderDto {
-  @Expose()
-  @IsOptional()
-  @AsOptionalHardwareTypeInputDataType  // Use optional variant from tiny-internal-services
-  hardwareType?: HardwareTypeInputDataType | null
+   @Expose()
+   @IsOptional()
+   @AsOptionalHardwareTypeInputDataType  // Use optional variant from tiny-internal-services
+   hardwareType?: HardwareTypeInputDataType | null
 }
 ```
 
@@ -258,44 +258,44 @@ dto.hardwareType = this.getHardwareType(resultProperties, 'hardwareType') // Key
 ```typescript
 // Explicit mapping table - values TBD from Evan
 const HARDWARE_TYPE_MAP: Record<string, 'ROBOT' | 'VOICE_ASSISTANT'> = {
-  'robot': 'ROBOT',
-  'voice_assistant': 'VOICE_ASSISTANT',
-  // Add Dutch labels if needed:
-  // 'spraakassistent': 'VOICE_ASSISTANT',
+   'robot': 'ROBOT',
+   'voice_assistant': 'VOICE_ASSISTANT',
+   // Add Dutch labels if needed:
+   // 'spraakassistent': 'VOICE_ASSISTANT',
 }
 ```
 
 **New Method:**
 ```typescript
 static getHardwareType(
-  answeredQuestions: SurveyAnsweredQuestion[],
-  key: string
+        answeredQuestions: SurveyAnsweredQuestion[],
+        key: string
 ): 'ROBOT' | 'VOICE_ASSISTANT' | null {
-  const data = answeredQuestions.filter((question) =>
-    question.additionalInfo?.toLowerCase()?.includes(key.toLowerCase())
-  )
-  
-  // Edge case: No match - return null (requires manual selection in backoffice)
-  if (!data || data.length === 0) {
-    return null // Confirmed by Arno: leave as null when missing
-  }
-  
-  // Edge case: Multiple matches - log warning and use first
-  if (data.length > 1) {
-    console.warn(`[ConceptOrderMapper] Multiple hardwareType questions found: ${data.map(q => q.id).join(', ')}. Using first match.`)
-  }
-  
-  const surveyValue = data[0].answer?.text?.trim().toLowerCase()
-  
-  // Explicit mapping lookup (deterministic)
-  const mappedValue = HARDWARE_TYPE_MAP[surveyValue]
-  
-  if (!mappedValue) {
-    console.warn(`[ConceptOrderMapper] Unknown hardwareType value: "${surveyValue}". Returning null.`)
-    return null // Unknown values also require manual selection
-  }
-  
-  return mappedValue
+   const data = answeredQuestions.filter((question) =>
+           question.additionalInfo?.toLowerCase()?.includes(key.toLowerCase())
+   )
+
+   // Edge case: No match - return null (requires manual selection in backoffice)
+   if (!data || data.length === 0) {
+      return null // Confirmed by Arno: leave as null when missing
+   }
+
+   // Edge case: Multiple matches - log warning and use first
+   if (data.length > 1) {
+      console.warn(`[ConceptOrderMapper] Multiple hardwareType questions found: ${data.map(q => q.id).join(', ')}. Using first match.`)
+   }
+
+   const surveyValue = data[0].answer?.text?.trim().toLowerCase()
+
+   // Explicit mapping lookup (deterministic)
+   const mappedValue = HARDWARE_TYPE_MAP[surveyValue]
+
+   if (!mappedValue) {
+      console.warn(`[ConceptOrderMapper] Unknown hardwareType value: "${surveyValue}". Returning null.`)
+      return null // Unknown values also require manual selection
+   }
+
+   return mappedValue
 }
 ```
 
@@ -310,17 +310,17 @@ static getHardwareType(
 **Current:**
 ```typescript
 public async addConceptOrder (orderDto: ConceptOrderDto): Promise<ConceptOrderDto> {
-  const url = `${this.wonkersTaasOrderAddress}/internal/v1/taas-orders/concepts/orders`
-  // ...
+   const url = `${this.wonkersTaasOrderAddress}/internal/v1/taas-orders/concepts/orders`
+   // ...
 }
 ```
 
 **Proposed Change:**
 ```typescript
 public async addConceptOrder (orderDto: ConceptOrderDto): Promise<ConceptOrderDto> {
-  // Change V1 → V6
-  const url = `${this.wonkersTaasOrderAddress}/internal/v6/taas-orders/concepts/orders`
-  // ...
+   // Change V1 → V6
+   const url = `${this.wonkersTaasOrderAddress}/internal/v6/taas-orders/concepts/orders`
+   // ...
 }
 ```
 
@@ -473,7 +473,7 @@ After implementation, verify:
     return dto
 ```
 
-### Current `WonkersTaasOrderService.addConceptOrder()` 
+### Current `WonkersTaasOrderService.addConceptOrder()`
 
 ```18:27:wonkers-nedap/src/service/WonkersTaasOrderService.ts
   public async addConceptOrder (orderDto: ConceptOrderDto): Promise<ConceptOrderDto> {
