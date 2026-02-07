@@ -141,24 +141,30 @@ Pattern để thêm feature mới vào server:
 
 ## Development
 
-```bash
-cd devtools/common/server
+> **Package manager:** Workspace dùng **pnpm** (không phải npm). Tất cả commands dùng `pnpm`.
 
-# Install dependencies (from workspace root recommended)
-cd devtools && pnpm install
+> **PM2:** Production server được quản lý bởi PM2 (`devtools/ecosystem.config.cjs`). Trước khi chạy dev mode, **phải stop PM2** để tránh port conflict.
+
+```bash
+# Stop PM2 process trước khi dev
+cd devtools
+pm2 stop aweave-server
+
+# Install dependencies (from workspace root)
+pnpm install
 
 # Build debate module first (dependency)
 cd common/nestjs-debate && pnpm build
 
 # Build server
 cd common/server && pnpm build
-# or: npx nest build
-
-# Run
-node dist/main.js
 
 # Dev mode (watch)
-npx nest start --watch
+cd common/server && pnpm start:dev
+
+# Start lại PM2 khi dev xong
+cd devtools
+pm2 start ecosystem.config.cjs --only aweave-server
 ```
 
 **Health check:**

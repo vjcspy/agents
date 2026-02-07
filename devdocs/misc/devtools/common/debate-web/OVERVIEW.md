@@ -136,21 +136,32 @@ ws://127.0.0.1:3456/ws?debate_id=xxx
 
 ## Development
 
-```bash
-cd devtools/common/debate-web
+> **Package manager:** Workspace dùng **pnpm** (không phải npm). Không dùng `npm install` trong project này.
 
-# Install dependencies
-npm install
+> **PM2:** Production app được quản lý bởi PM2 (`devtools/ecosystem.config.cjs`). Trước khi chạy dev mode, **phải stop PM2** để tránh port conflict.
+
+```bash
+# Stop PM2 process trước khi dev
+cd devtools
+pm2 stop debate-web
+
+# Install dependencies (từ workspace root)
+pnpm install
 
 # Run development server
-npm run dev
+cd common/debate-web
+pnpm dev
 
 # Build for production
-npm run build
+pnpm build
+
+# Start lại PM2 khi dev xong
+cd devtools
+pm2 start ecosystem.config.cjs --only debate-web
 ```
 
 **Prerequisites:**
-- debate-server running on port 3456
+- aweave-server running on port 3456 (PM2 hoặc dev mode)
 
 ## Related
 

@@ -322,13 +322,20 @@ devtools/common/nestjs-debate/
 
 ## Development
 
+> **Package manager:** Workspace dùng **pnpm** (không phải npm). Tất cả commands dùng `pnpm`.
+
+> **PM2:** `@aweave/server` (import module này) được quản lý bởi PM2 (`devtools/ecosystem.config.cjs`). Khi develop nestjs-debate, **phải stop PM2 server** trước, rồi chạy server ở dev mode để có hot-reload.
+
 ```bash
-cd devtools/common/nestjs-debate
+# Stop PM2 server trước khi dev
+cd devtools
+pm2 stop aweave-server
 
 # Install (from workspace root)
-cd devtools && pnpm install
+pnpm install
 
 # Generate Prisma client
+cd common/nestjs-debate
 DEBATE_DATABASE_URL="file:$HOME/.aweave/db/debate.db" pnpm prisma:generate
 
 # Run migrations
@@ -339,6 +346,13 @@ pnpm build
 
 # Build only TypeScript (if Prisma already generated)
 npx nest build
+
+# Chạy server dev mode (từ server package, auto-reload khi nestjs-debate thay đổi)
+cd ../server && pnpm start:dev
+
+# Start lại PM2 khi dev xong
+cd devtools
+pm2 start ecosystem.config.cjs --only aweave-server
 ```
 
 **Note:** `pnpm build` chạy `prisma generate` trước `nest build` (configured trong `package.json` scripts).
