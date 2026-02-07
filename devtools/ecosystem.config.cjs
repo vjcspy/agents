@@ -16,7 +16,9 @@ module.exports = {
     {
       name: 'aweave-server',
       cwd: path.join(__dirname, 'common/server'),
-      script: 'dist/main.js',
+      script: 'pnpm',
+      args: 'start:prod',
+      interpreter: 'none',
       env: {
         NODE_ENV: 'production',
         SERVER_PORT: 3456,
@@ -30,8 +32,9 @@ module.exports = {
     {
       name: 'debate-web',
       cwd: path.join(__dirname, 'common/debate-web'),
-      script: 'node_modules/next/dist/bin/next',
-      args: 'start --port 3457',
+      script: 'pnpm',
+      args: 'start',
+      interpreter: 'none',
       env: {
         NODE_ENV: 'production',
         PORT: 3457,
