@@ -6,7 +6,7 @@
 - `devtools/common/cli/devtool/aweave/` - Existing aweave package structure
 - `devtools/common/cli/devtool/aweave/mcp/response.py` - MCPResponse format (MUST follow)
 - `devtools/tinybots/cli/bitbucket/` - Reference CLI plugin implementation
-- `devdocs/misc/devtools/debate.md` - Parent project context (Debate ecosystem)
+- `devdocs/misc/devtools/plans/debate.md` - Parent project context (Debate ecosystem)
 
 ## User Requirements
 

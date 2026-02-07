@@ -4,7 +4,7 @@
 
 - Previous migration plan (superseded): `devdocs/misc/devtools/plans/260207-cli-typescript-migration.md`
 - DevTools overview: `devdocs/misc/devtools/OVERVIEW.md`
-- Debate ecosystem spec: `devdocs/misc/devtools/debate.md`
+- Debate ecosystem spec: `devdocs/misc/devtools/plans/debate.md`
 - Unified NestJS server plan: `devdocs/misc/devtools/plans/260207-unified-nestjs-server.md`
 
 ## Background & Decision Context

@@ -423,6 +423,6 @@ pm2 start ecosystem.config.cjs --only aweave-server
 - **Server Overview:** `devdocs/misc/devtools/common/server/OVERVIEW.md`
 - **Debate CLI Plugin:** `devtools/common/cli-plugin-debate/`
 - **Debate CLI Plugin Overview:** `devdocs/misc/devtools/common/cli-plugin-debate/OVERVIEW.md`
-- **Debate Spec:** `devdocs/misc/devtools/debate.md`
+- **Debate Spec:** `devdocs/misc/devtools/plans/debate.md`
 - **Architecture Plan:** `devdocs/misc/devtools/plans/260207-unified-nestjs-server.md`
 - **Debate Web:** `devtools/common/debate-web/`

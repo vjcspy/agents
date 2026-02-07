@@ -7,7 +7,7 @@
 ## References
 
 - DevTools overview: `devdocs/misc/devtools/OVERVIEW.md`
-- Debate ecosystem spec: `devdocs/misc/devtools/debate.md`
+- Debate ecosystem spec: `devdocs/misc/devtools/plans/debate.md`
 - Unified NestJS server plan: `devdocs/misc/devtools/plans/260207-unified-nestjs-server.md`
 - Debate server plan: `devdocs/misc/devtools/plans/260131-debate-server.md`
 - Docs CLI plan: `devdocs/misc/devtools/plans/260131-docs-cli-tool.md`
@@ -821,7 +821,7 @@ Port all commands from Python `debate/cli.py`:
   - Plugin system: Commander.js `.addCommand()` pattern
   - Quick reference: Updated commands
 - [ ] Update `devtools/CLI_TOOLS.md` if it exists
-- [ ] Update `devdocs/misc/devtools/debate.md` section 2.3:
+- [ ] Update `devdocs/misc/devtools/plans/debate.md` section 2.3:
   - CLI language: TypeScript (was Python)
   - Same command interface
   - Interval polling (was long polling)

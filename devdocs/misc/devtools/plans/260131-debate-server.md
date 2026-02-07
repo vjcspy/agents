@@ -2,7 +2,7 @@
 
 ## References
 
-- Spec document: `devdocs/misc/devtools/debate.md`
+- Spec document: `devdocs/misc/devtools/plans/debate.md`
 - DevTools overview: `devdocs/misc/devtools/OVERVIEW.md`
 - Docs CLI (pattern reference): `devtools/common/cli/devtool/aweave/docs/`
 

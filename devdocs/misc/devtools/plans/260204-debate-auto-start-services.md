@@ -2,7 +2,7 @@
 
 ## References
 
-- Spec document: `devdocs/misc/devtools/debate.md`
+- Spec document: `devdocs/misc/devtools/plans/debate.md`
 - CLI Plan: `devdocs/misc/devtools/plans/260131-debate-cli.md`
 - Server Plan: `devdocs/misc/devtools/plans/260131-debate-server.md`
 - Web Overview: `devdocs/misc/devtools/common/debate-web/OVERVIEW.md`
