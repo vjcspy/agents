@@ -1,19 +1,22 @@
+import type { ArgumentType, Role } from '@aweave/debate-machine';
+import {
+  canTransition,
+  toDebateEvent,
+  transition,
+} from '@aweave/debate-machine';
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 
-import { DebatePrismaService } from './debate-prisma.service';
-import { LockService } from './lock.service';
 import { DebateGateway } from './debate.gateway';
+import { DebatePrismaService } from './debate-prisma.service';
 import {
   ActionNotAllowedError,
-  ArgumentNotFoundError,
   ContentTooLargeError,
   DebateNotFoundError,
   InvalidInputError,
 } from './errors';
-import { toDebateEvent, transition, canTransition } from '@aweave/debate-machine';
-import type { ArgumentType, Role } from '@aweave/debate-machine';
-import { serializeDebate, serializeArgument } from './serializers';
+import { LockService } from './lock.service';
+import { serializeArgument, serializeDebate } from './serializers';
 import type { DebateState } from './types';
 
 const MAX_CONTENT_LENGTH = 10 * 1024; // 10KB
@@ -149,7 +152,10 @@ export class ArgumentService {
           where: { id: input.debate_id },
           data: {
             state: nextState,
-            updatedAt: new Date().toISOString().replace('T', ' ').replace(/\.\d+Z$/, ''),
+            updatedAt: new Date()
+              .toISOString()
+              .replace('T', ' ')
+              .replace(/\.\d+Z$/, ''),
           },
         });
 
@@ -161,8 +167,14 @@ export class ArgumentService {
     if (!result.isExisting) {
       this.gateway.broadcastNewArgument(
         input.debate_id,
-        serializeDebate(result.debate as any) as unknown as Record<string, unknown>,
-        serializeArgument(result.argument as any) as unknown as Record<string, unknown>,
+        serializeDebate(result.debate as any) as unknown as Record<
+          string,
+          unknown
+        >,
+        serializeArgument(result.argument as any) as unknown as Record<
+          string,
+          unknown
+        >,
       );
     }
 

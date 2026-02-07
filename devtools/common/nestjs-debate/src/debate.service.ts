@@ -1,17 +1,16 @@
+import type { DebateState } from '@aweave/debate-machine';
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 
-import { DebatePrismaService } from './debate-prisma.service';
-import { LockService } from './lock.service';
 import { DebateGateway } from './debate.gateway';
+import { DebatePrismaService } from './debate-prisma.service';
 import {
-  ActionNotAllowedError,
   ContentTooLargeError,
   DebateNotFoundError,
   InvalidInputError,
 } from './errors';
-import { serializeDebate, serializeArgument } from './serializers';
-import type { DebateState, Role } from '@aweave/debate-machine';
+import { LockService } from './lock.service';
+import { serializeArgument, serializeDebate } from './serializers';
 import type { WaitAction, WaiterRole } from './types';
 
 const MAX_CONTENT_LENGTH = 10 * 1024; // 10KB
@@ -20,31 +19,6 @@ function validateContentSize(content: string): void {
   if (content.length > MAX_CONTENT_LENGTH) {
     throw new ContentTooLargeError(MAX_CONTENT_LENGTH);
   }
-}
-
-function toActionNotAllowedError(
-  state: DebateState,
-  role: Role,
-  action: string,
-): ActionNotAllowedError {
-  const allowedRoles: Role[] =
-    state === 'AWAITING_OPPONENT'
-      ? ['opponent', 'arbitrator']
-      : state === 'AWAITING_PROPOSER'
-        ? ['proposer', 'arbitrator']
-        : state === 'AWAITING_ARBITRATOR' || state === 'INTERVENTION_PENDING'
-          ? ['arbitrator']
-          : [];
-
-  const suggestion =
-    state === 'CLOSED'
-      ? 'This debate is closed'
-      : `Wait for ${allowedRoles.join(' or ')} to submit`;
-
-  return new ActionNotAllowedError(
-    `Role '${role}' cannot perform '${action}' in state '${state}'`,
-    { current_state: state, allowed_roles: allowedRoles, suggestion },
-  );
 }
 
 function buildWaitAction(
@@ -108,7 +82,11 @@ export class DebateService {
               { debate_id: input.debate_id },
             );
           }
-          return { debate: existingDebate, argument: existingMotion, isExisting: true };
+          return {
+            debate: existingDebate,
+            argument: existingMotion,
+            isExisting: true,
+          };
         }
 
         const debate = await tx.debate.create({
@@ -140,8 +118,14 @@ export class DebateService {
     if (!result.isExisting) {
       this.gateway.broadcastNewArgument(
         input.debate_id,
-        serializeDebate(result.debate as any) as unknown as Record<string, unknown>,
-        serializeArgument(result.argument as any) as unknown as Record<string, unknown>,
+        serializeDebate(result.debate as any) as unknown as Record<
+          string,
+          unknown
+        >,
+        serializeArgument(result.argument as any) as unknown as Record<
+          string,
+          unknown
+        >,
       );
     }
 

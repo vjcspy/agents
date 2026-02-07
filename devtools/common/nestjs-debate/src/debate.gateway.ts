@@ -1,10 +1,10 @@
 import { Logger } from '@nestjs/common';
 import {
-  WebSocketGateway,
-  WebSocketServer,
   OnGatewayConnection,
   OnGatewayDisconnect,
   SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
 } from '@nestjs/websockets';
 import type { IncomingMessage } from 'http';
 import type { Server } from 'ws';
@@ -13,11 +13,17 @@ import type WebSocket from 'ws';
 type ServerToClientMessage =
   | {
       event: 'initial_state';
-      data: { debate: Record<string, unknown>; arguments: Record<string, unknown>[] };
+      data: {
+        debate: Record<string, unknown>;
+        arguments: Record<string, unknown>[];
+      };
     }
   | {
       event: 'new_argument';
-      data: { debate: Record<string, unknown>; argument: Record<string, unknown> };
+      data: {
+        debate: Record<string, unknown>;
+        argument: Record<string, unknown>;
+      };
     };
 
 /**
@@ -29,9 +35,7 @@ type ServerToClientMessage =
  * Client → Server events: submit_intervention, submit_ruling
  */
 @WebSocketGateway({ path: '/ws' })
-export class DebateGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+export class DebateGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
 
@@ -42,9 +46,10 @@ export class DebateGateway
   private readonly debateIdByClient = new Map<WebSocket, string>();
 
   // These will be injected after module init via setServices()
-  private getInitialState?: (
-    debateId: string,
-  ) => Promise<{ debate: Record<string, unknown>; arguments: Record<string, unknown>[] }>;
+  private getInitialState?: (debateId: string) => Promise<{
+    debate: Record<string, unknown>;
+    arguments: Record<string, unknown>[];
+  }>;
   private onSubmitIntervention?: (input: {
     debate_id: string;
     content?: string;
@@ -60,9 +65,10 @@ export class DebateGateway
    * This avoids circular dependency between Gateway and Services.
    */
   setHandlers(handlers: {
-    getInitialState: (
-      debateId: string,
-    ) => Promise<{ debate: Record<string, unknown>; arguments: Record<string, unknown>[] }>;
+    getInitialState: (debateId: string) => Promise<{
+      debate: Record<string, unknown>;
+      arguments: Record<string, unknown>[];
+    }>;
     onSubmitIntervention: (input: {
       debate_id: string;
       content?: string;
@@ -112,9 +118,7 @@ export class DebateGateway
         const initial = await this.getInitialState(debateId);
         this.send(client, { event: 'initial_state', data: initial });
       } catch {
-        this.logger.warn(
-          `Failed to get initial state for debate ${debateId}`,
-        );
+        this.logger.warn(`Failed to get initial state for debate ${debateId}`);
         client.close();
         return;
       }

@@ -1,14 +1,19 @@
+import {
+  ArgumentDto,
+  DebateDto,
+  ErrorResponseDto,
+  GetDebateResponseDto,
+  ListDebatesResponseDto,
+  PollResultNewResponseDto,
+  PollResultNoNewResponseDto,
+  WriteResultResponseDto,
+} from '@aweave/nestjs-debate';
 import { NestFactory } from '@nestjs/core';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { writeFileSync } from 'fs';
 import { resolve } from 'path';
+
 import { AppModule } from '../app.module';
-import {
-  DebateDto, ArgumentDto,
-  ListDebatesResponseDto, GetDebateResponseDto, WriteResultResponseDto,
-  PollResultNewResponseDto, PollResultNoNewResponseDto,
-  ErrorResponseDto,
-} from '@aweave/nestjs-debate';
 
 async function generate() {
   const app = await NestFactory.create(AppModule, { logger: false });
@@ -21,9 +26,13 @@ async function generate() {
   // Pass the same extraModels as main.ts to guarantee all $ref targets are emitted
   const document = SwaggerModule.createDocument(app, config, {
     extraModels: [
-      DebateDto, ArgumentDto,
-      ListDebatesResponseDto, GetDebateResponseDto, WriteResultResponseDto,
-      PollResultNewResponseDto, PollResultNoNewResponseDto,
+      DebateDto,
+      ArgumentDto,
+      ListDebatesResponseDto,
+      GetDebateResponseDto,
+      WriteResultResponseDto,
+      PollResultNewResponseDto,
+      PollResultNoNewResponseDto,
       ErrorResponseDto,
     ],
   });

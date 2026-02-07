@@ -1,5 +1,6 @@
-import { defineConfig, devices } from '@playwright/test';
 import process from 'node:process';
+
+import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
@@ -9,7 +10,8 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: process.env.ACADEMY_BASE_URL ?? 'https://dashadmin.tinybots.academy',
+    baseURL:
+      process.env.ACADEMY_BASE_URL ?? 'https://dashadmin.tinybots.academy',
     trace: 'on-first-retry',
   },
   projects: [

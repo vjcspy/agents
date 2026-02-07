@@ -5,20 +5,20 @@
  * Port of Python debate/services.py updated for unified NestJS server.
  */
 
-import { existsSync } from 'fs';
-import { resolve } from 'path';
 import {
-  MCPResponse,
+  checkHealth,
+  checkPm2Process,
+  ContentType,
   MCPContent,
   MCPError,
-  ContentType,
-  checkPm2Process,
-  checkHealth,
+  MCPResponse,
   runCommand,
   startPm2,
   stopPm2,
   waitForHealthy,
 } from '@aweave/cli-shared';
+import { existsSync } from 'fs';
+import { resolve } from 'path';
 
 interface ServiceConfig {
   name: string;

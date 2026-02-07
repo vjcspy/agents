@@ -2,9 +2,12 @@
  * Shared helpers for docs CLI commands.
  */
 
-import { MCPResponse, errorResponse } from '@aweave/cli-shared';
+import { errorResponse, MCPResponse } from '@aweave/cli-shared';
 
-export function validateFormatNoPlain(format: string, command: string): MCPResponse | null {
+export function validateFormatNoPlain(
+  format: string,
+  command: string,
+): MCPResponse | null {
   if (format === 'plain') {
     return errorResponse(
       'INVALID_INPUT',
@@ -15,16 +18,22 @@ export function validateFormatNoPlain(format: string, command: string): MCPRespo
   return null;
 }
 
-export function parseMetadata(metadataStr: string): [Record<string, unknown> | null, MCPResponse | null] {
+export function parseMetadata(
+  metadataStr: string,
+): [Record<string, unknown> | null, MCPResponse | null] {
   try {
     const parsed = JSON.parse(metadataStr);
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    if (
+      typeof parsed !== 'object' ||
+      parsed === null ||
+      Array.isArray(parsed)
+    ) {
       return [
         null,
         errorResponse(
           'INVALID_INPUT',
           `--metadata must be a JSON object, got ${Array.isArray(parsed) ? 'array' : typeof parsed}`,
-          "Provide JSON object, e.g. '{\"key\": \"value\"}'",
+          'Provide JSON object, e.g. \'{"key": "value"}\'',
         ),
       ];
     }
@@ -35,7 +44,7 @@ export function parseMetadata(metadataStr: string): [Record<string, unknown> | n
       errorResponse(
         'INVALID_INPUT',
         `Invalid JSON in --metadata: ${(e as Error).message}`,
-        "Provide valid JSON object, e.g. '{\"key\": \"value\"}'",
+        'Provide valid JSON object, e.g. \'{"key": "value"}\'',
       ),
     ];
   }

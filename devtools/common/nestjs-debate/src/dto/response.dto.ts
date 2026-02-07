@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { DebateDto } from './debate.dto';
+
 import { ArgumentDto } from './argument.dto';
+import { DebateDto } from './debate.dto';
 
 // ── Data shapes ──
 
@@ -11,7 +12,8 @@ export class ListDebatesDataDto {
 
 export class GetDebateDataDto {
   @ApiProperty() debate!: DebateDto;
-  @ApiProperty({ nullable: true, type: ArgumentDto }) motion!: ArgumentDto | null;
+  @ApiProperty({ nullable: true, type: ArgumentDto })
+  motion!: ArgumentDto | null;
   @ApiProperty({ type: [ArgumentDto] }) arguments!: ArgumentDto[];
 }
 
@@ -23,7 +25,10 @@ export class WriteResultDataDto {
 export class PollArgumentDataDto {
   @ApiProperty() id!: string;
   @ApiProperty() seq!: number;
-  @ApiProperty({ enum: ['MOTION', 'CLAIM', 'APPEAL', 'RULING', 'INTERVENTION', 'RESOLUTION'] }) type!: string;
+  @ApiProperty({
+    enum: ['MOTION', 'CLAIM', 'APPEAL', 'RULING', 'INTERVENTION', 'RESOLUTION'],
+  })
+  type!: string;
   @ApiProperty({ enum: ['proposer', 'opponent', 'arbitrator'] }) role!: string;
   @ApiProperty({ nullable: true, type: String }) parent_id!: string | null;
   @ApiProperty() content!: string;

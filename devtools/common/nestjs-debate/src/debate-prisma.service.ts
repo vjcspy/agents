@@ -1,8 +1,14 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
-import { PrismaClient } from '../generated/prisma';
-import { join } from 'path';
-import { homedir } from 'os';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { mkdirSync } from 'fs';
+import { homedir } from 'os';
+import { join } from 'path';
+
+import { PrismaClient } from '../generated/prisma';
 
 const DEFAULT_DB_DIR = join(homedir(), '.aweave', 'db');
 const DEFAULT_DB_NAME = 'debate.db';

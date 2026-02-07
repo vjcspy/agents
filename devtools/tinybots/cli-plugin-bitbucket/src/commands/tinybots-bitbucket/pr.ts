@@ -1,5 +1,6 @@
-import { Command, Flags, Args } from '@oclif/core';
 import { output } from '@aweave/cli-shared';
+import { Args, Command, Flags } from '@oclif/core';
+
 import { BitbucketClient } from '../../lib/client';
 
 export class BitbucketPr extends Command {
@@ -11,8 +12,15 @@ export class BitbucketPr extends Command {
   };
 
   static flags = {
-    workspace: Flags.string({ default: 'tinybots', description: 'Bitbucket workspace' }),
-    format: Flags.string({ default: 'json', options: ['json', 'markdown'], description: 'Output format' }),
+    workspace: Flags.string({
+      default: 'tinybots',
+      description: 'Bitbucket workspace',
+    }),
+    format: Flags.string({
+      default: 'json',
+      options: ['json', 'markdown'],
+      description: 'Output format',
+    }),
   };
 
   async run() {
@@ -26,7 +34,9 @@ export class BitbucketPr extends Command {
     const username = process.env.BITBUCKET_USER;
     const password = process.env.BITBUCKET_APP_PASSWORD;
     if (!username || !password) {
-      this.error('BITBUCKET_USER and BITBUCKET_APP_PASSWORD environment variables required.');
+      this.error(
+        'BITBUCKET_USER and BITBUCKET_APP_PASSWORD environment variables required.',
+      );
     }
     return new BitbucketClient(workspace, username, password);
   }

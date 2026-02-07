@@ -41,7 +41,9 @@ export interface PullRequest {
 
 // Factory functions
 
-export function parseBitbucketUser(data: Record<string, unknown>): BitbucketUser {
+export function parseBitbucketUser(
+  data: Record<string, unknown>,
+): BitbucketUser {
   return {
     uuid: (data.uuid as string) ?? '',
     display_name: (data.display_name as string) ?? 'Unknown',
@@ -71,7 +73,9 @@ export function parsePRTask(data: Record<string, unknown>): PRTask {
   return {
     id: (data.id as number) ?? 0,
     content: (contentObj.raw as string) ?? '',
-    state: ((data.state as string) ?? 'UNRESOLVED') as 'RESOLVED' | 'UNRESOLVED',
+    state: ((data.state as string) ?? 'UNRESOLVED') as
+      | 'RESOLVED'
+      | 'UNRESOLVED',
     comment_id: comment.id != null ? (comment.id as number) : null,
     creator: creatorData ? parseBitbucketUser(creatorData) : null,
   };

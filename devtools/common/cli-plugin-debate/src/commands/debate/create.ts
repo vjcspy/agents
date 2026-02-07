@@ -1,9 +1,18 @@
+import {
+  ContentType,
+  handleServerError,
+  HTTPClientError,
+  MCPContent,
+  MCPResponse,
+  output,
+  readContent,
+} from '@aweave/cli-shared';
 import { Command, Flags } from '@oclif/core';
 import { randomUUID } from 'crypto';
-import { MCPResponse, MCPContent, ContentType, HTTPClientError, output, handleServerError, readContent } from '@aweave/cli-shared';
+
 import { AUTO_START_SERVICES } from '../../lib/config';
+import { filterWriteResponse, getClient } from '../../lib/helpers';
 import { ensureServices } from '../../lib/services';
-import { getClient, filterWriteResponse } from '../../lib/helpers';
 
 export class DebateCreate extends Command {
   static description = 'Create a new debate with MOTION';
@@ -11,12 +20,19 @@ export class DebateCreate extends Command {
   static flags = {
     'debate-id': Flags.string({ required: true, description: 'Debate UUID' }),
     title: Flags.string({ required: true, description: 'Debate title' }),
-    type: Flags.string({ required: true, description: 'Debate type: coding_plan_debate|general_debate' }),
+    type: Flags.string({
+      required: true,
+      description: 'Debate type: coding_plan_debate|general_debate',
+    }),
     file: Flags.string({ description: 'Path to motion content file' }),
     content: Flags.string({ description: 'Inline motion content' }),
     stdin: Flags.boolean({ description: 'Read motion content from stdin' }),
     'client-request-id': Flags.string({ description: 'Idempotency key' }),
-    format: Flags.string({ default: 'json', options: ['json', 'markdown'], description: 'Output format' }),
+    format: Flags.string({
+      default: 'json',
+      options: ['json', 'markdown'],
+      description: 'Output format',
+    }),
   };
 
   async run() {
@@ -30,8 +46,15 @@ export class DebateCreate extends Command {
       }
     }
 
-    const result = await readContent({ file: flags.file, content: flags.content, stdin: flags.stdin });
-    if (result.error) { output(result.error, flags.format); this.exit(4); }
+    const result = await readContent({
+      file: flags.file,
+      content: flags.content,
+      stdin: flags.stdin,
+    });
+    if (result.error) {
+      output(result.error, flags.format);
+      this.exit(4);
+    }
 
     const reqId = flags['client-request-id'] ?? randomUUID();
 

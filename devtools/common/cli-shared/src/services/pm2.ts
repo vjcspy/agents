@@ -6,7 +6,10 @@
  * the NestJS server).
  */
 
-import { execSync, type ExecSyncOptionsWithStringEncoding } from 'child_process';
+import {
+  execSync,
+  type ExecSyncOptionsWithStringEncoding,
+} from 'child_process';
 
 const EXEC_OPTIONS: ExecSyncOptionsWithStringEncoding = {
   encoding: 'utf-8',

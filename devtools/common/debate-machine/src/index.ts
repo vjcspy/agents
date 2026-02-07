@@ -1,13 +1,8 @@
 export { debateMachine } from './machine';
+export type { ArgumentType, DebateEvent, DebateState, Role } from './types';
 export {
   canTransition,
-  transition,
   getAvailableActions,
   toDebateEvent,
+  transition,
 } from './utils';
-export type {
-  DebateState,
-  ArgumentType,
-  Role,
-  DebateEvent,
-} from './types';

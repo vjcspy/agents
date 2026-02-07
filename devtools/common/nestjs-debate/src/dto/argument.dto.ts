@@ -10,7 +10,9 @@ export class ArgumentDto {
   @ApiProperty({ nullable: true, type: String })
   parent_id!: string | null;
 
-  @ApiProperty({ enum: ['MOTION', 'CLAIM', 'APPEAL', 'RULING', 'INTERVENTION', 'RESOLUTION'] })
+  @ApiProperty({
+    enum: ['MOTION', 'CLAIM', 'APPEAL', 'RULING', 'INTERVENTION', 'RESOLUTION'],
+  })
   type!: string;
 
   @ApiProperty({ enum: ['proposer', 'opponent', 'arbitrator'] })

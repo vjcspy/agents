@@ -1,9 +1,11 @@
-import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-const BASE_URL = process.env.ACADEMY_BASE_URL ?? 'https://dashadmin.tinybots.academy';
+import { expect, test } from '@playwright/test';
+
+const BASE_URL =
+  process.env.ACADEMY_BASE_URL ?? 'https://dashadmin.tinybots.academy';
 const STORAGE_STATE_PATH =
   process.env.ACADEMY_STORAGE_STATE_PATH ??
   path.join(os.homedir(), '.playwright', 'academy.storageState.json');
@@ -23,10 +25,15 @@ test('seed academy auth storageState (manual)', async ({ page }) => {
 
   await page.pause();
 
-  await expect(page).toHaveURL(new RegExp(`^${BASE_URL.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}`), {
-    timeout: 60_000,
-  });
+  await expect(page).toHaveURL(
+    new RegExp(`^${BASE_URL.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}`),
+    {
+      timeout: 60_000,
+    },
+  );
 
-  await fs.promises.mkdir(path.dirname(STORAGE_STATE_PATH), { recursive: true });
+  await fs.promises.mkdir(path.dirname(STORAGE_STATE_PATH), {
+    recursive: true,
+  });
   await page.context().storageState({ path: STORAGE_STATE_PATH });
 });

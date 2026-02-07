@@ -1,9 +1,17 @@
-import { Command, Flags, Args } from '@oclif/core';
-import { MCPResponse, MCPContent, ContentType, output, errorResponse } from '@aweave/cli-shared';
+import {
+  ContentType,
+  errorResponse,
+  MCPContent,
+  MCPResponse,
+  output,
+} from '@aweave/cli-shared';
+import { Args, Command, Flags } from '@oclif/core';
+
 import * as db from '../../lib/db';
 
 export class DocsGet extends Command {
-  static description = 'Get document content. Use --format plain for raw content only.';
+  static description =
+    'Get document content. Use --format plain for raw content only.';
 
   static args = {
     document_id: Args.string({ required: true, description: 'Document ID' }),
@@ -11,7 +19,11 @@ export class DocsGet extends Command {
 
   static flags = {
     version: Flags.integer({ description: 'Specific version' }),
-    format: Flags.string({ default: 'plain', options: ['json', 'markdown', 'plain'], description: 'Output format' }),
+    format: Flags.string({
+      default: 'plain',
+      options: ['json', 'markdown', 'plain'],
+      description: 'Output format',
+    }),
   };
 
   async run() {
@@ -20,9 +32,17 @@ export class DocsGet extends Command {
 
     if (!doc) {
       const errorFmt = flags.format === 'plain' ? 'json' : flags.format;
-      const code = flags.version !== undefined ? 'VERSION_NOT_FOUND' : 'DOC_NOT_FOUND';
+      const code =
+        flags.version !== undefined ? 'VERSION_NOT_FOUND' : 'DOC_NOT_FOUND';
       const msg = `Document '${args.document_id}'${flags.version !== undefined ? ` version ${flags.version}` : ''} not found`;
-      output(errorResponse(code, msg, "Use 'aw docs list' or 'aw docs history' to see available documents/versions"), errorFmt);
+      output(
+        errorResponse(
+          code,
+          msg,
+          "Use 'aw docs list' or 'aw docs history' to see available documents/versions",
+        ),
+        errorFmt,
+      );
       this.exit(2);
     }
 
@@ -32,7 +52,12 @@ export class DocsGet extends Command {
       output(
         new MCPResponse({
           success: true,
-          content: [new MCPContent({ type: ContentType.JSON, data: doc as unknown as Record<string, unknown> })],
+          content: [
+            new MCPContent({
+              type: ContentType.JSON,
+              data: doc as unknown as Record<string, unknown>,
+            }),
+          ],
         }),
         flags.format,
       );

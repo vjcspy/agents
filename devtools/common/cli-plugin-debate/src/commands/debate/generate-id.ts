@@ -1,12 +1,21 @@
+import {
+  ContentType,
+  MCPContent,
+  MCPResponse,
+  output,
+} from '@aweave/cli-shared';
 import { Command, Flags } from '@oclif/core';
 import { randomUUID } from 'crypto';
-import { MCPResponse, MCPContent, ContentType, output } from '@aweave/cli-shared';
 
 export class DebateGenerateId extends Command {
   static description = 'Generate a new UUID for debate operations';
 
   static flags = {
-    format: Flags.string({ default: 'json', options: ['json', 'markdown'], description: 'Output format' }),
+    format: Flags.string({
+      default: 'json',
+      options: ['json', 'markdown'],
+      description: 'Output format',
+    }),
   };
 
   async run() {

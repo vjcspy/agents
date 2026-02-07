@@ -1,6 +1,6 @@
 export {
-  checkPm2Process,
   checkHealth,
+  checkPm2Process,
   runCommand,
   startPm2,
   stopPm2,

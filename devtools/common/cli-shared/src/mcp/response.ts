@@ -41,7 +41,11 @@ export class MCPContent {
   text?: string;
   data?: Record<string, unknown>;
 
-  constructor(opts: { type: ContentType; text?: string; data?: Record<string, unknown> }) {
+  constructor(opts: {
+    type: ContentType;
+    text?: string;
+    data?: Record<string, unknown>;
+  }) {
     this.type = opts.type;
     this.text = opts.text;
     this.data = opts.data;
@@ -154,7 +158,9 @@ export class MCPResponse {
         this.totalCount !== undefined
           ? `Showing ${this.content.length} of ${this.totalCount} items.`
           : `Showing ${this.content.length} items. More available.`;
-      lines.push(`\n---\n*${msg} Use --offset ${this.nextOffset} to see more.*`);
+      lines.push(
+        `\n---\n*${msg} Use --offset ${this.nextOffset} to see more.*`,
+      );
     }
 
     return lines.join('\n');

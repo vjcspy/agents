@@ -8,6 +8,7 @@
  */
 
 import { setup } from 'xstate';
+
 import type { DebateEvent } from './types';
 
 export const debateMachine = setup({

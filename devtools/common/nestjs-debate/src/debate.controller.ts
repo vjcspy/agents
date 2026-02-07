@@ -8,36 +8,36 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiExtraModels,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiQuery,
-  ApiOkResponse,
-  ApiBadRequestResponse,
-  ApiNotFoundResponse,
-  ApiForbiddenResponse,
   getSchemaPath,
 } from '@nestjs/swagger';
 
-import { DebateService } from './debate.service';
 import { ArgumentService } from './argument.service';
-import { InvalidInputError } from './errors';
-import { serializeDebate, serializeArgument } from './serializers';
-import type { WaiterRole } from './types';
+import { DebateService } from './debate.service';
 import {
   CreateDebateBodyDto,
-  SubmitArgumentBodyDto,
-  SubmitAppealBodyDto,
-  RequestCompletionBodyDto,
-  SubmitInterventionBodyDto,
-  SubmitRulingBodyDto,
-  ListDebatesResponseDto,
+  ErrorResponseDto,
   GetDebateResponseDto,
-  WriteResultResponseDto,
+  ListDebatesResponseDto,
   PollResultNewResponseDto,
   PollResultNoNewResponseDto,
-  ErrorResponseDto,
+  RequestCompletionBodyDto,
+  SubmitAppealBodyDto,
+  SubmitArgumentBodyDto,
+  SubmitInterventionBodyDto,
+  SubmitRulingBodyDto,
+  WriteResultResponseDto,
 } from './dto';
+import { InvalidInputError } from './errors';
+import { serializeArgument, serializeDebate } from './serializers';
+import type { WaiterRole } from './types';
 
 function ok<T>(data: T) {
   return { success: true as const, data };
@@ -51,7 +51,11 @@ function serializeWriteResult(result: { debate: any; argument: any }) {
   };
 }
 
-@ApiExtraModels(PollResultNewResponseDto, PollResultNoNewResponseDto, ErrorResponseDto)
+@ApiExtraModels(
+  PollResultNewResponseDto,
+  PollResultNoNewResponseDto,
+  ErrorResponseDto,
+)
 @Controller()
 export class DebateController {
   constructor(
@@ -67,10 +71,28 @@ export class DebateController {
   }
 
   @ApiOperation({ summary: 'List debates with optional filtering' })
-  @ApiQuery({ name: 'state', required: false, type: String, description: 'Filter by debate state' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Max results to return' })
-  @ApiQuery({ name: 'offset', required: false, type: Number, description: 'Pagination offset' })
-  @ApiOkResponse({ type: ListDebatesResponseDto, description: 'List of debates' })
+  @ApiQuery({
+    name: 'state',
+    required: false,
+    type: String,
+    description: 'Filter by debate state',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Max results to return',
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    type: Number,
+    description: 'Pagination offset',
+  })
+  @ApiOkResponse({
+    type: ListDebatesResponseDto,
+    description: 'List of debates',
+  })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @Get('debates')
   async listDebates(
@@ -88,7 +110,11 @@ export class DebateController {
       throw new InvalidInputError('Invalid offset parameter');
     }
 
-    const result = await this.debateService.listDebates({ state, limit, offset });
+    const result = await this.debateService.listDebates({
+      state,
+      limit,
+      offset,
+    });
     return ok({
       debates: result.debates.map(serializeDebate),
       total: result.total,
@@ -96,12 +122,13 @@ export class DebateController {
   }
 
   @ApiOperation({ summary: 'Create a new debate with initial MOTION argument' })
-  @ApiOkResponse({ type: WriteResultResponseDto, description: 'Debate created' })
+  @ApiOkResponse({
+    type: WriteResultResponseDto,
+    description: 'Debate created',
+  })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @Post('debates')
-  async createDebate(
-    @Body() body: CreateDebateBodyDto,
-  ) {
+  async createDebate(@Body() body: CreateDebateBodyDto) {
     if (
       !body.debate_id ||
       !body.title ||
@@ -124,7 +151,12 @@ export class DebateController {
 
   @ApiOperation({ summary: 'Get debate with motion and arguments' })
   @ApiParam({ name: 'id', description: 'Debate UUID', type: String })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Max arguments to return' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Max arguments to return',
+  })
   @ApiOkResponse({ type: GetDebateResponseDto, description: 'Debate detail' })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
@@ -137,7 +169,9 @@ export class DebateController {
     if (limitRaw !== undefined) {
       limit = parseInt(limitRaw, 10);
       if (!Number.isFinite(limit)) {
-        throw new InvalidInputError('Invalid limit parameter', { limit: limitRaw });
+        throw new InvalidInputError('Invalid limit parameter', {
+          limit: limitRaw,
+        });
       }
       if (limit < 0) {
         throw new InvalidInputError('limit must be non-negative', { limit });
@@ -165,16 +199,27 @@ export class DebateController {
 
   @ApiOperation({ summary: 'Submit a CLAIM argument' })
   @ApiParam({ name: 'id', description: 'Debate UUID', type: String })
-  @ApiOkResponse({ type: WriteResultResponseDto, description: 'Argument submitted' })
+  @ApiOkResponse({
+    type: WriteResultResponseDto,
+    description: 'Argument submitted',
+  })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
-  @ApiForbiddenResponse({ type: ErrorResponseDto, description: 'Action not allowed in current state' })
+  @ApiForbiddenResponse({
+    type: ErrorResponseDto,
+    description: 'Action not allowed in current state',
+  })
   @Post('debates/:id/arguments')
   async submitArgument(
     @Param('id') debateId: string,
     @Body() body: SubmitArgumentBodyDto,
   ) {
-    if (!body.role || !body.target_id || !body.content || !body.client_request_id) {
+    if (
+      !body.role ||
+      !body.target_id ||
+      !body.content ||
+      !body.client_request_id
+    ) {
       throw new InvalidInputError('Missing required fields');
     }
 
@@ -190,10 +235,16 @@ export class DebateController {
 
   @ApiOperation({ summary: 'Submit an APPEAL' })
   @ApiParam({ name: 'id', description: 'Debate UUID', type: String })
-  @ApiOkResponse({ type: WriteResultResponseDto, description: 'Appeal submitted' })
+  @ApiOkResponse({
+    type: WriteResultResponseDto,
+    description: 'Appeal submitted',
+  })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
-  @ApiForbiddenResponse({ type: ErrorResponseDto, description: 'Action not allowed in current state' })
+  @ApiForbiddenResponse({
+    type: ErrorResponseDto,
+    description: 'Action not allowed in current state',
+  })
   @Post('debates/:id/appeal')
   async submitAppeal(
     @Param('id') debateId: string,
@@ -214,10 +265,16 @@ export class DebateController {
 
   @ApiOperation({ summary: 'Request debate completion (RESOLUTION)' })
   @ApiParam({ name: 'id', description: 'Debate UUID', type: String })
-  @ApiOkResponse({ type: WriteResultResponseDto, description: 'Resolution submitted' })
+  @ApiOkResponse({
+    type: WriteResultResponseDto,
+    description: 'Resolution submitted',
+  })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
-  @ApiForbiddenResponse({ type: ErrorResponseDto, description: 'Action not allowed in current state' })
+  @ApiForbiddenResponse({
+    type: ErrorResponseDto,
+    description: 'Action not allowed in current state',
+  })
   @Post('debates/:id/resolution')
   async submitResolution(
     @Param('id') debateId: string,
@@ -238,10 +295,16 @@ export class DebateController {
 
   @ApiOperation({ summary: 'Submit an INTERVENTION (arbitrator only)' })
   @ApiParam({ name: 'id', description: 'Debate UUID', type: String })
-  @ApiOkResponse({ type: WriteResultResponseDto, description: 'Intervention submitted' })
+  @ApiOkResponse({
+    type: WriteResultResponseDto,
+    description: 'Intervention submitted',
+  })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
-  @ApiForbiddenResponse({ type: ErrorResponseDto, description: 'Action not allowed in current state' })
+  @ApiForbiddenResponse({
+    type: ErrorResponseDto,
+    description: 'Action not allowed in current state',
+  })
   @Post('debates/:id/intervention')
   async submitIntervention(
     @Param('id') debateId: string,
@@ -257,10 +320,16 @@ export class DebateController {
 
   @ApiOperation({ summary: 'Submit a RULING (arbitrator only)' })
   @ApiParam({ name: 'id', description: 'Debate UUID', type: String })
-  @ApiOkResponse({ type: WriteResultResponseDto, description: 'Ruling submitted' })
+  @ApiOkResponse({
+    type: WriteResultResponseDto,
+    description: 'Ruling submitted',
+  })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
-  @ApiForbiddenResponse({ type: ErrorResponseDto, description: 'Action not allowed in current state' })
+  @ApiForbiddenResponse({
+    type: ErrorResponseDto,
+    description: 'Action not allowed in current state',
+  })
   @Post('debates/:id/ruling')
   async submitRuling(
     @Param('id') debateId: string,
@@ -281,14 +350,21 @@ export class DebateController {
 
   @ApiOperation({ summary: 'Long-poll for new arguments' })
   @ApiParam({ name: 'id', description: 'Debate UUID', type: String })
-  @ApiQuery({ name: 'argument_id', required: false, type: String, description: 'Last seen argument UUID' })
+  @ApiQuery({
+    name: 'argument_id',
+    required: false,
+    type: String,
+    description: 'Last seen argument UUID',
+  })
   @ApiQuery({ name: 'role', required: true, enum: ['proposer', 'opponent'] })
   @ApiOkResponse({
     description: 'Poll result — new argument or timeout',
-    schema: { oneOf: [
-      { $ref: getSchemaPath(PollResultNewResponseDto) },
-      { $ref: getSchemaPath(PollResultNoNewResponseDto) },
-    ]},
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(PollResultNewResponseDto) },
+        { $ref: getSchemaPath(PollResultNoNewResponseDto) },
+      ],
+    },
   })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })

@@ -1,5 +1,13 @@
+import {
+  ContentType,
+  handleServerError,
+  HTTPClientError,
+  MCPContent,
+  MCPResponse,
+  output,
+} from '@aweave/cli-shared';
 import { Command, Flags } from '@oclif/core';
-import { MCPResponse, MCPContent, ContentType, HTTPClientError, output, handleServerError } from '@aweave/cli-shared';
+
 import { getClient } from '../../lib/helpers';
 
 export class DebateList extends Command {
@@ -9,7 +17,11 @@ export class DebateList extends Command {
     state: Flags.string({ description: 'Filter by state' }),
     limit: Flags.integer({ description: 'Max results' }),
     offset: Flags.integer({ description: 'Pagination offset' }),
-    format: Flags.string({ default: 'json', options: ['json', 'markdown'], description: 'Output format' }),
+    format: Flags.string({
+      default: 'json',
+      options: ['json', 'markdown'],
+      description: 'Output format',
+    }),
   };
 
   async run() {
@@ -22,7 +34,10 @@ export class DebateList extends Command {
       if (flags.limit !== undefined) params.limit = String(flags.limit);
       if (flags.offset !== undefined) params.offset = String(flags.offset);
 
-      const resp = await client.get('/debates', Object.keys(params).length > 0 ? params : undefined);
+      const resp = await client.get(
+        '/debates',
+        Object.keys(params).length > 0 ? params : undefined,
+      );
       const data = (resp.data ?? {}) as Record<string, unknown>;
       const total = (data.total as number) ?? 0;
       const debates = (data.debates as unknown[]) ?? [];
@@ -30,7 +45,9 @@ export class DebateList extends Command {
       output(
         new MCPResponse({
           success: true,
-          content: [new MCPContent({ type: ContentType.JSON, data: { debates } })],
+          content: [
+            new MCPContent({ type: ContentType.JSON, data: { debates } }),
+          ],
           totalCount: total,
           hasMore: flags.limit !== undefined && debates.length === flags.limit,
         }),

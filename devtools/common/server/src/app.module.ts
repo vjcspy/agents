@@ -1,5 +1,5 @@
-import { Module } from '@nestjs/common';
 import { DebateModule } from '@aweave/nestjs-debate';
+import { Module } from '@nestjs/common';
 
 @Module({
   imports: [DebateModule],

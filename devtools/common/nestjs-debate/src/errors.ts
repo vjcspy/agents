@@ -33,12 +33,9 @@ export class DebateNotFoundError extends AppError {
 
 export class ArgumentNotFoundError extends AppError {
   constructor(argumentId: string) {
-    super(
-      'ARGUMENT_NOT_FOUND',
-      `Argument not found: ${argumentId}`,
-      404,
-      { argument_id: argumentId },
-    );
+    super('ARGUMENT_NOT_FOUND', `Argument not found: ${argumentId}`, 404, {
+      argument_id: argumentId,
+    });
   }
 }
 

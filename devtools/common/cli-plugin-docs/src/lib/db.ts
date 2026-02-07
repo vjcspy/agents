@@ -7,7 +7,7 @@
 
 import Database from 'better-sqlite3';
 import { randomUUID } from 'crypto';
-import { existsSync, mkdirSync } from 'fs';
+import { mkdirSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
 
@@ -109,7 +109,14 @@ export function createDocument(
       `INSERT INTO document_versions
        (id, document_id, summary, content, version, metadata, created_at)
        VALUES (?, ?, ?, ?, 1, ?, ?)`,
-    ).run(versionId, documentId, summary, content, JSON.stringify(metadata), createdAt);
+    ).run(
+      versionId,
+      documentId,
+      summary,
+      content,
+      JSON.stringify(metadata),
+      createdAt,
+    );
 
     return { document_id: documentId, version: 1, id: versionId };
   } finally {
@@ -164,7 +171,11 @@ export function submitVersion(
             createdAt,
           );
 
-          return { document_id: documentId, version: nextVersion, id: versionId };
+          return {
+            document_id: documentId,
+            version: nextVersion,
+            id: versionId,
+          };
         })();
 
         return result;
@@ -283,7 +294,9 @@ export function getHistory(
 
     if (limit !== undefined) query += ` LIMIT ${limit}`;
 
-    const rows = db.prepare(query).all(documentId) as Array<Record<string, unknown>>;
+    const rows = db.prepare(query).all(documentId) as Array<
+      Record<string, unknown>
+    >;
 
     const countRow = db
       .prepare(

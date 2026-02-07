@@ -11,7 +11,13 @@ export class DebateDto {
   debate_type!: string;
 
   @ApiProperty({
-    enum: ['AWAITING_OPPONENT', 'AWAITING_PROPOSER', 'AWAITING_ARBITRATOR', 'INTERVENTION_PENDING', 'CLOSED'],
+    enum: [
+      'AWAITING_OPPONENT',
+      'AWAITING_PROPOSER',
+      'AWAITING_ARBITRATOR',
+      'INTERVENTION_PENDING',
+      'CLOSED',
+    ],
   })
   state!: string;
 

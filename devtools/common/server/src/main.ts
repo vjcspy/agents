@@ -1,15 +1,20 @@
+import {
+  ArgumentDto,
+  DebateDto,
+  ErrorResponseDto,
+  GetDebateResponseDto,
+  ListDebatesResponseDto,
+  PollResultNewResponseDto,
+  PollResultNoNewResponseDto,
+  WriteResultResponseDto,
+} from '@aweave/nestjs-debate';
 import { NestFactory } from '@nestjs/core';
 import { WsAdapter } from '@nestjs/platform-ws';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+
 import { AppModule } from './app.module';
 import { AppExceptionFilter } from './shared/filters/app-exception.filter';
 import { AuthGuard } from './shared/guards/auth.guard';
-import {
-  DebateDto, ArgumentDto,
-  ListDebatesResponseDto, GetDebateResponseDto, WriteResultResponseDto,
-  PollResultNewResponseDto, PollResultNoNewResponseDto,
-  ErrorResponseDto,
-} from '@aweave/nestjs-debate';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -32,9 +37,13 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig, {
     extraModels: [
-      DebateDto, ArgumentDto,
-      ListDebatesResponseDto, GetDebateResponseDto, WriteResultResponseDto,
-      PollResultNewResponseDto, PollResultNoNewResponseDto,
+      DebateDto,
+      ArgumentDto,
+      ListDebatesResponseDto,
+      GetDebateResponseDto,
+      WriteResultResponseDto,
+      PollResultNewResponseDto,
+      PollResultNoNewResponseDto,
       ErrorResponseDto,
     ],
   });

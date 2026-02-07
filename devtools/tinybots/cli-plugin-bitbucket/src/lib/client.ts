@@ -6,20 +6,19 @@
  */
 
 import {
-  HTTPClient,
-  HTTPClientError,
-  MCPResponse,
-  MCPContent,
-  MCPError,
   ContentType,
   createPaginatedResponse,
+  HTTPClient,
+  HTTPClientError,
+  MCPContent,
+  MCPError,
+  MCPResponse,
 } from '@aweave/cli-shared';
 
 import {
-  parsePullRequest,
   parsePRComment,
   parsePRTask,
-  type PullRequest,
+  parsePullRequest,
   type PRComment,
   type PRTask,
 } from './models';
@@ -105,7 +104,11 @@ export class BitbucketClient {
       if (e instanceof HTTPClientError) {
         return new MCPResponse({
           success: false,
-          error: new MCPError({ code: e.code, message: e.message, suggestion: e.suggestion }),
+          error: new MCPError({
+            code: e.code,
+            message: e.message,
+            suggestion: e.suggestion,
+          }),
         });
       }
       throw e;
@@ -119,7 +122,11 @@ export class BitbucketClient {
   ): Promise<MCPResponse> {
     try {
       const path = `${this.repoPath(repoSlug)}/pullrequests/${prId}/comments`;
-      const [allData, totalCount] = await this.fetchAllPages(path, undefined, maxItems);
+      const [allData, totalCount] = await this.fetchAllPages(
+        path,
+        undefined,
+        maxItems,
+      );
 
       const comments = allData.map(parsePRComment);
 
@@ -144,7 +151,11 @@ export class BitbucketClient {
       if (e instanceof HTTPClientError) {
         return new MCPResponse({
           success: false,
-          error: new MCPError({ code: e.code, message: e.message, suggestion: e.suggestion }),
+          error: new MCPError({
+            code: e.code,
+            message: e.message,
+            suggestion: e.suggestion,
+          }),
         });
       }
       throw e;
@@ -158,7 +169,11 @@ export class BitbucketClient {
   ): Promise<MCPResponse> {
     try {
       const path = `${this.repoPath(repoSlug)}/pullrequests/${prId}/tasks`;
-      const [allData, totalCount] = await this.fetchAllPages(path, undefined, maxItems);
+      const [allData, totalCount] = await this.fetchAllPages(
+        path,
+        undefined,
+        maxItems,
+      );
 
       const tasks = allData.map(parsePRTask);
 
@@ -183,7 +198,11 @@ export class BitbucketClient {
       if (e instanceof HTTPClientError) {
         return new MCPResponse({
           success: false,
-          error: new MCPError({ code: e.code, message: e.message, suggestion: e.suggestion }),
+          error: new MCPError({
+            code: e.code,
+            message: e.message,
+            suggestion: e.suggestion,
+          }),
         });
       }
       throw e;

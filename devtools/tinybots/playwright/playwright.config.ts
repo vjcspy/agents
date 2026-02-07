@@ -1,7 +1,8 @@
-import { defineConfig, devices } from '@playwright/test';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+
+import { defineConfig, devices } from '@playwright/test';
 
 /**
  * Read environment variables from file.
@@ -30,7 +31,8 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('')`. */
-    baseURL: process.env.ACADEMY_BASE_URL ?? 'https://dashadmin.tinybots.academy',
+    baseURL:
+      process.env.ACADEMY_BASE_URL ?? 'https://dashadmin.tinybots.academy',
     storageState: (() => {
       const p =
         process.env.ACADEMY_STORAGE_STATE_PATH ??

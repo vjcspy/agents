@@ -1,7 +1,15 @@
-import { Command, Flags } from '@oclif/core';
-import { MCPResponse, MCPContent, ContentType, HTTPClientError, output, handleServerError } from '@aweave/cli-shared';
-import { getAvailableActions } from '@aweave/debate-machine';
+import {
+  ContentType,
+  handleServerError,
+  HTTPClientError,
+  MCPContent,
+  MCPResponse,
+  output,
+} from '@aweave/cli-shared';
 import type { DebateState } from '@aweave/debate-machine';
+import { getAvailableActions } from '@aweave/debate-machine';
+import { Command, Flags } from '@oclif/core';
+
 import { getClient } from '../../lib/helpers';
 
 export class DebateGetContext extends Command {
@@ -10,7 +18,11 @@ export class DebateGetContext extends Command {
   static flags = {
     'debate-id': Flags.string({ required: true, description: 'Debate UUID' }),
     limit: Flags.integer({ description: 'Number of recent arguments' }),
-    format: Flags.string({ default: 'json', options: ['json', 'markdown'], description: 'Output format' }),
+    format: Flags.string({
+      default: 'json',
+      options: ['json', 'markdown'],
+      description: 'Output format',
+    }),
   };
 
   async run() {

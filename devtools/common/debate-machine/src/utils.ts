@@ -6,8 +6,9 @@
  */
 
 import { createActor } from 'xstate';
+
 import { debateMachine } from './machine';
-import type { DebateState, DebateEvent, Role, ArgumentType } from './types';
+import type { ArgumentType, DebateEvent, DebateState, Role } from './types';
 
 /**
  * Check if a transition is valid from current state.
@@ -121,8 +122,7 @@ export function toDebateEvent(
       if (role === 'proposer') return { type: 'SUBMIT_RESOLUTION', role };
       return null;
     case 'INTERVENTION':
-      if (role === 'arbitrator')
-        return { type: 'SUBMIT_INTERVENTION', role };
+      if (role === 'arbitrator') return { type: 'SUBMIT_INTERVENTION', role };
       return null;
     case 'RULING':
       if (role === 'arbitrator')

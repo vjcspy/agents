@@ -1,40 +1,40 @@
-import { AbstractSeed } from '../core/AbstractSeed'
-import type { SeedContext } from '../core/SeedContext'
+import { AbstractSeed } from '../core/AbstractSeed';
+import type { SeedContext } from '../core/SeedContext';
 
 export type MicroManagerTriggeredApisRefs = {
-  robotId: number
-  userId: number
-  scriptReferenceId: bigint
-  scriptVersionId: bigint
-  scriptStepIds: bigint[]
-  triggeringEventId: bigint
-  triggerName: string
-}
+  robotId: number;
+  userId: number;
+  scriptReferenceId: bigint;
+  scriptVersionId: bigint;
+  scriptStepIds: bigint[];
+  triggeringEventId: bigint;
+  triggerName: string;
+};
 
 export class MicroManagerTriggeredApisSeed extends AbstractSeed<MicroManagerTriggeredApisRefs> {
   constructor() {
-    super('micro_manager_triggered_apis')
+    super('micro_manager_triggered_apis');
   }
 
   async seed(ctx: SeedContext): Promise<MicroManagerTriggeredApisRefs> {
-    const robotId = 1
-    const userId = 1
+    const robotId = 1;
+    const userId = 1;
 
-    const scriptReferenceId = BigInt(9001)
-    const scriptVersionId = BigInt(9001)
-    const scriptStepIds = [BigInt(9101), BigInt(9102)]
+    const scriptReferenceId = BigInt(9001);
+    const scriptVersionId = BigInt(9001);
+    const scriptStepIds = [BigInt(9101), BigInt(9102)];
 
-    const eventSchemaName = 'seed.micro-manager.trigger'
-    const triggerName = eventSchemaName
+    const eventSchemaName = 'seed.micro-manager.trigger';
+    const triggerName = eventSchemaName;
 
-    const eventTypeId = BigInt(9201)
-    const eventTriggerSettingId = BigInt(9301)
-    const eventSubscriptionId = BigInt(9401)
-    const incomingEventId = BigInt(9501)
-    const outgoingEventId = BigInt(9601)
-    const triggeringEventId = BigInt(9701)
+    const eventTypeId = BigInt(9201);
+    const eventTriggerSettingId = BigInt(9301);
+    const eventSubscriptionId = BigInt(9401);
+    const incomingEventId = BigInt(9501);
+    const outgoingEventId = BigInt(9601);
+    const triggeringEventId = BigInt(9701);
 
-    const now = new Date()
+    const now = new Date();
 
     await ctx.tinybots.user_account.upsert({
       where: { id: userId },
@@ -42,24 +42,32 @@ export class MicroManagerTriggeredApisSeed extends AbstractSeed<MicroManagerTrig
       create: {
         id: userId,
         email: 'seed-user@tinybots.local',
-        password: 'PBKDF2WithHmacSHA512:1024:18:NDdUxqBLUpif/OQI9KWTm0B4VkyRamu8:eus+wi62zGmjEh/QJiJF2Sfe',
+        password:
+          'PBKDF2WithHmacSHA512:1024:18:NDdUxqBLUpif/OQI9KWTm0B4VkyRamu8:eus+wi62zGmjEh/QJiJF2Sfe',
         eula_accepted_at: now,
       },
-    })
+    });
 
-    const existingUserRobotRole = await ctx.tinybots.user_robot_role.findUnique({ where: { id: 1 } })
+    const existingUserRobotRole = await ctx.tinybots.user_robot_role.findUnique(
+      { where: { id: 1 } },
+    );
     if (!existingUserRobotRole) {
-      await ctx.tinybots.user_robot_role.create({ data: { id: 1, role: 'owner' } })
+      await ctx.tinybots.user_robot_role.create({
+        data: { id: 1, role: 'owner' },
+      });
     }
 
-    const existingClientRelationRole = await ctx.tinybots.client_relation_role.findUnique({ where: { id: 4 } })
+    const existingClientRelationRole =
+      await ctx.tinybots.client_relation_role.findUnique({ where: { id: 4 } });
     if (!existingClientRelationRole) {
-      await ctx.tinybots.client_relation_role.create({ data: { id: 4, name: 'owner' } })
+      await ctx.tinybots.client_relation_role.create({
+        data: { id: 4, name: 'owner' },
+      });
     }
 
     const existingUserRobot = await ctx.tinybots.user_robot.findFirst({
       where: { user_id: userId, robot_id: robotId },
-    })
+    });
     if (!existingUserRobot) {
       await ctx.tinybots.user_robot.create({
         data: {
@@ -69,10 +77,13 @@ export class MicroManagerTriggeredApisSeed extends AbstractSeed<MicroManagerTrig
           client_relation_role_id: 4,
           created_at: now,
         },
-      })
+      });
     }
 
-    const existingScriptReference = await ctx.tinybots.script_reference.findUnique({ where: { id: scriptReferenceId } })
+    const existingScriptReference =
+      await ctx.tinybots.script_reference.findUnique({
+        where: { id: scriptReferenceId },
+      });
     if (!existingScriptReference) {
       await ctx.tinybots.script_reference.create({
         data: {
@@ -80,16 +91,22 @@ export class MicroManagerTriggeredApisSeed extends AbstractSeed<MicroManagerTrig
           robot_id: robotId,
           created_at: now,
         },
-      })
+      });
     }
 
-    const existingCategory = await ctx.tinybots.script_category.findFirst({ orderBy: { id: 'asc' } })
-    const scriptCategoryId = existingCategory?.id ?? 1
+    const existingCategory = await ctx.tinybots.script_category.findFirst({
+      orderBy: { id: 'asc' },
+    });
+    const scriptCategoryId = existingCategory?.id ?? 1;
     if (!existingCategory) {
-      await ctx.tinybots.script_category.create({ data: { id: scriptCategoryId, name: 'seed' } })
+      await ctx.tinybots.script_category.create({
+        data: { id: scriptCategoryId, name: 'seed' },
+      });
     }
 
-    const existingScriptVersion = await ctx.tinybots.script_version.findUnique({ where: { id: scriptVersionId } })
+    const existingScriptVersion = await ctx.tinybots.script_version.findUnique({
+      where: { id: scriptVersionId },
+    });
     if (!existingScriptVersion) {
       await ctx.tinybots.script_version.create({
         data: {
@@ -100,18 +117,24 @@ export class MicroManagerTriggeredApisSeed extends AbstractSeed<MicroManagerTrig
           script_category_id: scriptCategoryId,
           created_at: now,
         },
-      })
+      });
     }
 
-    const stepType = await ctx.tinybots.step_type.findFirst({ orderBy: { id: 'asc' } })
+    const stepType = await ctx.tinybots.step_type.findFirst({
+      orderBy: { id: 'asc' },
+    });
     if (!stepType) {
-      throw new Error('No step_type rows found; typ-e migrations likely not applied')
+      throw new Error(
+        'No step_type rows found; typ-e migrations likely not applied',
+      );
     }
 
     for (let i = 0; i < scriptStepIds.length; i++) {
-      const id = scriptStepIds[i]
-      const existing = await ctx.tinybots.script_step.findUnique({ where: { id } })
-      if (existing) continue
+      const id = scriptStepIds[i];
+      const existing = await ctx.tinybots.script_step.findUnique({
+        where: { id },
+      });
+      if (existing) continue;
       await ctx.tinybots.script_step.create({
         data: {
           id,
@@ -120,10 +143,12 @@ export class MicroManagerTriggeredApisSeed extends AbstractSeed<MicroManagerTrig
           first: i === 0,
           created_at: now,
         },
-      })
+      });
     }
 
-    const existingEventSchema = await ctx.tinybots.event_schema.findUnique({ where: { id: eventTypeId } })
+    const existingEventSchema = await ctx.tinybots.event_schema.findUnique({
+      where: { id: eventTypeId },
+    });
     if (!existingEventSchema) {
       await ctx.tinybots.event_schema.create({
         data: {
@@ -136,10 +161,13 @@ export class MicroManagerTriggeredApisSeed extends AbstractSeed<MicroManagerTrig
           created_at: now,
           updated_at: now,
         },
-      })
+      });
     }
 
-    const existingEventSubscription = await ctx.tinybots.event_subscription.findUnique({ where: { id: eventSubscriptionId } })
+    const existingEventSubscription =
+      await ctx.tinybots.event_subscription.findUnique({
+        where: { id: eventSubscriptionId },
+      });
     if (!existingEventSubscription) {
       await ctx.tinybots.event_subscription.create({
         data: {
@@ -150,15 +178,19 @@ export class MicroManagerTriggeredApisSeed extends AbstractSeed<MicroManagerTrig
           created_at: now,
           updated_at: now,
         },
-      })
+      });
     }
 
-    const provider = await ctx.tinybots.event_provider.findFirst({ orderBy: { id: 'asc' } })
+    const provider = await ctx.tinybots.event_provider.findFirst({
+      orderBy: { id: 'asc' },
+    });
     if (!provider) {
-      throw new Error('No event_provider rows found; run base seeds first')
+      throw new Error('No event_provider rows found; run base seeds first');
     }
 
-    const existingIncomingEvent = await ctx.tinybots.incoming_event.findUnique({ where: { id: incomingEventId } })
+    const existingIncomingEvent = await ctx.tinybots.incoming_event.findUnique({
+      where: { id: incomingEventId },
+    });
     if (!existingIncomingEvent) {
       await ctx.tinybots.incoming_event.create({
         data: {
@@ -171,10 +203,12 @@ export class MicroManagerTriggeredApisSeed extends AbstractSeed<MicroManagerTrig
           created_at: now,
           updated_at: now,
         },
-      })
+      });
     }
 
-    const existingOutgoingEvent = await ctx.tinybots.outgoing_event.findUnique({ where: { id: outgoingEventId } })
+    const existingOutgoingEvent = await ctx.tinybots.outgoing_event.findUnique({
+      where: { id: outgoingEventId },
+    });
     if (!existingOutgoingEvent) {
       await ctx.tinybots.outgoing_event.create({
         data: {
@@ -185,12 +219,13 @@ export class MicroManagerTriggeredApisSeed extends AbstractSeed<MicroManagerTrig
           created_at: now,
           updated_at: now,
         },
-      })
+      });
     }
 
-    const existingEventTriggerSetting = await ctx.tinybots.event_trigger_setting.findUnique({
-      where: { id: eventTriggerSettingId },
-    })
+    const existingEventTriggerSetting =
+      await ctx.tinybots.event_trigger_setting.findUnique({
+        where: { id: eventTriggerSettingId },
+      });
     if (!existingEventTriggerSetting) {
       await ctx.tinybots.event_trigger_setting.create({
         data: {
@@ -201,10 +236,12 @@ export class MicroManagerTriggeredApisSeed extends AbstractSeed<MicroManagerTrig
           created_at: now,
           updated_at: now,
         },
-      })
+      });
     }
 
-    const existingEventTrigger = await ctx.tinybots.event_trigger.findUnique({ where: { id: triggeringEventId } })
+    const existingEventTrigger = await ctx.tinybots.event_trigger.findUnique({
+      where: { id: triggeringEventId },
+    });
     if (!existingEventTrigger) {
       await ctx.tinybots.event_trigger.create({
         data: {
@@ -220,7 +257,7 @@ export class MicroManagerTriggeredApisSeed extends AbstractSeed<MicroManagerTrig
           created_at: now,
           updated_at: now,
         },
-      })
+      });
     }
 
     return {
@@ -231,37 +268,69 @@ export class MicroManagerTriggeredApisSeed extends AbstractSeed<MicroManagerTrig
       scriptStepIds,
       triggeringEventId,
       triggerName,
-    }
+    };
   }
 
   async clean(ctx: SeedContext): Promise<void> {
     await ctx.tinybots.closed_question_execution_data.deleteMany({
-      where: { script_step_execution: { script_execution: { script_reference_id: BigInt(9001) } } },
-    })
+      where: {
+        script_step_execution: {
+          script_execution: { script_reference_id: BigInt(9001) },
+        },
+      },
+    });
     await ctx.tinybots.multiple_choice_execution_data.deleteMany({
-      where: { script_step_execution: { script_execution: { script_reference_id: BigInt(9001) } } },
-    })
+      where: {
+        script_step_execution: {
+          script_execution: { script_reference_id: BigInt(9001) },
+        },
+      },
+    });
     await ctx.tinybots.report_execution_data.deleteMany({
-      where: { script_step_execution: { script_execution: { script_reference_id: BigInt(9001) } } },
-    })
+      where: {
+        script_step_execution: {
+          script_execution: { script_reference_id: BigInt(9001) },
+        },
+      },
+    });
     await ctx.tinybots.script_step_execution.deleteMany({
       where: { script_execution: { script_reference_id: BigInt(9001) } },
-    })
-    await ctx.tinybots.script_execution.deleteMany({ where: { script_reference_id: BigInt(9001) } })
-    await ctx.tinybots.event_trigger.deleteMany({ where: { id: BigInt(9701) } })
-    await ctx.tinybots.event_trigger_setting.deleteMany({ where: { id: BigInt(9301) } })
-    await ctx.tinybots.outgoing_event.deleteMany({ where: { id: BigInt(9601) } })
-    await ctx.tinybots.incoming_event.deleteMany({ where: { id: BigInt(9501) } })
-    await ctx.tinybots.event_subscription.deleteMany({ where: { id: BigInt(9401) } })
-    await ctx.tinybots.event_schema.deleteMany({ where: { id: BigInt(9201) } })
-    await ctx.tinybots.script_step.deleteMany({ where: { id: { in: [BigInt(9101), BigInt(9102)] } } })
-    await ctx.tinybots.script_version.deleteMany({ where: { id: BigInt(9001) } })
-    await ctx.tinybots.script_reference.deleteMany({ where: { id: BigInt(9001) } })
-    await ctx.tinybots.user_robot.deleteMany({ where: { user_id: 1, robot_id: 1 } })
-    await ctx.tinybots.user_account.deleteMany({ where: { id: 1 } })
+    });
+    await ctx.tinybots.script_execution.deleteMany({
+      where: { script_reference_id: BigInt(9001) },
+    });
+    await ctx.tinybots.event_trigger.deleteMany({
+      where: { id: BigInt(9701) },
+    });
+    await ctx.tinybots.event_trigger_setting.deleteMany({
+      where: { id: BigInt(9301) },
+    });
+    await ctx.tinybots.outgoing_event.deleteMany({
+      where: { id: BigInt(9601) },
+    });
+    await ctx.tinybots.incoming_event.deleteMany({
+      where: { id: BigInt(9501) },
+    });
+    await ctx.tinybots.event_subscription.deleteMany({
+      where: { id: BigInt(9401) },
+    });
+    await ctx.tinybots.event_schema.deleteMany({ where: { id: BigInt(9201) } });
+    await ctx.tinybots.script_step.deleteMany({
+      where: { id: { in: [BigInt(9101), BigInt(9102)] } },
+    });
+    await ctx.tinybots.script_version.deleteMany({
+      where: { id: BigInt(9001) },
+    });
+    await ctx.tinybots.script_reference.deleteMany({
+      where: { id: BigInt(9001) },
+    });
+    await ctx.tinybots.user_robot.deleteMany({
+      where: { user_id: 1, robot_id: 1 },
+    });
+    await ctx.tinybots.user_account.deleteMany({ where: { id: 1 } });
   }
 
   describe(): string {
-    return `${this.name} (robotId=1, scriptReferenceId=9001, triggeringEventId=9701)`
+    return `${this.name} (robotId=1, scriptReferenceId=9001, triggeringEventId=9701)`;
   }
 }
