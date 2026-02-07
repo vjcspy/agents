@@ -38,7 +38,7 @@ Lúc này sẽ có 2 trường hợp:
 - Tạo mới một debate conversation
 
 **Trường hợp user gửi một `debate_id` đã tồn tại:**
-Sẽ gọi command `aw debate get-context` để lấy thông tin debate cũ đọc và hiểu context, phân tích và có thể cần thực hiện thêm các addition steps như scan folder, read source code, nói chung là làm toàn bộ nhưng thứ mà cho là cần thiết để lấy được lại context cũ, cuối cùng xem role của argument cuối cùng là gì?
+Sẽ gọi command `aw debate get-context` để lấy thông tin debate cũ đọc và hiểu context, phân tích vả có thể cần thực hiện thêm các addition steps như scan folder, read source code, nói chung là làm toàn bộ nhưng thứ mà cho là cần thiết để lấy được lại context cũ, cuối cùng xem role của argument cuối cùng là gì?
 Nếu role là của `Proposer` chính là role của mình thì sẽ gọi `aw debate wait` để chờ kết quả
 Nếu role khác `Proposer` tức là đã có phản hồi thì xem phản hồi đó là gì để đánh giá xem có chuẩn không, hoặc nếu là của `Arbitrator` thì follow theo option mà `Arbitrator` đưa ra. Sau đó thực hiện tiếp các công việc cần thiết rồi gọi `aw debate submit` lấy được `argument_id` rồi gọi `aw debate wait` trên `argument_id` để chờ phản hồi
 
@@ -65,7 +65,9 @@ Khi có bản ghi mới thì `Proposer` và `Opponent` đều sẽ nhận đư�
 **1.1.5** Step5 2 bên đều nhất trí hết các điểm:
 Lúc đó `Proposer` sẽ gọi `aw debate request-completion` để tạo bản ghi `RESOLUTION`. **Server sẽ tự động tạo bản ghi `RULING` với close=true** (auto-ruling), chuyển state của debate sang `CLOSED`. Cả 2 `Proposer` và `Opponent` sẽ nhận `action: "debate_closed"` khi poll và dừng lại.
 
-> **Note:** Trong giai đoạn hiện tại, server auto-approve RESOLUTION — không cần Arbitrator can thiệp thủ công. Xem `devdocs/misc/devtools/plans/260207-auto-ruling-on-resolution.md`.
+> **Note:** Trong giai đoạn hiện tại, server auto-approve RESOLUTION — không cần Arbitrator can thiệp thủ công.
+> Khi Proposer submit RESOLUTION, server sẽ tự động tạo một bản ghi RULING (close=true) ngay lập tức.
+> Điều này giúp debate kết thúc nhanh gọn nếu Proposer đã hài lòng.
 
 **1.1.6** Lưu ý về INTERVENTION:
 
@@ -117,17 +119,17 @@ Cần có cơ chế cấu hình để AI agents biết các CLI tools được p
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │   ┌──────────────┐         HTTP/REST         ┌──────────────────────┐       │
-│   │  CLI Python  │ ◄───────────────────────► │   debate-server      │       │
-│   │  (aw debate) │                           │   (Node.js)          │       │
+│   │  OCLIF CLI   │ ◄───────────────────────► │   Unified Server     │       │
+│   │(@aweave/cli) │                           │     (NestJS)         │       │
 │   └──────────────┘                           │                      │       │
 │         ▲                                    │  ┌────────────────┐  │       │
-│         │                                    │  │ better-sqlite3 │  │       │
-│   AI Agents call                             │  │    (SQLite)    │  │       │
+│         │                                    │  │     Prisma     │  │       │
+│   AI Agents call                             │  │sqlite-datasource│  │      │
 │   CLI commands                               │  └────────────────┘  │       │
 │                                              │         │            │       │
 │                                              │  ┌──────▼─────────┐  │       │
 │   ┌──────────────┐      WebSocket            │  │  ~/.aweave/    │  │       │
-│   │  debate-web  │ ◄───────────────────────► │  │  debate.db     │  │       │
+│   │  debate-web  │ ◄───────────────────────► │  │  db/debate.db  │  │       │
 │   │  (Next.js)   │                           │  └────────────────┘  │       │
 │   └──────────────┘                           └──────────────────────┘       │
 │         ▲                                                                   │
@@ -143,20 +145,23 @@ Cần có cơ chế cấu hình để AI agents biết các CLI tools được p
 
 | Component | Technology | Lý do |
 |-----------|------------|-------|
-| Database | SQLite | Lightweight, file-based, không cần server |
-| DB Library | `better-sqlite3` | Sync API, nhanh, locking tốt cho Node.js |
-| CLI | Python | Consistency với `aw docs` CLI đã có |
-| Server | Node.js | WebSocket support tốt, dễ integrate với Next.js |
-| Web | Next.js + shadcn | Modern, fast development |
+| Database | SQLite (Prisma v7) | Lightweight, file-based, type-safe query builder |
+| Server Framework | NestJS | Modular architecture, easy WebSocket integration, widely used in monorepo |
+| CLI Framework | OCLIF (Node.js) | Standard plugin system, TypeScript-first, easy to extend |
+| State Machine | XState v5 | Shared logic between CLI and Server, visualized states |
+| Web | Next.js + shadcn | Modern, fast development, shared component library |
 
 **Data Flow:**
-- CLI **KHÔNG** access database trực tiếp
-- Mọi data access đều qua NestJS server (HTTP REST API)
-- State machine được định nghĩa trong `@aweave/debate-machine` (xstate v5) — shared package
-- CLI import machine để tính `available_actions`, server import để validate trước khi persist
-- Server là single source of truth cho locking và data persistence
+- CLI **KHÔNG** access database trực tiếp.
+- Mọi data access đều qua NestJS server (HTTP REST API).
+- State machine được định nghĩa trong `@aweave/debate-machine` (xstate v5) — shared package.
+- CLI import machine để tính `available_actions` (pre-validation/hinting).
+- Server import machine để validate strict rules trước khi persist vào DB.
+- Server là single source of truth cho locking và data persistence.
 
 ### 2.1 State Machine
+
+Sử dụng package `@aweave/debate-machine` để quản lý trạng thái.
 
 #### 2.1.1 States
 
@@ -169,6 +174,8 @@ Cần có cơ chế cấu hình để AI agents biết các CLI tools được p
 | `CLOSED` | Debate kết thúc | Không ai chờ |
 
 #### 2.1.2 Transitions
+
+Logic chuyển đổi trạng thái được định nghĩa chặt chẽ trong XState machine.
 
 | From State | Action | By | To State |
 |------------|--------|-----|----------|
@@ -197,27 +204,30 @@ Cần có cơ chế cấu hình để AI agents biết các CLI tools được p
 
 ### 2.2 Communication Pattern
 
-#### 2.2.1 Long Polling cho `aw debate wait`
+#### 2.2.1 Interval Polling cho `aw debate wait`
 
-CLI sử dụng **Long Polling** để chờ response từ server:
+Khác với kiến trúc cũ (Long Polling), hệ thống mới sử dụng **Interval Polling** để đơn giản hóa server và tránh giữ connection lâu.
 
-```python
-# CLI Python pseudo-code (tối giản - implementation chuẩn xem 2.2.3)
-while True:
-    response = requests.get(
-        f"{SERVER}/debates/{debate_id}/wait",
-        params={"argument_id": Y, "role": "proposer"},
-        timeout=65  # > server timeout (60s)
-    )
-    if response.json()["has_new_argument"]:
-        return response.json()
-    # else: retry (server timeout, no new data yet)
+- **Endpoint**: `GET /debates/:id/poll`
+- **Behavior**: Server trả về kết quả ngay lập tức (Immediate Response).
+- **Client Logic**: CLI gọi endpoint này mỗi `POLL_INTERVAL` giây (mặc định 2s) cho đến khi có dữ liệu mới hoặc timeout.
+
+```typescript
+// CLI Pseudo-code
+while (elapsed < DEADLINE) {
+    const response = await api.poll(debateId, lastArgumentId, role);
+    if (response.has_new_argument) {
+        return response; // Success, return action to Agent
+    }
+    await sleep(2000); // Wait 2s
+}
+return TIMEOUT; // Tell Agent to retry
 ```
 
 **Tham số `aw debate wait`:**
 - `--debate-id`: ID của debate
 - `--argument-id`: ID của argument đang chờ response
-- `--role`: Role của requester (`proposer` hoặc `opponent`) - để server trả response phù hợp
+- `--role`: Role của requester (`proposer` hoặc `opponent`) - để server trả response chứa `available_actions` phù hợp
 
 #### 2.2.2 Response theo Role
 
@@ -229,581 +239,176 @@ while True:
 | Arbitrator INTERVENTION | `action: "wait_for_ruling"` | `action: "wait_for_ruling"` |
 | Debate CLOSED | `action: "debate_closed"` | `action: "debate_closed"` |
 
-#### 2.2.3 Timeout Behavior (2 layers)
+#### 2.2.3 Timeout Behavior
 
-**Layer 1 - Poll Timeout (per request):**
-- Server long-poll tối đa **60 giây** mỗi request
-- Client timeout **65 giây** (> server timeout)
-- Nếu hết 60s mà chưa có data mới, server trả về `{ "has_new_argument": false }`
-- CLI tự động retry request mới
+**Wait Deadline:**
+- CLI có overall deadline (ví dụ: **2 phút**).
+- Nếu sau deadline vẫn chưa có response, CLI trả về `status: "timeout"`.
+- AI agent được hướng dẫn (qua tool output) để retry command `aw debate wait`.
 
-**Layer 2 - Overall Wait Deadline:**
-- CLI có overall deadline **5 phút** (300 giây)
-- Nếu sau 5 phút vẫn chưa có response, CLI trả về `status: "timeout"`
-- AI agent thông báo cho user và thoát
-- Khi cần resume, user trigger lại **CẢ Proposer và Opponent**
-
-```python
-# CLI pseudo-code
-overall_start = time.time()
-OVERALL_DEADLINE = int(os.getenv("DEBATE_WAIT_DEADLINE", 300))  # default 5 phút, có thể override
-POLL_TIMEOUT = 65  # > server 60s
-
-while time.time() - overall_start < OVERALL_DEADLINE:
-    response = requests.get(
-        f"{SERVER}/debates/{debate_id}/wait",
-        params={"argument_id": Y, "role": "proposer"},
-        timeout=POLL_TIMEOUT
-    )
-    if response.json()["has_new_argument"]:
-        return response.json()
-    # else: retry
-
-return {"status": "timeout", "message": f"No response after {OVERALL_DEADLINE} seconds"}
-```
-
-**Environment Variables:**
-- `DEBATE_WAIT_DEADLINE`: Override overall deadline (seconds). Default: 300 (5 phút)
-- Use case: debate phức tạp có thể cần deadline dài hơn
-
-**Resume Flow:**
-1. User chạy lại Proposer với `debate_id`
-2. User chạy lại Opponent với `debate_id`
-3. Mỗi bên gọi `aw debate get-context` để lấy lại context
-4. Dựa vào `state` hiện tại, mỗi bên biết mình cần làm gì tiếp
-
-**LƯU Ý cho Commands/Rules:** Proposer và Opponent Commands PHẢI hướng dẫn AI agent handle trường hợp resume với `debate_id` đã tồn tại. AI agent cần:
-- Đọc lại toàn bộ context từ `aw debate get-context`
-- Kiểm tra `state` hiện tại
-- Thực hiện action phù hợp hoặc gọi `aw debate wait` nếu đang chờ bên kia
+> Việc timeout là bình thường trong các debate dài hơi (ví dụ Opponent cần nhiều thời gian suy nghĩ). Agent chỉ cần chạy lại wait command.
 
 ### 2.3 Devtool CLI
 
-Đây là cầu nối giữa các AI agent, là công cụ để các AI agent giao tiếp với nhau qua command.
+Sử dụng framework OCLIF. Code nằm tại `devtools/common/cli` và `devtools/common/cli-plugin-debate`.
 
 #### 2.3.1 Các components trong `devtools`
 
-- **debate-machine**: Shared xstate v5 state machine (`@aweave/debate-machine`) trong `devtools/common/debate-machine`
-- **CLI Plugin**: oclif plugin (`@aweave/cli-plugin-debate`) trong `devtools/common/cli-plugin-debate`
-- **NestJS Module**: Server module (`@aweave/nestjs-debate`) trong `devtools/common/nestjs-debate`
-- **NestJS Server**: Unified server (`@aweave/server`) trong `devtools/common/server`
-- **debate-web**: Next.js app trong `devtools/common/debate-web`
+- **@aweave/cli**: Core CLI entry point.
+- **@aweave/cli-plugin-debate**: OCLIF plugin chứa các command `aw debate ...`.
+- **@aweave/debate-machine**: Shared XState machine logic.
+- **@aweave/nestjs-debate**: NestJS module cho debate logic.
+- **@aweave/server**: Unified NestJS server hosting các module.
 
-#### 2.3.2 Database Schema
+#### 2.3.2 Database Schema (Prisma)
 
-**debates:**
+File: `devtools/common/nestjs-debate/prisma/schema.prisma`
 
-| **Column**      | **Type**      | **Description**                                            |
-| --------------- | ------------- | ---------------------------------------------------------- |
-| **id** (PK)     | TEXT          | UUID - ID duy nhất của cuộc tranh luận                     |
-| **title**       | TEXT          | Tiêu đề vấn đề cần debate                                  |
-| **debate_type** | TEXT          | Phân loại (ví dụ: `coding_plan_debate`, `general_debate`)  |
-| **state**       | TEXT          | State machine state (xem 2.1.1)                            |
-| **created_at**  | TEXT          | Thời gian tạo (ISO 8601)                                   |
-| **updated_at**  | TEXT          | Thời gian update cuối (ISO 8601)                           |
+**Debate:**
+- `id`: UUID
+- `title`: String
+- `debateType`: String
+- `state`: String (Enum-like string mapping to XState)
+- `createdAt`, `updatedAt`
 
-> **Note:** Không có `status` column. Status được derive từ `state`:
-> - `state = CLOSED` → closed
-> - Các state khác → open
-
-**arguments:**
-
-| **Column**            | **Type**      | **Description**                                              |
-| --------------------- | ------------- | ------------------------------------------------------------ |
-| **id** (PK)           | TEXT          | UUID - ID của lập luận/phản hồi                              |
-| **debate_id** (FK)    | TEXT          | Liên kết tới `debates.id`                                    |
-| **parent_id** (FK)    | TEXT          | ID của argument trước đó (Self-reference). Null nếu là MOTION |
-| **type**              | TEXT          | `MOTION`, `CLAIM`, `APPEAL`, `RULING`, `INTERVENTION`, `RESOLUTION` |
-| **role**              | TEXT          | Vai trò: `proposer`, `opponent`, `arbitrator`                |
-| **content**           | TEXT          | Nội dung của lập luận                                        |
-| **client_request_id** | TEXT          | ID từ client để đảm bảo idempotency (UNIQUE per debate)      |
-| **created_at**        | TEXT          | Thời gian submit (ISO 8601)                                  |
-
-**SQL Schema:**
-
-```sql
--- Enable WAL mode và foreign keys (copy pattern từ aw docs)
-PRAGMA journal_mode = WAL;
-PRAGMA foreign_keys = ON;
-
-CREATE TABLE debates (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  debate_type TEXT NOT NULL,
-  state TEXT NOT NULL DEFAULT 'AWAITING_OPPONENT',
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE TABLE arguments (
-  id TEXT PRIMARY KEY,
-  debate_id TEXT NOT NULL REFERENCES debates(id),
-  parent_id TEXT REFERENCES arguments(id),
-  type TEXT NOT NULL,
-  role TEXT NOT NULL,
-  content TEXT NOT NULL,
-  client_request_id TEXT,
-  seq INTEGER NOT NULL,  -- Auto-increment per debate để ordering
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE(debate_id, client_request_id),
-  UNIQUE(debate_id, seq)  -- Đảm bảo seq unique per debate
-);
-
-CREATE INDEX idx_arguments_debate_id ON arguments(debate_id);
-CREATE INDEX idx_arguments_parent_id ON arguments(parent_id);
-CREATE INDEX idx_arguments_seq ON arguments(debate_id, seq);
-```
+**Argument:**
+- `id`: UUID
+- `debateId`: UUID (FK Debate)
+- `parentId`: UUID (Self-ref)
+- `type`: String (MOTION, CLAIM, etc.)
+- `role`: String (proposer, opponent, arbitrator)
+- `content`: String
+- `clientRequestId`: String (Idempotency Key)
+- `seq`: Int (Sequence number per debate, ordered)
 
 **Ordering:**
-- Sử dụng `seq` integer tăng dần per debate để đảm bảo thứ tự arguments
-- Khi query arguments, ORDER BY `seq` ASC
-
-**QUAN TRỌNG - seq Assignment:**
-`seq` assignment và insert PHẢI nằm trong **cùng một transaction** để tránh race condition:
-
-```sql
-BEGIN IMMEDIATE;
--- Lấy next seq trong cùng transaction
-SELECT COALESCE(MAX(seq), 0) + 1 AS next_seq FROM arguments WHERE debate_id = ?;
--- Insert với seq vừa lấy
-INSERT INTO arguments (id, debate_id, ..., seq) VALUES (?, ?, ..., ?);
-COMMIT;
-```
-
-Không rely hoàn toàn vào mutex ở application layer - transaction là source of truth.
-
-**Database Patterns (copy từ `aw docs`):**
-- WAL mode cho concurrent access
-- `BEGIN IMMEDIATE` transaction cho write operations
-- Retry on `SQLITE_BUSY` với exponential backoff
+- Sử dụng `seq` integer tăng dần per debate để đảm bảo thứ tự arguments.
+- `seq` được gán atomic trong transaction DB khi insert argument.
 
 #### 2.3.3 CLI Commands
 
 **`aw debate generate-id`**
-
-Trả về UUID để AI agent sử dụng làm ID. Dùng cho `debate_id`, `client_request_id`.
+Trả về UUID để AI agent sử dụng làm ID.
 
 **`aw debate get-context`**
-
 Lấy lại context của debate đã tồn tại (resume flow).
-
-| Tham số | Required | Mô tả |
-|---------|----------|-------|
-| `--debate-id` | ✅ | ID của debate |
-| `--argument-limit` | ❌ | Số lượng arguments gần nhất (default: 10) |
-
-**Response:**
-```json
-{
-  "debate": { "id": "...", "title": "...", "state": "AWAITING_PROPOSER", ... },
-  "arguments": [
-    { "type": "MOTION", ... },
-    { "...last N arguments..." }
-  ]
-}
-```
+Trả về: `debate`, `arguments` (limit N), và `available_actions` (hint từ XState).
 
 **`aw debate create`**
-
 Proposer khởi tạo debate mới.
-
-| Tham số | Required | Mô tả |
-|---------|----------|-------|
-| `--debate-id` | ✅ | UUID từ `generate-id` |
-| `--title` | ✅ | Tiêu đề debate |
-| `--debate-type` | ✅ | `coding_plan_debate`, `general_debate` |
-| `--file` | ✅ | Path đến file nội dung MOTION |
-| `--client-request-id` | ✅ | UUID để đảm bảo idempotency |
-
-**debateType:**
-- `coding_plan_debate`: Proposer tạo plan, Opponent review và tìm lỗi/cải thiện
-- `general_debate`: Tranh luận chung dựa trên kiến thức AI
+Tham số: `--debate-id`, `--title`, `--type`, `--file`/`--content`, `--client-request-id`.
 
 **`aw debate wait`**
-
-Chờ response từ bên đối diện (Long Polling).
-
-| Tham số | Required | Mô tả |
-|---------|----------|-------|
-| `--debate-id` | ✅ | ID của debate |
-| `--argument-id` | ✅ | ID của argument đang chờ response |
-| `--role` | ✅ | `proposer` hoặc `opponent` |
-
-**Response theo role:** Xem section 2.2.2
+Chờ response từ bên đối diện (Interval Polling).
+Tham số: `--debate-id`, `--argument-id`, `--role`.
 
 **`aw debate submit`**
-
 Submit argument mới (CLAIM).
-
-| Tham số | Required | Mô tả |
-|---------|----------|-------|
-| `--debate-id` | ✅ | ID của debate |
-| `--role` | ✅ | `proposer` hoặc `opponent` |
-| `--target-id` | ✅ | ID argument đang phản hồi |
-| `--content` | ✅ | Nội dung (hoặc `--file`) |
-| `--client-request-id` | ✅ | UUID để đảm bảo idempotency |
+Tham số: `--debate-id`, `--role`, `--target-id`, `--content`, `--client-request-id`.
 
 **`aw debate appeal`**
-
 Proposer submit APPEAL yêu cầu Arbitrator phán xử.
 
-| Tham số | Required | Mô tả |
-|---------|----------|-------|
-| `--debate-id` | ✅ | ID của debate |
-| `--target-id` | ✅ | ID argument đang tranh cãi |
-| `--content` | ✅ | Nội dung appeal (context + options) |
-| `--client-request-id` | ✅ | UUID để đảm bảo idempotency |
-
 **`aw debate request-completion`**
-
 Proposer yêu cầu kết thúc debate (tạo RESOLUTION).
-
-| Tham số | Required | Mô tả |
-|---------|----------|-------|
-| `--debate-id` | ✅ | ID của debate |
-| `--target-id` | ✅ | ID argument cuối cùng |
-| `--content` | ✅ | Tóm tắt kết quả debate |
-| `--client-request-id` | ✅ | UUID để đảm bảo idempotency |
-
-> **Note:** `submitRuling` và `submitIntervention` không cần CLI vì Arbitrator (human) sử dụng `debate-web`
+Server sẽ tự động trigger `submitRuling(close=true)` ngay sau đó.
 
 ### 2.4 Concurrency & Locking
 
 #### 2.4.1 Server-side Locking
 
-Mỗi debate có một mutex lock. Tại một thời điểm chỉ có 1 bên được write.
+Mỗi debate có một mutex lock (sử dụng library `async-mutex` hoặc tương tự trong NestJS Service).
+Tại một thời điểm chỉ có 1 request write được xử lý cho một debateId để đảm bảo tính nhất quán của `seq` và `state`.
 
-```javascript
-// Pseudo-code trong debate-server
-const debateLocks = new Map(); // debate_id -> mutex
+#### 2.4.2 State/Role Validation
 
-async function submitArgument(debateId, role, content, clientRequestId) {
-  const lock = getOrCreateLock(debateId);
-  
-  await lock.acquire();
-  try {
-    // 1. Idempotency check
-    const existing = db.findByClientRequestId(debateId, clientRequestId);
-    if (existing) return existing; // Return existing, không tạo mới
-    
-    // 2. State validation - role này có được submit không?
-    const debate = db.getDebate(debateId);
-    if (!canSubmit(debate.state, role)) {
-      throw new Error(`Role ${role} cannot submit in state ${debate.state}`);
-    }
-    
-    // 3. Insert argument
-    const argument = db.insertArgument({...});
-    
-    // 4. Update debate state (atomic)
-    const newState = calculateNextState(debate.state, argumentType);
-    db.updateDebateState(debateId, newState);
-    
-    // 5. Broadcast to WebSocket clients
-    websocket.broadcast(debateId, { event: 'new_argument', data: argument });
-    
-    return argument;
-  } finally {
-    lock.release();
-  }
-}
-```
-
-#### 2.4.2 State/Role Validation (Invariant)
-
-**Đây là invariant bắt buộc.** Server PHẢI validate và trả lỗi nếu:
-- Role không được phép submit trong state hiện tại
-- Action không hợp lệ cho state hiện tại
-
-**Validation Matrix:**
-
-| State | Proposer allowed | Opponent allowed | Arbitrator allowed |
-|-------|------------------|------------------|-------------------|
-| `AWAITING_OPPONENT` | ❌ | ✅ submit | ✅ intervention |
-| `AWAITING_PROPOSER` | ✅ submit/appeal/completion | ❌ | ✅ intervention |
-| `AWAITING_ARBITRATOR` | ❌ | ❌ | ✅ ruling |
-| `INTERVENTION_PENDING` | ❌ | ❌ | ✅ ruling |
-| `CLOSED` | ❌ | ❌ | ❌ |
-
-**Error Response Format (ổn định để agent handle):**
-
-```json
-{
-  "success": false,
-  "error": {
-    "code": "ACTION_NOT_ALLOWED",
-    "message": "Role 'opponent' cannot submit in state 'AWAITING_PROPOSER'",
-    "current_state": "AWAITING_PROPOSER",
-    "allowed_roles": ["proposer"],
-    "suggestion": "Wait for proposer to submit their argument"
-  }
-}
-```
-
-AI agent có thể dựa vào `error.code` để handle programmatically.
+Server sử dụng `@aweave/debate-machine` để validate mọi action trước khi ghi vào DB.
+Nếu `canTransition(currentState, event)` trả về false, server ném lỗi `ActionNotAllowed` về phía CLI.
 
 ### 2.5 Error Handling & Recovery
 
-#### 2.5.1 Scenarios
+**Idempotency:**
+Mọi submit command đều yêu cầu `client_request_id`.
+Server check unique constraint `(debate_id, client_request_id)`.
+Nếu trùng ID, trả về thành công với data của record đã tồn tại (không tạo bản ghi duplicate).
 
-| Scenario | Xử lý |
-|----------|-------|
-| AI agent crash giữa chừng (chưa submit) | Resume với `debate_id`, đọc context, tiếp tục |
-| AI agent crash sau submit, trước wait | Resume, check state, gọi wait nếu cần |
-| Network error khi submit | CLI retry 3 lần với exponential backoff |
-| Server crash/restart | SQLite persist data, clients tự reconnect |
-| Duplicate submit (retry) | Server check `client_request_id`, return existing argument |
-
-#### 2.5.2 Idempotency
-
-Mọi submit command đều cần `client_request_id`:
-- AI agent generate UUID trước khi submit
-- Server check nếu `(debate_id, client_request_id)` đã tồn tại → return existing
-- Đảm bảo retry không tạo duplicate arguments
+**Retries:**
+CLI tự động retry các lỗi network thoáng qua.
+Với lỗi logic (như sai state), trả về lỗi rõ ràng để Agent biết cách xử lý (vd: gọi lại `get-context`).
 
 ### 2.6 Commands, Rules, Skills Structure
 
-#### 2.6.1 Folder Structure
+Tương tự kiến trúc cũ, Agent được trang bị:
+1. **Commands**: Hướng dẫn sử dụng CLI (`aw debate ...`).
+2. **Rules**: Quy định cách hành xử, format nội dung debate theo `debateType`.
 
+Folder structure:
 ```
 devdocs/agent/
 ├── commands/
 │   └── common/
-│       ├── debate-proposer.md      # Proposer Command (chung cho mọi debateType)
-│       └── debate-opponent.md      # Opponent Command (chung cho mọi debateType)
+│       ├── debate-proposer.md
+│       └── debate-opponent.md
 │
 └── rules/
     └── common/
         └── debate/
             ├── proposer/
-            │   ├── coding-plan.md      # Rules cho coding_plan_debate
-            │   └── general.md          # Rules cho general_debate
-            │
+            │   ├── coding-plan.md
+            │   └── general.md
             └── opponent/
-                ├── coding-plan.md      # Rules cho coding_plan_debate
-                └── general.md          # Rules cho general_debate
+                ├── coding-plan.md
+                └── general.md
 ```
-
-#### 2.6.2 Command vs Rule
-
-| Type | Mục đích | Load khi nào |
-|------|----------|--------------|
-| **Command** | Quy trình chung: cách gọi CLI, handle states, resume flow | Luôn load khi bắt đầu |
-| **Rule** | Logic nghiệp vụ theo debateType: cách review plan, cách phản biện | Load dựa vào `debateType` |
-
-#### 2.6.3 Load Rules theo debateType
-
-Command hướng dẫn AI agent tự đọc `debateType` rồi load rule file tương ứng:
-
-```markdown
-# Trong Proposer Command
-Sau khi biết debateType từ `aw debate get-context` hoặc user input:
-- coding_plan_debate: đọc `devdocs/agent/rules/common/debate/proposer/coding-plan.md`
-- general_debate: đọc `devdocs/agent/rules/common/debate/proposer/general.md`
-```
-
-#### 2.6.4 Commands Content (TODO)
-
-**Proposer Command** cần bao gồm:
-- Cách tạo debate mới
-- Cách resume debate cũ
-- Cách handle từng state
-- Cách sử dụng `aw docs` để share tài liệu
-- Khi nào submit APPEAL, RESOLUTION
-
-**Opponent Command** cần bao gồm:
-- Cách join debate
-- Cách resume debate cũ  
-- Cách handle từng state
-- Cách sử dụng `aw docs` để get tài liệu
-- Cách đưa ra CLAIM hiệu quả
 
 ### 2.7 debate-web
 
-Xây dựng Next.js application ở `devtools/common/debate-web`
+Web application (Next.js) để Arbitrator (Human) theo dõi và can thiệp.
 
-**Tech stack:** Next.js + shadcn/ui + WebSocket client
+- **Tech**: Next.js, WebSocket (`@nestjs/platform-ws`).
+- **Features**:
+    - Real-time updates (nghe event `new_argument` từ server).
+    - Hiển thị danh sách debate, chi tiết argument.
+    - Action UI: Nút Stop (Intervention), Form Ruling.
 
-#### 2.7.1 Layout
+### 2.8 Unified Server (NestJS)
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         debate-web                           │
-├──────────────┬──────────────────────────────────────────────┤
-│              │                                              │
-│   SIDEBAR    │              CONTENT AREA                    │
-│              │                                              │
-│  ┌────────┐  │  ┌────────────────────────────────────────┐  │
-│  │ Search │  │  │  Argument List                         │  │
-│  └────────┘  │  │  - MOTION (Proposer)                   │  │
-│              │  │  - CLAIM (Opponent)                    │  │
-│  ┌────────┐  │  │  - CLAIM (Proposer)                    │  │
-│  │Debate 1│  │  │  - ...                                 │  │
-│  ├────────┤  │  │                                        │  │
-│  │Debate 2│  │  └────────────────────────────────────────┘  │
-│  ├────────┤  │                                              │
-│  │  ...   │  │  ┌────────────────────────────────────────┐  │
-│  └────────┘  │  │  ACTION AREA                           │  │
-│              │  │  (Button hoặc Chat box - xem 2.7.2)    │  │
-│              │  └────────────────────────────────────────┘  │
-│              │                                              │
-└──────────────┴──────────────────────────────────────────────┘
-```
-
-#### 2.7.2 Action Area Logic
-
-| State hiện tại | UI hiển thị |
-|----------------|-------------|
-| `AWAITING_OPPONENT` hoặc `AWAITING_PROPOSER` | **Stop Button** (full width, icon stop). Hold 1s để gửi INTERVENTION |
-| `AWAITING_ARBITRATOR` (từ APPEAL) | **Chat box** để nhập RULING content |
-| `AWAITING_ARBITRATOR` (từ RESOLUTION) | **Chat box** để nhập RULING (close hoặc continue) |
-| `INTERVENTION_PENDING` | **Chat box** để nhập RULING content |
-| `CLOSED` | Disabled / Read-only |
-
-### 2.8 debate-server
-
-Node.js server trong `devtools/common/debate-server`
-
-#### 2.8.0 Server Bind & Security
-
-**Network Binding:**
-- **Default:** Bind `127.0.0.1` (localhost only)
-- Không expose ra LAN/Internet trừ khi explicitly configured
-
-**Authentication (Optional):**
-- Env var `DEBATE_AUTH_TOKEN` để enable bearer token auth
-- Nếu set, tất cả requests phải có header `Authorization: Bearer <token>`
-- Nếu không set, no auth (local development mode)
-
-```bash
-# Development (no auth)
-npm start
-
-# With auth
-DEBATE_AUTH_TOKEN=my-secret-token npm start
-```
-
-**CLI Configuration:**
-- Env var `DEBATE_SERVER_URL` (default: `http://127.0.0.1:3456`)
-- Env var `DEBATE_AUTH_TOKEN` (nếu server require auth)
+Node.js server unified tại `devtools/common/server`.
 
 #### 2.8.1 Responsibilities
-
-1. **REST API cho CLI**: Tất cả debate operations
-2. **WebSocket cho Web**: Real-time updates + Arbitrator actions
-3. **State Machine**: Single source of truth
-4. **SQLite Database**: Data persistence
+1. **Modules**: Load `@aweave/nestjs-debate` module.
+2. **REST API**: Phục vụ CLI requests.
+3. **WebSocket**: Phục vụ Web real-time updates.
+4. **Persistence**: Quản lý connection tới SQLite via Prisma.
 
 #### 2.8.2 API Endpoints (REST)
 
-| Method | Endpoint | Description | Used by |
-|--------|----------|-------------|---------|
-| POST | `/debates` | Create debate | CLI |
-| GET | `/debates/:id` | Get debate + arguments | CLI |
-| POST | `/debates/:id/arguments` | Submit argument | CLI |
-| POST | `/debates/:id/appeal` | Submit appeal | CLI |
-| POST | `/debates/:id/resolution` | Request completion | CLI |
-| GET | `/debates/:id/wait` | Long polling wait | CLI |
-| GET | `/debates` | List debates | Web |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/debates` | Create debate |
+| GET | `/debates/:id` | Get debate + arguments |
+| GET | `/debates/:id/poll` | Poll for new arguments (New!) |
+| POST | `/debates/:id/arguments` | Submit argument |
+| POST | `/debates/:id/appeal` | Submit appeal |
+| POST | `/debates/:id/resolution` | Request completion |
+| POST | `/debates/:id/ruling` | Submit ruling (Arbitrator only) |
+| POST | `/debates/:id/intervention` | Submit intervention (Arbitrator only) |
 
 #### 2.8.3 WebSocket Events
 
-**Server → Client (Web):**
+- `new_argument`: Broadcast khi có argument mới (bao gồm cả Auto-ruling).
+- `initial_state`: Gửi khi client connect.
 
-| Event | Trigger | Data |
-|-------|---------|------|
-| `initial_state` | On connect | Full debate + all arguments |
-| `new_argument` | Khi có argument mới | Argument object |
-| `state_changed` | Khi state thay đổi | New state |
+## 3. Tóm tắt migration path
 
-**Client → Server (Web):**
+Kiến trúc hiện tại đã chuyển dịch hoàn toàn sang hệ sinh thái TypeScript/Node.js giúp đồng bộ hóa công nghệ và dễ dàng bảo trì.
 
-| Event | Description | Data |
-|-------|-------------|------|
-| `submit_intervention` | Arbitrator INTERVENTION | `{ debate_id }` |
-| `submit_ruling` | Arbitrator RULING | `{ debate_id, content, close? }` |
+| Component | Old (Python/Legacy) | New (TypeScript) |
+|-----------|---------------------|------------------|
+| **CLI** | Python (`typer`) | Node.js (`oclif`) |
+| **Server** | Express/Standalone | NestJS Unified Server |
+| **DB Access** | Raw SQLite | Prisma ORM |
+| **State Logic** | Custom TS file | XState Shared Package |
+| **Waiting** | Long Polling | Interval Polling |
 
-#### 2.8.4 Real-time Notification Flow
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Notification Flow                             │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  CLI (Proposer)           debate-server           debate-web    │
-│       │                        │                       │        │
-│       │── POST /arguments ────►│                       │        │
-│       │                        │                       │        │
-│       │                        │── ws: new_argument ──►│        │
-│       │                        │                       │        │
-│       │◄── 201 Created ────────│                       │        │
-│       │                        │                       │        │
-│  CLI (Opponent)                │                       │        │
-│       │                        │                       │        │
-│       │── GET /wait ──────────►│                       │        │
-│       │   (long polling)       │                       │        │
-│       │                        │   ... time passes ... │        │
-│       │                        │                       │        │
-│       │                        │◄── ws: submit_ruling ─│        │
-│       │                        │                       │        │
-│       │◄── 200 (new argument)──│── ws: new_argument ──►│        │
-│       │                        │                       │        │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-Server broadcast `new_argument` event sau mỗi lần insert argument thành công (trong `submitArgument`, `submitRuling`, `submitIntervention`).
-
-## 3. Tóm tắt các việc phải làm
-
-### 3.1 Infrastructure (theo thứ tự dependency)
-
-| # | Task | Location | Dependencies |
-|---|------|----------|--------------|
-| 1 | **debate-server** (Node.js) | `devtools/common/debate-server` | - |
-| | - SQLite schema + better-sqlite3 | | |
-| | - REST API endpoints | | |
-| | - State machine logic | | |
-| | - WebSocket server | | |
-| | - Locking mechanism | | |
-| 2 | **debate CLI** (Python) | `devtools/common/cli/devtool/aweave/debate` | debate-server |
-| | - Tất cả commands (generate-id, create, get-context, submit, wait, appeal, request-completion) | | |
-| | - Long polling implementation | | |
-| | - MCPResponse format | | |
-| 3 | **debate-web** (Next.js) | `devtools/common/debate-web` | debate-server |
-| | - Sidebar + Content layout | | |
-| | - WebSocket client | | |
-| | - Arbitrator actions (INTERVENTION, RULING) | | |
-
-### 3.2 AI Agent Configuration
-
-| # | Task | Location |
-|---|------|----------|
-| 4 | **Proposer Command** | `devdocs/agent/commands/common/debate-proposer.md` |
-| | - Quy trình tạo/resume debate | |
-| | - Handle từng state | |
-| | - Sử dụng `aw docs` | |
-| 5 | **Opponent Command** | `devdocs/agent/commands/common/debate-opponent.md` |
-| | - Quy trình join/resume debate | |
-| | - Handle từng state | |
-| | - Sử dụng `aw docs` | |
-| 6 | **Proposer Rules** | `devdocs/agent/rules/common/debate/proposer/` |
-| | - `coding-plan.md`: Rules cho coding_plan_debate | |
-| | - `general.md`: Rules cho general_debate | |
-| 7 | **Opponent Rules** | `devdocs/agent/rules/common/debate/opponent/` |
-| | - `coding-plan.md`: Rules cho coding_plan_debate | |
-| | - `general.md`: Rules cho general_debate | |
-
-### 3.3 Technical Decisions Summary
-
-| Decision | Choice |
-|----------|--------|
-| Database | SQLite (file: `~/.aweave/debate.db`) |
-| DB Library | better-sqlite3 |
-| CLI Language | Python |
-| CLI ↔ Server | HTTP REST |
-| Web ↔ Server | WebSocket |
-| Wait mechanism | Long Polling (timeout 5 phút) |
-| Idempotency | `client_request_id` per request |
-| State vs Status | Chỉ giữ `state`, derive status từ state |
-| Submit sai lượt | Return error (không queue) |
-| Load rules | AI agent tự load dựa vào debateType |
+Việc update document này phản ánh đúng thực trạng code base hiện tại (tháng 2/2026).
