@@ -3,20 +3,20 @@
 > **Source:** `devtools/common/cli/`
 > **Last Updated:** 2026-02-07
 
-oclif-based main CLI application — provides the global `aw` command. Package này **không chứa business logic** — nó chỉ bootstrap oclif, khai báo plugins, và cung cấp shared infrastructure (help). Tất cả domain commands đến từ plugins.
+oclif-based main CLI application — provides the global `aw` command. This package **contains no business logic** — it only bootstraps oclif, declares plugins, and provides shared infrastructure (help). All domain commands come from plugins.
 
 ## Purpose
 
-- **Single Entrypoint:** `aw <command>` — một binary cho toàn bộ devtools CLI
-- **Plugin Composition:** Khai báo và load các domain plugins tự động qua oclif plugin system
+- **Single Entrypoint:** `aw <command>` — one binary for the entire devtools CLI
+- **Plugin Composition:** Declares and auto-loads domain plugins via the oclif plugin system
 - **Global Install:** Installed via `pnpm link --global`, available system-wide
-- **Extensible:** Thêm domain mới = tạo `@aweave/cli-plugin-<name>`, add vào oclif config
+- **Extensible:** Adding a new domain = create `@aweave/cli-plugin-<name>`, add to oclif config
 
-**Tại sao oclif?** `aw` là platform CLI phục vụ nhiều domains (`common/`, `tinybots/`, `nab/`, future domains). oclif cung cấp:
+**Why oclif?** `aw` is a platform CLI serving multiple domains (e.g. `common/`, `nab/`, future domains). oclif provides:
 1. Standard plugin system — auto-discovery, no manual require/catch
 2. File-based command routing — `commands/debate/create.ts` → `aw debate create`
 3. Built-in help, flag validation, topic grouping
-4. Manifest caching cho fast startup
+4. Manifest caching for fast startup
 
 ## Architecture
 
@@ -36,8 +36,8 @@ oclif-based main CLI application — provides the global `aw` command. Package n
 │                       ├── @aweave/cli-plugin-docs             │
 │                       │   └── aw docs *                       │
 │                       │                                      │
-│                       └── @aweave/cli-plugin-bitbucket        │
-│                           └── aw tinybots-bitbucket *         │
+│                       └── @aweave/cli-plugin-<name>           │
+│                           └── aw <name> *                     │
 │                                                              │
 ├──────────────────────────────────────────────────────────────┤
 │  @oclif/plugin-help — auto-generated help for all commands    │
@@ -57,9 +57,7 @@ oclif-based main CLI application — provides the global `aw` command. Package n
 | `@oclif/core` | oclif framework (command parsing, plugin loading) |
 | `@oclif/plugin-help` | Auto-generated help text |
 | `@aweave/cli-shared` | Shared utilities (MCP, HTTP, helpers) |
-| `@aweave/cli-plugin-debate` | Debate domain commands (workspace dependency) |
-| `@aweave/cli-plugin-docs` | Docs domain commands (workspace dependency) |
-| `@aweave/cli-plugin-bitbucket` | Bitbucket domain commands (workspace dependency) |
+| `@aweave/cli-plugin-*` | Domain command plugins (workspace dependencies) |
 
 **devDependencies:** `oclif` (CLI for manifest generation), `ts-node`, `typescript`
 
@@ -69,7 +67,7 @@ oclif-based main CLI application — provides the global `aw` command. Package n
   ├── @aweave/cli-shared
   ├── @aweave/cli-plugin-debate ──► @aweave/cli-shared
   ├── @aweave/cli-plugin-docs ──► @aweave/cli-shared
-  └── @aweave/cli-plugin-bitbucket ──► @aweave/cli-shared
+  └── @aweave/cli-plugin-<name> ──► @aweave/cli-shared
 ```
 
 ## Configuration
@@ -86,7 +84,7 @@ oclif-based main CLI application — provides the global `aw` command. Package n
     "plugins": [
       "@aweave/cli-plugin-debate",
       "@aweave/cli-plugin-docs",
-      "@aweave/cli-plugin-bitbucket"
+      "@aweave/cli-plugin-<name>"
     ]
   }
 }
@@ -151,7 +149,6 @@ aw --help                   # Shows all topics and commands
 cd devtools/common/cli-shared && pnpm build        # 1. Shared utilities
 cd devtools/common/cli-plugin-debate && pnpm build  # 2. Plugins (parallel OK)
 cd devtools/common/cli-plugin-docs && pnpm build
-cd devtools/tinybots/cli-plugin-bitbucket && pnpm build
 cd devtools/common/cli && pnpm build                # 3. Main CLI (last)
 
 # Or from workspace root:
@@ -169,7 +166,5 @@ cd devtools/common/cli && bin/dev.js debate generate-id
 - **Debate Plugin Overview:** `devdocs/misc/devtools/common/cli-plugin-debate/OVERVIEW.md`
 - **Docs Plugin:** `devtools/common/cli-plugin-docs/`
 - **Docs Plugin Overview:** `devdocs/misc/devtools/common/cli-plugin-docs/OVERVIEW.md`
-- **Bitbucket Plugin:** `devtools/tinybots/cli-plugin-bitbucket/`
-- **Bitbucket Plugin Overview:** `devdocs/misc/devtools/tinybots/cli-plugin-bitbucket/OVERVIEW.md`
 - **Architecture Plan:** `devdocs/misc/devtools/plans/260207-cli-oclif-refactor.md`
 - **Global DevTools Overview:** `devdocs/misc/devtools/OVERVIEW.md`
