@@ -1,29 +1,77 @@
 # Devtools
 
-Unified CLI monorepo với single entrypoint: `aw <subcommand>`
+Unified TypeScript monorepo: CLI (`aw`), backend (NestJS), frontend (Next.js).
+
+## Prerequisites
+
+- Node.js >= 20
+- pnpm >= 10
+- pm2 (`npm install -g pm2`)
 
 ## Quickstart
 
 ```bash
 cd devtools
-./scripts/install-all.sh   # Install + link to ~/.local/bin/aw
+pnpm install
+pnpm -r build
 ```
 
-Sau khi install, chạy `aw --help` từ bất kỳ đâu.
-
-## Development Mode
+Install CLI globally:
 
 ```bash
-cd devtools
-uv sync
-uv run aw --help
+cd common/cli-core
+pnpm link --global
 ```
 
-## Available Tools
+After install, run `aw --help` from anywhere.
 
-See **[CLI_TOOLS.md](CLI_TOOLS.md)** for available commands.
+## Start Services
+
+```bash
+pm2 start ecosystem.config.cjs
+
+# Check status
+pm2 list
+
+# View logs
+pm2 logs
+```
+
+| Service | Port | Description |
+|---------|------|-------------|
+| `aweave-server` | 3456 | NestJS API + WebSocket |
+| `debate-web` | 3457 | Next.js debate monitoring UI |
+
+## Packages
+
+| Package | Path | Description |
+|---------|------|-------------|
+| `@aweave/cli` | `common/cli-core/` | Root CLI entrypoint + shared utilities |
+| `@aweave/cli-shared` | `common/cli-shared/` | Shared CLI libraries (MCP, HTTP, pm2) |
+| `@aweave/cli-debate` | `common/cli-plugin-debate/` | `aw debate` commands |
+| `@aweave/cli-docs` | `common/cli-plugin-docs/` | `aw docs` commands |
+| `@aweave/server` | `common/server/` | Unified NestJS server |
+| `@aweave/nestjs-debate` | `common/nestjs-debate/` | Debate backend module (Prisma + SQLite) |
+| `debate-web` | `common/debate-web/` | Next.js debate web UI |
+
+## Development
+
+```bash
+# Build everything
+pnpm -r build
+
+# Build specific package
+cd common/server && pnpm build
+
+# Run server directly (dev)
+cd common/server && node dist/main.js
+
+# Run CLI (dev, without global install)
+cd common/cli-core && node dist/bin/aw.js --help
+```
 
 ## Documentation
 
 - **Full Overview:** `devdocs/misc/devtools/OVERVIEW.md`
-- **Adding plugins:** See OVERVIEW.md → "Development Workflow"
+- **Server docs:** `devdocs/misc/devtools/common/server/OVERVIEW.md`
+- **Debate module docs:** `devdocs/misc/devtools/common/nestjs-debate/OVERVIEW.md`

@@ -1,6 +1,12 @@
 packages:
-  # All CLIs (both Python and Node) are under cli/ folders
-  # pnpm will only pick up folders with package.json
-  - "nab/cli/foo"
-  - "common/debate-server"
-  - "common/debate-web"
+  - nab/cli/foo
+  - common/server
+  - common/nestjs-debate
+  - common/debate-web
+  - common/cli-shared
+  - common/cli
+  - common/cli-plugin-debate
+  - common/cli-plugin-docs
+  - tinybots/cli-plugin-bitbucket
+
+onlyBuiltDependencies: '@nestjs/core,@prisma/client,@prisma/engines,better-sqlite3,prisma'
