@@ -1,6 +1,6 @@
 # DevTools Workspace
 
-Workspace for development tools, CLI applications, and infrastructure serving AI agents and development workflow.
+Workspace for development tools, CLI applications, and backend services — all TypeScript/Node.js.
 
 ## Key Paths
 
@@ -14,28 +14,28 @@ Workspace for development tools, CLI applications, and infrastructure serving AI
 ## Folder Structure
 
 ```
-devtools/                           # Source code
+devtools/                           # Source code (100% TypeScript)
 ├── common/                         # Shared tools across all domains
-│   ├── cli/devtool/aweave/         # Python CLI packages (aw command)
-│   │   ├── core/                   # CLI core
-│   │   ├── docs/                   # aw docs
-│   │   ├── debate/                 # aw debate
-│   │   └── ...
-│   └── debate-server/              # Node.js debate server
+│   ├── cli-core/                   # @aweave/cli — root CLI + shared utilities
+│   ├── cli-debate/                 # @aweave/cli-debate — aw debate commands
+│   ├── cli-docs/                   # @aweave/cli-docs — aw docs commands
+│   ├── server/                     # @aweave/server — unified NestJS server
+│   ├── nestjs-debate/              # @aweave/nestjs-debate — debate backend module
+│   └── debate-web/                 # Next.js debate monitoring UI
 ├── <domain>/                       # Domain-specific tools
-│   ├── cli/                        # Domain CLI tools
+│   ├── cli-<tool>/                 # CLI packages for this domain
 │   └── local/                      # Local dev infrastructure
-└── scripts/                        # Installation & utility scripts
+└── pnpm-workspace.yaml             # pnpm workspace packages
 
 devdocs/misc/devtools/              # Documentation
 ├── OVERVIEW.md                     # Global devtools overview (MUST read)
 ├── plans/                          # Implementation plans
 │   └── [YYMMDD-name].md
 ├── common/                         # Package-level documentation
-│   ├── cli/devtool/aweave/<pkg>/   # Python package docs
-│   │   └── OVERVIEW.md
-│   └── <package>/                  # Node package docs
-│       └── OVERVIEW.md
+│   ├── server/OVERVIEW.md          # NestJS server docs
+│   ├── nestjs-debate/OVERVIEW.md   # Debate module docs
+│   ├── cli-<package>/OVERVIEW.md   # CLI package docs
+│   └── <package>/OVERVIEW.md       # Other package docs
 └── <domain>/                       # Domain-specific docs
 ```
 
@@ -49,17 +49,22 @@ devdocs/misc/devtools/              # Documentation
    ```
 
 2. **Package Overview** (if working on specific package)
-   
-   For Python CLI packages:
+
+   For CLI packages:
    ```
-   devdocs/misc/devtools/common/cli/devtool/aweave/<package>/OVERVIEW.md
+   devdocs/misc/devtools/common/cli-<package>/OVERVIEW.md
    ```
-   
-   For Node packages:
+
+   For NestJS modules:
    ```
-   devdocs/misc/devtools/common/<package>/OVERVIEW.md
+   devdocs/misc/devtools/common/nestjs-<package>/OVERVIEW.md
    ```
-   
+
+   For server:
+   ```
+   devdocs/misc/devtools/common/server/OVERVIEW.md
+   ```
+
    For domain-specific packages:
    ```
    devdocs/misc/devtools/<domain>/<package>/OVERVIEW.md
@@ -76,37 +81,47 @@ devdocs/misc/devtools/              # Documentation
 
 | User Input | Package Type | Package Overview Path |
 |------------|--------------|----------------------|
-| `devtools/common/cli/devtool/aweave/debate/` | Python CLI | `devdocs/misc/devtools/common/cli/devtool/aweave/debate/OVERVIEW.md` |
-| `devtools/common/debate-server/` | Node.js | `devdocs/misc/devtools/common/debate-server/OVERVIEW.md` |
-| `devdocs/misc/devtools/plans/260131-debate-cli.md` | Plan file | Load Global OVERVIEW + related package OVERVIEW |
+| `devtools/common/cli-core/` | CLI (core) | `devdocs/misc/devtools/common/cli-core/OVERVIEW.md` |
+| `devtools/common/cli-debate/` | CLI (debate) | `devdocs/misc/devtools/common/cli-debate/OVERVIEW.md` |
+| `devtools/common/server/` | NestJS Server | `devdocs/misc/devtools/common/server/OVERVIEW.md` |
+| `devtools/common/nestjs-debate/` | NestJS Module | `devdocs/misc/devtools/common/nestjs-debate/OVERVIEW.md` |
+| `devtools/tinybots/cli-bitbucket/` | Domain CLI | `devdocs/misc/devtools/tinybots/cli-bitbucket/OVERVIEW.md` |
+| `devdocs/misc/devtools/plans/260207-*.md` | Plan file | Load Global OVERVIEW + related package OVERVIEW |
 
 ## CLI Development
 
-### Python CLI (aw command)
+### CLI Architecture (Commander.js)
 
-- Entry point: `devtools/common/cli/devtool/aweave/core/main.py`
-- Plugin discovery: `aw.plugins` entry points
-- Run dev mode: `uv run aw <command>`
+- Root program: `devtools/common/cli-core/src/program.ts`
+- Each domain exports a Commander `Command` object
+- Root composes via `.addCommand()`
+- Global install: `pnpm add -g @aweave/cli` → `aw` available globally
+- Run dev mode: `cd devtools/common/cli-core && node dist/bin/aw.js <cmd>`
 
-### Node Packages
+### Adding New CLI Tools
 
-- Build required: `npm run build` → `dist/cli.js`
-- Plugin registry: `aw-plugins.yaml`
+1. Create package at `devtools/<domain>/cli-<name>/`
+2. Export Commander `Command` from package
+3. Add to `pnpm-workspace.yaml`
+4. Register in `cli-core/src/program.ts`
+5. Build: `pnpm build`
 
-### Adding New Tools
+### Backend Modules (NestJS)
 
-> **SKILL:** When creating new CLI tool, **MUST** read and follow:
-> `devdocs/agent/skills/common/devtools-builder/SKILL.md`
+- Server: `devtools/common/server/` (imports all feature modules)
+- Feature modules: `devtools/<domain>/nestjs-<feature>/` (separate pnpm packages)
+- Pattern: `devdocs/misc/devtools/common/server/OVERVIEW.md` → "Adding a New Feature Module"
 
 ## Development Commands
 
 | Task | Command |
 |------|---------|
-| Install all | `cd devtools && ./scripts/install-all.sh` |
-| Sync Python deps | `cd devtools && uv sync` |
-| Run CLI (dev) | `uv run aw <cmd>` |
-| Lint Python | `uv run ruff check .` |
-| Build Node package | `cd <package> && npm run build` |
+| Install all | `cd devtools && pnpm install` |
+| Build all | `cd devtools && pnpm -r build` |
+| Build specific | `cd devtools/common/<pkg> && pnpm build` |
+| Run CLI (dev) | `cd devtools/common/cli-core && node dist/bin/aw.js <cmd>` |
+| Run CLI (global) | `aw <cmd>` |
+| Start server | `cd devtools/common/server && node dist/main.js` |
 
 ## Working with Plans
 

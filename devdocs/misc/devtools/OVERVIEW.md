@@ -1,15 +1,15 @@
 # DevTools Overview
 
 > **Branch:** master
-> **Last Updated:** 2026-02-01
+> **Last Updated:** 2026-02-07
 
 ## TL;DR
 
-Unified CLI monorepo with single entrypoint `aw <subcommand>`. Supports Python plugins (entry points, in-process) and Node plugins (registry, subprocess). Organized with domain-first folder structure.
+Unified TypeScript monorepo with single CLI entrypoint `aw <subcommand>`. All tools built with Node.js: CLI (Commander.js), server (NestJS), frontend (Next.js). Organized with domain-first folder structure, pnpm workspaces for package management.
 
 ## Purpose & Bounded Context
 
-- **Role:** Provide unified CLI toolset for entire development workflow
+- **Role:** Provide unified CLI toolset and backend services for entire development workflow
 - **Domain:** Developer Experience, Automation, Local Development Infrastructure
 
 ## Design Philosophy
@@ -17,133 +17,145 @@ Unified CLI monorepo with single entrypoint `aw <subcommand>`. Supports Python p
 ### Core Principles
 
 1. **Single Entrypoint** — All tools accessed via `aw <subcommand>`
-2. **Domain-First Organization** — Folder structure by domain, not by language
-3. **Language Flexibility** — Each tool can be implemented in Python or Node
-4. **Shared Infrastructure** — Common utilities shared via `aweave` package
+2. **Domain-First Organization** — Folder structure by domain, not by tool type
+3. **TypeScript Everywhere** — CLI, server, frontend — all TypeScript
+4. **pnpm Workspace = Plugin System** — Each domain exports a Commander program, composed via `.addCommand()`
+5. **Modular Backend** — Each feature is a NestJS module in its own pnpm package, imported by a single unified server
 
 ### Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    User Terminal                            │
+│                    User Terminal / AI Agent                   │
 │                         │                                   │
-│                    aw <command>                             │
+│                    aw <command>                              │
 │                         │                                   │
-│         ┌───────────────┴───────────────┐                   │
-│         │                               │                   │
-│         ▼                               ▼                   │
-│  ┌─────────────────┐           ┌─────────────────┐         │
-│  │ Python Plugins  │           │  Node Plugins   │         │
-│  │ (Entry Points)  │           │   (Registry +   │         │
-│  │   aw.plugins    │           │   Subprocess)   │         │
-│  └─────────────────┘           └─────────────────┘         │
+│  ┌──────────────────────┴──────────────────────┐            │
+│  │             @aweave/cli (Commander.js)       │            │
+│  │  ┌──────────┐ ┌──────────┐ ┌─────────────┐  │            │
+│  │  │cli-debate│ │ cli-docs │ │cli-bitbucket │  │            │
+│  │  └────┬─────┘ └────┬─────┘ └──────┬──────┘  │            │
+│  └───────┼─────────────┼──────────────┼─────────┘            │
+│          │             │              │                      │
+│          ▼             │              ▼                      │
+│  ┌───────────────┐     │      ┌─────────────┐               │
+│  │ @aweave/server │     │      │ Bitbucket   │               │
+│  │   (NestJS)    │     │      │  REST API   │               │
+│  │ ┌───────────┐ │     │      └─────────────┘               │
+│  │ │  Debate   │ │     │                                    │
+│  │ │  Module   │ │     │  SQLite (direct)                   │
+│  │ └───────────┘ │     └─────────────┘                      │
+│  └───────────────┘                                          │
+│                                                             │
+│  ┌───────────────┐                                          │
+│  │  debate-web   │  (Next.js — WebSocket to server)         │
+│  └───────────────┘                                          │
 └─────────────────────────────────────────────────────────────┘
 ```
-
-### Plugin System
-
-| Type | Discovery | Execution | Use Case |
-|------|-----------|-----------|----------|
-| Python | Entry points (`aw.plugins`) | In-process | Complex logic, leverage shared libraries |
-| Node | Registry (`aw-plugin.yaml` → `aw-plugins.yaml`) | Subprocess | Rapid prototyping, leverage npm ecosystem |
 
 ## Project Structure
 
 ```
 devtools/
-├── common/                     # Shared tools & core infrastructure
-│   └── cli/devtool/aweave/     # Root CLI "aw" + shared utilities
-│       ├── core/               # CLI core: main.py, plugin loaders
-│       ├── http/               # HTTP client utilities
-│       └── mcp/                # MCP pagination/response helpers
-├── <domain>/                   # Domain-specific tools
-│   ├── cli/                    # CLI tools for this domain
-│   │   └── <tool>/             # Individual tool package
-│   └── local/                  # Local dev infrastructure
+├── common/                        # Shared tools & core infrastructure
+│   ├── cli-core/                  # @aweave/cli — root CLI + shared utilities
+│   │   └── src/
+│   │       ├── bin/aw.ts          # Global entrypoint
+│   │       ├── program.ts         # Commander root, registers subcommands
+│   │       ├── mcp/               # MCP response format helpers
+│   │       ├── http/              # HTTP client utilities
+│   │       └── services/          # pm2 service management
+│   ├── cli-debate/                # @aweave/cli-debate — aw debate commands
+│   ├── cli-docs/                  # @aweave/cli-docs — aw docs commands
+│   ├── server/                    # @aweave/server — unified NestJS server
+│   ├── nestjs-debate/             # @aweave/nestjs-debate — debate backend module
+│   └── debate-web/                # Next.js debate monitoring UI
+├── <domain>/                      # Domain-specific tools
+│   ├── cli-<tool>/                # CLI package for this domain
+│   └── local/                     # Local dev infrastructure
 │       ├── docker-compose.yaml
 │       ├── Justfile
 │       └── .env.example
-├── scripts/                    # install-all.sh, generate-registry.py
-├── pyproject.toml              # uv workspace root
-├── pnpm-workspace.yaml         # pnpm workspace for Node plugins
-└── CLI_TOOLS.md                # Quick reference for available tools
+├── pnpm-workspace.yaml            # pnpm workspace packages
+└── .npmrc                         # Build permissions
 ```
 
 ## Core Components
 
-### Plugin System
+### CLI (`@aweave/cli` — Commander.js)
 
-- **Python Loader** (`core/python_loader.py`): Auto-discover plugins via `aw.plugins` entry points
-- **Node Loader** (`core/node_loader.py`): Load registry from `aw-plugins.yaml`, execute via subprocess
-- **Main CLI** (`core/main.py`): Typer app, orchestrates plugin discovery and command routing
+- **Root program** (`cli-core/src/program.ts`): Registers all subcommands via `.addCommand()`
+- **Domain packages** export Commander `Command` objects, composed at root level
+- **Shared utilities**: MCP response format, HTTP client, pm2 service management
+- **Global install**: `pnpm add -g @aweave/cli` → `aw` command available globally
 
-### Shared Utilities (`aweave` package)
+### Server (`@aweave/server` — NestJS)
 
-- **HTTP Client** (`http/client.py`): Reusable HTTP client with common patterns
-- **MCP Helpers** (`mcp/`): Pagination, response formatting for MCP integrations
+- Single unified server at port `3456`
+- Feature modules imported as separate pnpm packages (`@aweave/nestjs-<feature>`)
+- Shared infrastructure: auth guard, exception filter, CORS
+- REST API + WebSocket support
+
+### MCP Response Format
+
+All CLI tools output responses in a structured format designed for AI agent consumption:
+
+```json
+{
+  "success": true,
+  "content": [{ "type": "json", "data": { ... } }],
+  "metadata": { ... },
+  "has_more": false,
+  "total_count": 10
+}
+```
 
 ## Development Approach
 
 ### Adding a New CLI Tool
 
-> **SKILL:** When creating new CLI tool, AI agents **MUST** read and follow:
-> `devdocs/agent/skills/common/devtools-builder/SKILL.md`
->
-> Key patterns:
-> - MCP-compatible response format for AI agent compatibility
-> - Auto-pagination pattern (CLI returns full data, `has_more=false`)
-> - Actionable error messages
-> - Shared utilities (`aweave/http/`, `aweave/mcp/`)
+1. Create package at `devtools/<domain>/cli-<name>/`
+2. Export a Commander `Command` from the package
+3. Add to `pnpm-workspace.yaml`
+4. Import and register in `cli-core/src/program.ts` via `.addCommand()`
+5. Build: `pnpm build`
 
-### Python Plugin
+### Adding a New Backend Feature
 
-1. Create package at `<domain>/cli/<name>/`
-2. Configure `pyproject.toml` with entry point `aw.plugins`
-3. Add to workspace root `pyproject.toml`
-4. Run `uv sync`
-
-### Node Plugin
-
-1. Create package at `<domain>/cli/<name>/`
-2. Create `aw-plugin.yaml` marker
-3. Build `dist/cli.js`
-4. Run `python scripts/generate-registry.py`
+1. Create NestJS module package at `devtools/<domain>/nestjs-<feature>/`
+2. Export NestJS module from the package
+3. Add as dependency of `@aweave/server`
+4. Import in `server/src/app.module.ts`
+5. See: `devdocs/misc/devtools/common/server/OVERVIEW.md` for full pattern
 
 ## Package Management
 
-### Python
-
-- **uv** — Primary workspace management (preferred)
-- **pip** — Fallback when uv is not available
-- Single lock file (`uv.lock`) for all Python packages
-
-### Node
-
-- **pnpm** — Workspace management for Node plugins
-- Dependencies isolated per plugin
+- **pnpm** — Workspace management for all packages
+- **pnpm-workspace.yaml** — Defines all workspace packages
+- Dependencies isolated per package, shared via `workspace:*` protocol
 
 ### Key Considerations
 
-- Single Python environment; dependency conflicts between tools will cause sync failures
-- Internal workspace dependencies must declare `[tool.uv.sources]` with `workspace = true`
-- `aw` is linked to `~/.local/bin/aw` via wrapper script
+- All packages use TypeScript with strict mode
+- Internal workspace dependencies use `workspace:*` version spec
+- `aw` is installed globally via `pnpm add -g @aweave/cli`
 
 ## Quick Reference
 
 | Task | Command |
 |------|---------|
-| Install all | `cd devtools && ./scripts/install-all.sh` |
-| Sync Python deps | `cd devtools && uv sync` |
-| Run CLI (dev mode) | `uv run aw <cmd>` |
-| Lint Python | `uv run ruff check .` |
-| Generate Node registry | `uv run python scripts/generate-registry.py` |
-| List available tools | `aw --help` |
+| Install all | `cd devtools && pnpm install` |
+| Build all | `cd devtools && pnpm -r build` |
+| Build specific | `cd devtools/common/<pkg> && pnpm build` |
+| Run CLI (dev) | `cd devtools/common/cli-core && node dist/bin/aw.js <cmd>` |
+| Run CLI (global) | `aw <cmd>` |
+| Start server | `cd devtools/common/server && node dist/main.js` |
+| Health check | `curl http://127.0.0.1:3456/health` |
 
 ## Package Documentation
 
 Each package has its own OVERVIEW at:
-- Python CLI: `devdocs/misc/devtools/<domain>/cli/devtool/aweave/<package>/OVERVIEW.md`
-- Node packages: `devdocs/misc/devtools/<domain>/<package>/OVERVIEW.md`
-- Common: `devdocs/misc/devtools/common/...`
-
-See `devtools/CLI_TOOLS.md` for list of tools with links to documentation.
+- CLI packages: `devdocs/misc/devtools/common/cli-<package>/OVERVIEW.md`
+- NestJS modules: `devdocs/misc/devtools/common/nestjs-<package>/OVERVIEW.md`
+- Server: `devdocs/misc/devtools/common/server/OVERVIEW.md`
+- Domain-specific: `devdocs/misc/devtools/<domain>/<package>/OVERVIEW.md`
