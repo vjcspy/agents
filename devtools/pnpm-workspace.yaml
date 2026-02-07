@@ -8,5 +8,3 @@ packages:
   - common/cli-plugin-debate
   - common/cli-plugin-docs
   - tinybots/cli-plugin-bitbucket
-
-onlyBuiltDependencies: '@nestjs/core,@prisma/client,@prisma/engines,better-sqlite3,prisma'
