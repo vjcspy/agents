@@ -1,19 +1,6 @@
-export type DebateState =
-  | 'AWAITING_OPPONENT'
-  | 'AWAITING_PROPOSER'
-  | 'AWAITING_ARBITRATOR'
-  | 'INTERVENTION_PENDING'
-  | 'CLOSED';
+// Re-export core types from shared package
+export type { DebateState, ArgumentType, Role } from '@aweave/debate-machine';
 
-export type ArgumentType =
-  | 'MOTION'
-  | 'CLAIM'
-  | 'APPEAL'
-  | 'RULING'
-  | 'INTERVENTION'
-  | 'RESOLUTION';
-
-export type Role = 'proposer' | 'opponent' | 'arbitrator';
 export type WaiterRole = 'proposer' | 'opponent';
 
 export type WaitAction =

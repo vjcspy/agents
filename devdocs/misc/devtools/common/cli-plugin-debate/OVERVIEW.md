@@ -14,11 +14,14 @@ Plugin này cung cấp CLI interface cho hệ thống debate giữa AI agents:
 - **Service Management:** Auto-start/stop NestJS server và debate-web qua pm2
 - **Token Optimization:** Write commands trả về filtered response (chỉ IDs/state/type/seq, bỏ content) để tiết kiệm tokens cho AI agents
 
-**Cách tiếp cận:** CLI là thin HTTP client. Tất cả business logic (state machine, locking, idempotency) nằm ở NestJS server (`@aweave/nestjs-debate`). CLI chỉ:
+**Cách tiếp cận:** CLI là primary state machine consumer via `@aweave/debate-machine` (xstate). Server validates + persists. CLI:
 1. Parse flags → construct HTTP request
 2. Call server REST API
-3. Wrap response trong MCPResponse format
-4. Output JSON cho AI agent parse
+3. Enrich response with `available_actions` (computed locally via xstate machine)
+4. Wrap response trong MCPResponse format
+5. Output JSON cho AI agent parse
+
+**State Machine:** Defined in `@aweave/debate-machine` (shared xstate package). CLI uses it in `get-context` and `wait` to compute `available_actions` per role — AI agents see what actions are valid in current state without guessing. Server also imports the same package for final validation before persisting.
 
 ## Architecture
 
@@ -65,6 +68,7 @@ Plugin này cung cấp CLI interface cho hệ thống debate giữa AI agents:
 |---------|------|
 | `@oclif/core` | oclif Command class, Flags, Args |
 | `@aweave/cli-shared` | MCPResponse, HTTPClient, output helpers, pm2 utils |
+| `@aweave/debate-machine` | xstate state machine — `getAvailableActions()` for response enrichment |
 
 **Runtime dependency:** NestJS server phải running tại `DEBATE_SERVER_URL` (default `http://127.0.0.1:3456`). Plugin auto-starts server nếu `AUTO_START_SERVICES=true`.
 
@@ -191,9 +195,11 @@ DEBATE_AUTO_START=false aw debate create --debate-id test --title test --type ge
 
 ## Related
 
+- **State Machine:** `devtools/common/debate-machine/` — shared xstate definition
 - **NestJS Backend:** `devtools/common/nestjs-debate/`
 - **Backend Overview:** `devdocs/misc/devtools/common/nestjs-debate/OVERVIEW.md`
 - **Debate Spec:** `devdocs/misc/devtools/debate.md`
 - **Shared Utilities:** `devtools/common/cli-shared/`
 - **Main CLI:** `devtools/common/cli/`
 - **Architecture Plan:** `devdocs/misc/devtools/plans/260207-cli-oclif-refactor.md`
+- **xstate Migration Plan:** `devdocs/misc/devtools/plans/260207-xstate-debate-machine.md`

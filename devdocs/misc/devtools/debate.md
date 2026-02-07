@@ -149,8 +149,10 @@ Cần có cơ chế cấu hình để AI agents biết các CLI tools được p
 
 **Data Flow:**
 - CLI **KHÔNG** access database trực tiếp
-- Mọi data access đều qua `debate-server` (HTTP REST API)
-- `debate-server` là single source of truth cho state machine và locking
+- Mọi data access đều qua NestJS server (HTTP REST API)
+- State machine được định nghĩa trong `@aweave/debate-machine` (xstate v5) — shared package
+- CLI import machine để tính `available_actions`, server import để validate trước khi persist
+- Server là single source of truth cho locking và data persistence
 
 ### 2.1 State Machine
 
@@ -279,8 +281,10 @@ return {"status": "timeout", "message": f"No response after {OVERALL_DEADLINE} s
 
 #### 2.3.1 Các components trong `devtools`
 
-- **CLI Python**: Viết trong `devtools/common/cli/devtool/aweave/debate` (giống cấu trúc `docs` CLI)
-- **debate-server**: Node.js server trong `devtools/common/debate-server`
+- **debate-machine**: Shared xstate v5 state machine (`@aweave/debate-machine`) trong `devtools/common/debate-machine`
+- **CLI Plugin**: oclif plugin (`@aweave/cli-plugin-debate`) trong `devtools/common/cli-plugin-debate`
+- **NestJS Module**: Server module (`@aweave/nestjs-debate`) trong `devtools/common/nestjs-debate`
+- **NestJS Server**: Unified server (`@aweave/server`) trong `devtools/common/server`
 - **debate-web**: Next.js app trong `devtools/common/debate-web`
 
 #### 2.3.2 Database Schema

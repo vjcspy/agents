@@ -1,5 +1,5 @@
 {
-  "name": "@aweave/cli-plugin-debate",
+  "name": "@aweave/debate-machine",
   "version": "0.1.0",
   "private": true,
   "main": "dist/index.js",
@@ -7,14 +7,8 @@
   "scripts": {
     "build": "tsc"
   },
-  "oclif": {
-    "commands": "./dist/commands",
-    "topicSeparator": " "
-  },
   "dependencies": {
-    "@aweave/cli-shared": "workspace:*",
-    "@aweave/debate-machine": "workspace:*",
-    "@oclif/core": "^4.2.8"
+    "xstate": "^5"
   },
   "devDependencies": {
     "@types/node": "^22.10.7",

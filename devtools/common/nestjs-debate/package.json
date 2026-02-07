@@ -11,6 +11,7 @@
     "prisma:migrate:deploy": "prisma migrate deploy --schema=prisma/schema.prisma"
   },
   "dependencies": {
+    "@aweave/debate-machine": "workspace:*",
     "@nestjs/common": "^11.0.1",
     "@nestjs/platform-ws": "^11.0.1",
     "@nestjs/swagger": "^11.2.6",

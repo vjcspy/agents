@@ -10,14 +10,9 @@ import {
   DebateNotFoundError,
   InvalidInputError,
 } from './errors';
-import { calculateNextState, isActionAllowed } from './state-machine';
 import { serializeDebate, serializeArgument } from './serializers';
-import type {
-  DebateState,
-  Role,
-  WaitAction,
-  WaiterRole,
-} from './types';
+import type { DebateState, Role } from '@aweave/debate-machine';
+import type { WaitAction, WaiterRole } from './types';
 
 const MAX_CONTENT_LENGTH = 10 * 1024; // 10KB
 

@@ -1,5 +1,7 @@
 import { Command, Flags } from '@oclif/core';
 import { MCPResponse, MCPContent, ContentType, HTTPClientError, output, handleServerError } from '@aweave/cli-shared';
+import { getAvailableActions } from '@aweave/debate-machine';
+import type { DebateState } from '@aweave/debate-machine';
 import { getClient } from '../../lib/helpers';
 
 export class DebateGetContext extends Command {
@@ -24,6 +26,17 @@ export class DebateGetContext extends Command {
         Object.keys(params).length > 0 ? params : undefined,
       );
       const data = (resp.data ?? {}) as Record<string, unknown>;
+
+      // Enrich with available actions per role (computed via xstate machine)
+      const debate = (data.debate ?? {}) as Record<string, unknown>;
+      const state = debate.state as DebateState | undefined;
+      if (state) {
+        data.available_actions = {
+          proposer: getAvailableActions(state, 'proposer'),
+          opponent: getAvailableActions(state, 'opponent'),
+          arbitrator: getAvailableActions(state, 'arbitrator'),
+        };
+      }
 
       output(
         new MCPResponse({

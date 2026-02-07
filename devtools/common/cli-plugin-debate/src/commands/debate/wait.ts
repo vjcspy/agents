@@ -1,5 +1,7 @@
 import { Command, Flags } from '@oclif/core';
 import { MCPResponse, MCPContent, ContentType, HTTPClientError, output, handleServerError } from '@aweave/cli-shared';
+import { getAvailableActions } from '@aweave/debate-machine';
+import type { DebateState, Role } from '@aweave/debate-machine';
 import { DEBATE_WAIT_DEADLINE, POLL_INTERVAL } from '../../lib/config';
 import { getClient, sleep } from '../../lib/helpers';
 
@@ -31,6 +33,8 @@ export class DebateWait extends Command {
 
         if (data.has_new_argument) {
           const argument = data.argument as Record<string, unknown>;
+          const debateState = data.debate_state as DebateState;
+
           output(
             new MCPResponse({
               success: true,
@@ -40,9 +44,13 @@ export class DebateWait extends Command {
                   data: {
                     status: 'new_argument',
                     action: data.action,
-                    debate_state: data.debate_state,
+                    debate_state: debateState,
                     argument,
                     next_argument_id_to_wait: argument.id,
+                    available_actions: getAvailableActions(
+                      debateState,
+                      flags.role as Role,
+                    ),
                   },
                 }),
               ],

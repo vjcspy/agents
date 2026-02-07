@@ -11,9 +11,10 @@ import {
   DebateNotFoundError,
   InvalidInputError,
 } from './errors';
-import { calculateNextState, isActionAllowed } from './state-machine';
+import { toDebateEvent, transition, canTransition } from '@aweave/debate-machine';
+import type { ArgumentType, Role } from '@aweave/debate-machine';
 import { serializeDebate, serializeArgument } from './serializers';
-import type { ArgumentType, DebateState, Role } from './types';
+import type { DebateState } from './types';
 
 const MAX_CONTENT_LENGTH = 10 * 1024; // 10KB
 
@@ -106,14 +107,11 @@ export class ArgumentService {
           }
         }
 
-        // 4. Validate state allows this action
-        if (
-          !isActionAllowed(
-            debate.state as DebateState,
-            input.role,
-            input.action_name as any,
-          )
-        ) {
+        // 4. Validate state allows this action (via shared xstate machine)
+        const event = toDebateEvent(input.type, input.role, {
+          close: input.close,
+        });
+        if (!event || !canTransition(debate.state as DebateState, event)) {
           throw toActionNotAllowedError(
             debate.state as DebateState,
             input.role,
@@ -142,13 +140,11 @@ export class ArgumentService {
           },
         });
 
-        // 7. Update debate state
-        const nextState = calculateNextState(
-          debate.state as DebateState,
-          input.type,
-          input.role,
-          { close: input.close },
-        );
+        // 7. Update debate state (via shared xstate machine)
+        // event! is safe: canTransition already validated above
+        const nextState =
+          transition(debate.state as DebateState, event!) ??
+          (debate.state as DebateState);
         const updatedDebate = await tx.debate.update({
           where: { id: input.debate_id },
           data: {

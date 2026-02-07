@@ -2,6 +2,7 @@ packages:
   - nab/cli/foo
   - common/server
   - common/nestjs-debate
+  - common/debate-machine
   - common/debate-web
   - common/cli-shared
   - common/cli
