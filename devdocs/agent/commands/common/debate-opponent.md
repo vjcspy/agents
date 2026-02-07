@@ -10,8 +10,8 @@
 > - `aw docs get <document_id>` → Example: `aw docs get 0c5a44a3-42f6-4787-aa53-c5963099fa65`
 >
 > **Full command details:**
-> - Debate CLI: `devdocs/misc/devtools/common/cli/devtool/aweave/debate/COMMANDS.md`
-> - Docs CLI: `devdocs/misc/devtools/common/cli/devtool/aweave/docs/COMMANDS.md`
+> - Debate CLI: `devdocs/misc/devtools/common/cli-plugin-debate/OVERVIEW.md`
+> - Docs CLI: `devdocs/misc/devtools/common/cli-plugin-docs/OVERVIEW.md`
 
 ## Main Loop - IMPORTANT
 

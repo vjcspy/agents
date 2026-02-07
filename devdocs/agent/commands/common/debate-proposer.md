@@ -11,8 +11,8 @@
 > - `aw docs submit <document_id> --summary "..." --file <path>` → Example: `aw docs submit 0c5a44a3-... --summary "v2" --file ./plan.md`
 >
 > **Full command details:**
-> - Debate CLI: `devdocs/misc/devtools/common/cli/devtool/aweave/debate/COMMANDS.md`
-> - Docs CLI: `devdocs/misc/devtools/common/cli/devtool/aweave/docs/COMMANDS.md`
+> - Debate CLI: `devdocs/misc/devtools/common/cli-plugin-debate/OVERVIEW.md`
+> - Docs CLI: `devdocs/misc/devtools/common/cli-plugin-docs/OVERVIEW.md`
 
 ## Main Loop - IMPORTANT
 
