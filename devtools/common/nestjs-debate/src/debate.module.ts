@@ -6,6 +6,7 @@ import { DebateService } from './debate.service';
 import { ArgumentService } from './argument.service';
 import { DebateController } from './debate.controller';
 import { DebateGateway } from './debate.gateway';
+import { serializeDebate, serializeArgument } from './serializers';
 
 @Module({
   providers: [
@@ -33,9 +34,18 @@ export class DebateModule implements OnModuleInit {
     this.gateway.setHandlers({
       getInitialState: async (debateId: string) => {
         const result = await this.debateService.getDebateWithArgs(debateId);
+        const args = [];
+
+        if (result.motion) {
+            args.push(result.motion);
+        }
+        if (result.arguments) {
+            args.push(...result.arguments);
+        }
+
         return {
-          debate: result.debate as unknown as Record<string, unknown>,
-          arguments: (result.arguments ?? []) as unknown as Record<string, unknown>[],
+          debate: serializeDebate(result.debate as any) as unknown as Record<string, unknown>,
+          arguments: args.map(arg => serializeArgument(arg as any)) as unknown as Record<string, unknown>[],
         };
       },
       onSubmitIntervention: async (input) => {
