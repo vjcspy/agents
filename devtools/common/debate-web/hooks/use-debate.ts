@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useReducer, useCallback } from 'react';
-import type { Debate, Argument, ServerToClientMessage, ClientToServerMessage } from '@/lib/types';
+import type { Debate, Argument } from '@/lib/api';
+import type { ServerToClientMessage, ClientToServerMessage } from '@/lib/types';
 import { getWsUrl } from '@/lib/api';
 
 type DebateState = {

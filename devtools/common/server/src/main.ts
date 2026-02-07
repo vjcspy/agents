@@ -1,8 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { WsAdapter } from '@nestjs/platform-ws';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { AppExceptionFilter } from './shared/filters/app-exception.filter';
 import { AuthGuard } from './shared/guards/auth.guard';
+import {
+  DebateDto, ArgumentDto,
+  ListDebatesResponseDto, GetDebateResponseDto, WriteResultResponseDto,
+  PollResultNewResponseDto, PollResultNoNewResponseDto,
+  ErrorResponseDto,
+} from '@aweave/nestjs-debate';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -16,6 +23,26 @@ async function bootstrap() {
     methods: 'GET,POST,DELETE,OPTIONS',
     allowedHeaders: 'Content-Type,Authorization',
   });
+
+  // Swagger setup (registers schemas for spec generation)
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Aweave Server API')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig, {
+    extraModels: [
+      DebateDto, ArgumentDto,
+      ListDebatesResponseDto, GetDebateResponseDto, WriteResultResponseDto,
+      PollResultNewResponseDto, PollResultNoNewResponseDto,
+      ErrorResponseDto,
+    ],
+  });
+
+  // Serve Swagger UI in dev
+  if (process.env.NODE_ENV !== 'production') {
+    SwaggerModule.setup('api-docs', app, document);
+  }
 
   // Global exception filter (formats errors to { success, error } envelope)
   app.useGlobalFilters(new AppExceptionFilter());

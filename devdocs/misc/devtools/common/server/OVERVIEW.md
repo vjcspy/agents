@@ -51,6 +51,7 @@ Unified NestJS server là **single entry point** cho tất cả backend services
 | `@nestjs/core`, `@nestjs/common` | NestJS framework |
 | `@nestjs/platform-express` | HTTP adapter |
 | `@nestjs/platform-ws`, `@nestjs/websockets` | WebSocket adapter (ws library) |
+| `@nestjs/swagger` | OpenAPI spec generation + Swagger UI |
 | `@aweave/nestjs-debate` | Debate feature module (workspace dependency) |
 
 **Dependency graph:**
@@ -71,6 +72,22 @@ Unified NestJS server là **single entry point** cho tất cả backend services
 
 > **Note:** Feature-specific env vars (e.g. `DEBATE_DB_DIR`) được handle bởi feature module, không phải server.
 
+## OpenAPI / Swagger
+
+Server configures `@nestjs/swagger` in `main.ts`:
+- **Swagger UI:** Served at `/api-docs` in non-production mode
+- **OpenAPI spec generation:** `pnpm generate:openapi` runs a standalone script that boots the app, generates `openapi.json`, and writes it to `devtools/common/server/openapi.json`
+- **`openapi.json` is committed** to the repo — `debate-web` consumes it at build time to generate typed client code
+- **`extraModels` list** in both `main.ts` and the generation script must match — ensures all `$ref` targets appear in `components.schemas`
+
+**Regenerate when API changes:**
+```bash
+cd devtools/common/server
+pnpm generate:openapi   # writes openapi.json
+cd ../debate-web
+pnpm generate:types     # regenerates lib/api-types.ts from openapi.json
+```
+
 ## Project Structure
 
 ```
@@ -79,9 +96,12 @@ devtools/common/server/
 ├── nest-cli.json
 ├── tsconfig.json
 ├── tsconfig.build.json
+├── openapi.json                         # Generated OpenAPI spec (committed)
 ├── src/
-│   ├── main.ts                          # Bootstrap: NestFactory, WsAdapter, guards, filters
+│   ├── main.ts                          # Bootstrap: NestFactory, WsAdapter, Swagger, guards, filters
 │   ├── app.module.ts                    # Root module: imports feature modules
+│   ├── scripts/
+│   │   └── generate-openapi.ts          # Standalone OpenAPI spec generator
 │   └── shared/
 │       ├── guards/
 │       │   └── auth.guard.ts            # Global bearer token auth

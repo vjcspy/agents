@@ -1,67 +1,27 @@
-// Types copied from debate-server/src/types.ts
+import type { Debate, Argument } from './api';
 
-export type DebateState =
-  | 'AWAITING_OPPONENT'
-  | 'AWAITING_PROPOSER'
-  | 'AWAITING_ARBITRATOR'
-  | 'INTERVENTION_PENDING'
-  | 'CLOSED';
+// Re-export for convenience — components use these as union types
+export type { Debate, Argument };
+export type DebateState = Debate['state'];
+export type ArgumentType = Argument['type'];
+export type Role = Argument['role'];
 
-export type ArgumentType =
-  | 'MOTION'
-  | 'CLAIM'
-  | 'APPEAL'
-  | 'RULING'
-  | 'INTERVENTION'
-  | 'RESOLUTION';
-
-export type Role = 'proposer' | 'opponent' | 'arbitrator';
-
-export type Debate = {
-  id: string;
-  title: string;
-  debate_type: string;
-  state: DebateState;
-  created_at: string;
-  updated_at: string;
+/**
+ * Generic WebSocket event envelope.
+ */
+export type WsEvent<E extends string = string, D = unknown> = {
+  event: E;
+  data: D;
 };
 
-export type Argument = {
-  id: string;
-  debate_id: string;
-  parent_id: string | null;
-  type: ArgumentType;
-  role: Role;
-  content: string;
-  client_request_id: string | null;
-  seq: number;
-  created_at: string;
-};
-
-// WebSocket message types
+// ── Server → Client ──
 
 export type ServerToClientMessage =
-  | { event: 'initial_state'; data: { debate: Debate; arguments: Argument[] } }
-  | { event: 'new_argument'; data: { debate: Debate; argument: Argument } };
+  | WsEvent<'initial_state', { debate: Debate; arguments: Argument[] }>
+  | WsEvent<'new_argument', { debate: Debate; argument: Argument }>;
+
+// ── Client → Server ──
 
 export type ClientToServerMessage =
-  | { event: 'submit_intervention'; data: { debate_id: string; content?: string } }
-  | { event: 'submit_ruling'; data: { debate_id: string; content: string; close?: boolean } };
-
-// API response types
-
-export type SuccessResponse<T> = {
-  success: true;
-  data: T;
-};
-
-export type ErrorResponse = {
-  success: false;
-  error: {
-    code: string;
-    message: string;
-    suggestion?: string;
-  };
-};
-
-export type ApiResponse<T> = SuccessResponse<T> | ErrorResponse;
+  | WsEvent<'submit_intervention', { debate_id: string; content?: string }>
+  | WsEvent<'submit_ruling', { debate_id: string; content: string; close?: boolean }>;

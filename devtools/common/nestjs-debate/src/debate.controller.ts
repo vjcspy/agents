@@ -7,12 +7,37 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import {
+  ApiExtraModels,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiOkResponse,
+  ApiBadRequestResponse,
+  ApiNotFoundResponse,
+  ApiForbiddenResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
 
 import { DebateService } from './debate.service';
 import { ArgumentService } from './argument.service';
 import { InvalidInputError } from './errors';
 import { serializeDebate, serializeArgument } from './serializers';
 import type { WaiterRole } from './types';
+import {
+  CreateDebateBodyDto,
+  SubmitArgumentBodyDto,
+  SubmitAppealBodyDto,
+  RequestCompletionBodyDto,
+  SubmitInterventionBodyDto,
+  SubmitRulingBodyDto,
+  ListDebatesResponseDto,
+  GetDebateResponseDto,
+  WriteResultResponseDto,
+  PollResultNewResponseDto,
+  PollResultNoNewResponseDto,
+  ErrorResponseDto,
+} from './dto';
 
 function ok<T>(data: T) {
   return { success: true as const, data };
@@ -26,6 +51,7 @@ function serializeWriteResult(result: { debate: any; argument: any }) {
   };
 }
 
+@ApiExtraModels(PollResultNewResponseDto, PollResultNoNewResponseDto, ErrorResponseDto)
 @Controller()
 export class DebateController {
   constructor(
@@ -33,12 +59,19 @@ export class DebateController {
     private readonly argumentService: ArgumentService,
   ) {}
 
+  @ApiOperation({ summary: 'Health check' })
+  @ApiOkResponse({ description: 'Server is healthy' })
   @Get('health')
   healthCheck() {
     return ok({ status: 'ok' });
   }
 
-  // GET /debates?state=...&limit=...&offset=...
+  @ApiOperation({ summary: 'List debates with optional filtering' })
+  @ApiQuery({ name: 'state', required: false, type: String, description: 'Filter by debate state' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Max results to return' })
+  @ApiQuery({ name: 'offset', required: false, type: Number, description: 'Pagination offset' })
+  @ApiOkResponse({ type: ListDebatesResponseDto, description: 'List of debates' })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
   @Get('debates')
   async listDebates(
     @Query('state') state?: string,
@@ -62,17 +95,12 @@ export class DebateController {
     });
   }
 
-  // POST /debates
+  @ApiOperation({ summary: 'Create a new debate with initial MOTION argument' })
+  @ApiOkResponse({ type: WriteResultResponseDto, description: 'Debate created' })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
   @Post('debates')
   async createDebate(
-    @Body()
-    body: {
-      debate_id: string;
-      title: string;
-      debate_type: string;
-      motion_content: string;
-      client_request_id: string;
-    },
+    @Body() body: CreateDebateBodyDto,
   ) {
     if (
       !body.debate_id ||
@@ -94,7 +122,12 @@ export class DebateController {
     return ok(serializeWriteResult(result));
   }
 
-  // GET /debates/:id?limit=N
+  @ApiOperation({ summary: 'Get debate with motion and arguments' })
+  @ApiParam({ name: 'id', description: 'Debate UUID', type: String })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Max arguments to return' })
+  @ApiOkResponse({ type: GetDebateResponseDto, description: 'Debate detail' })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
   @Get('debates/:id')
   async getDebate(
     @Param('id') debateId: string,
@@ -119,24 +152,27 @@ export class DebateController {
     });
   }
 
-  // DELETE /debates/:id
+  @ApiOperation({ summary: 'Delete a debate and all its arguments' })
+  @ApiParam({ name: 'id', description: 'Debate UUID', type: String })
+  @ApiOkResponse({ description: 'Debate deleted' })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
   @Delete('debates/:id')
   async deleteDebate(@Param('id') debateId: string) {
     await this.debateService.deleteDebate(debateId);
     return ok({ deleted: true });
   }
 
-  // POST /debates/:id/arguments
+  @ApiOperation({ summary: 'Submit a CLAIM argument' })
+  @ApiParam({ name: 'id', description: 'Debate UUID', type: String })
+  @ApiOkResponse({ type: WriteResultResponseDto, description: 'Argument submitted' })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto, description: 'Action not allowed in current state' })
   @Post('debates/:id/arguments')
   async submitArgument(
     @Param('id') debateId: string,
-    @Body()
-    body: {
-      role: 'proposer' | 'opponent';
-      target_id: string;
-      content: string;
-      client_request_id: string;
-    },
+    @Body() body: SubmitArgumentBodyDto,
   ) {
     if (!body.role || !body.target_id || !body.content || !body.client_request_id) {
       throw new InvalidInputError('Missing required fields');
@@ -152,16 +188,16 @@ export class DebateController {
     return ok(serializeWriteResult(result));
   }
 
-  // POST /debates/:id/appeal
+  @ApiOperation({ summary: 'Submit an APPEAL' })
+  @ApiParam({ name: 'id', description: 'Debate UUID', type: String })
+  @ApiOkResponse({ type: WriteResultResponseDto, description: 'Appeal submitted' })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto, description: 'Action not allowed in current state' })
   @Post('debates/:id/appeal')
   async submitAppeal(
     @Param('id') debateId: string,
-    @Body()
-    body: {
-      target_id: string;
-      content: string;
-      client_request_id: string;
-    },
+    @Body() body: SubmitAppealBodyDto,
   ) {
     if (!body.target_id || !body.content || !body.client_request_id) {
       throw new InvalidInputError('Missing required fields');
@@ -176,16 +212,16 @@ export class DebateController {
     return ok(serializeWriteResult(result));
   }
 
-  // POST /debates/:id/resolution
+  @ApiOperation({ summary: 'Request debate completion (RESOLUTION)' })
+  @ApiParam({ name: 'id', description: 'Debate UUID', type: String })
+  @ApiOkResponse({ type: WriteResultResponseDto, description: 'Resolution submitted' })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto, description: 'Action not allowed in current state' })
   @Post('debates/:id/resolution')
   async submitResolution(
     @Param('id') debateId: string,
-    @Body()
-    body: {
-      target_id: string;
-      content: string;
-      client_request_id: string;
-    },
+    @Body() body: RequestCompletionBodyDto,
   ) {
     if (!body.target_id || !body.content || !body.client_request_id) {
       throw new InvalidInputError('Missing required fields');
@@ -200,11 +236,16 @@ export class DebateController {
     return ok(serializeWriteResult(result));
   }
 
-  // POST /debates/:id/intervention (DEV-ONLY Arbitrator)
+  @ApiOperation({ summary: 'Submit an INTERVENTION (arbitrator only)' })
+  @ApiParam({ name: 'id', description: 'Debate UUID', type: String })
+  @ApiOkResponse({ type: WriteResultResponseDto, description: 'Intervention submitted' })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto, description: 'Action not allowed in current state' })
   @Post('debates/:id/intervention')
   async submitIntervention(
     @Param('id') debateId: string,
-    @Body() body: { content?: string; client_request_id?: string },
+    @Body() body: SubmitInterventionBodyDto,
   ) {
     const result = await this.argumentService.submitIntervention({
       debate_id: debateId,
@@ -214,11 +255,16 @@ export class DebateController {
     return ok(serializeWriteResult(result));
   }
 
-  // POST /debates/:id/ruling (DEV-ONLY Arbitrator)
+  @ApiOperation({ summary: 'Submit a RULING (arbitrator only)' })
+  @ApiParam({ name: 'id', description: 'Debate UUID', type: String })
+  @ApiOkResponse({ type: WriteResultResponseDto, description: 'Ruling submitted' })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto, description: 'Action not allowed in current state' })
   @Post('debates/:id/ruling')
   async submitRuling(
     @Param('id') debateId: string,
-    @Body() body: { content: string; close?: boolean; client_request_id?: string },
+    @Body() body: SubmitRulingBodyDto,
   ) {
     if (!body.content) {
       throw new InvalidInputError('Missing required fields');
@@ -233,7 +279,19 @@ export class DebateController {
     return ok(serializeWriteResult(result));
   }
 
-  // GET /debates/:id/poll?argument_id=...&role=...
+  @ApiOperation({ summary: 'Long-poll for new arguments' })
+  @ApiParam({ name: 'id', description: 'Debate UUID', type: String })
+  @ApiQuery({ name: 'argument_id', required: false, type: String, description: 'Last seen argument UUID' })
+  @ApiQuery({ name: 'role', required: true, enum: ['proposer', 'opponent'] })
+  @ApiOkResponse({
+    description: 'Poll result — new argument or timeout',
+    schema: { oneOf: [
+      { $ref: getSchemaPath(PollResultNewResponseDto) },
+      { $ref: getSchemaPath(PollResultNoNewResponseDto) },
+    ]},
+  })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
   @Get('debates/:id/poll')
   async poll(
     @Param('id') debateId: string,

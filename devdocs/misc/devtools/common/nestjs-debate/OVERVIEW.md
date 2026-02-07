@@ -81,9 +81,48 @@ export { DebateModule }        // NestJS Module — import này vào AppModule
 export { DebateService }       // Injectable — nếu cần inject từ module khác
 export { ArgumentService }     // Injectable — nếu cần inject từ module khác
 export { DebateGateway }       // WebSocket gateway
+
+// All DTOs (entity, request, response, error) — consumed by @aweave/server for Swagger setup
+export * from './dto';
+
+// WS event types — consumed by debate-web for WebSocket typing
+export type { WsEvent, ServerToClientEvent, NewArgumentEvent, ... } from './ws-types';
 ```
 
 **Primary export:** `DebateModule` — chỉ cần import module, tất cả providers/controllers tự register.
+
+## Swagger DTOs (`src/dto/`)
+
+Swagger DTO classes define the OpenAPI schema for all REST endpoints. They mirror the **serialized** (snake_case) API output, not the Prisma camelCase model.
+
+| File | Contents |
+|------|----------|
+| `debate.dto.ts` | `DebateDto` — serialized debate entity |
+| `argument.dto.ts` | `ArgumentDto` — serialized argument entity |
+| `request.dto.ts` | `CreateDebateBodyDto`, `SubmitArgumentBodyDto`, `SubmitAppealBodyDto`, `RequestCompletionBodyDto`, `SubmitInterventionBodyDto`, `SubmitRulingBodyDto` |
+| `response.dto.ts` | `ListDebatesResponseDto`, `GetDebateResponseDto`, `WriteResultResponseDto`, `PollResultNewResponseDto`, `PollResultNoNewResponseDto` — concrete `{ success, data }` envelopes |
+| `error.dto.ts` | `ErrorResponseDto`, `ErrorDetailDto` — error envelope |
+| `index.ts` | Barrel export |
+
+**Key design:** Each response DTO is a concrete class with the full `{ success, data }` envelope so OpenAPI spec is self-describing. Poll endpoint uses `oneOf` with `PollResultNewResponseDto` / `PollResultNoNewResponseDto`.
+
+## WebSocket Event Types (`src/ws-types.ts`)
+
+Generic envelope + specific events referencing entity DTOs:
+
+```typescript
+type WsEvent<E extends string, D> = { event: E; data: D };
+
+// Server → Client
+type InitialStateEvent = WsEvent<'initial_state', { debate: DebateDto; arguments: ArgumentDto[] }>;
+type NewArgumentEvent = WsEvent<'new_argument', { debate: DebateDto; argument: ArgumentDto }>;
+
+// Client → Server
+type SubmitInterventionEvent = WsEvent<'submit_intervention', { debate_id: string; content?: string }>;
+type SubmitRulingEvent = WsEvent<'submit_ruling', { debate_id: string; content: string; close?: boolean }>;
+```
+
+> **Note:** WS types are NOT covered by OpenAPI. They use a manually-defined generic envelope that references the same DTO types.
 
 ## Configuration
 
@@ -305,10 +344,10 @@ devtools/common/nestjs-debate/
 ├── generated/
 │   └── prisma/                    # Generated Prisma Client (gitignored)
 ├── src/
-│   ├── index.ts                   # Barrel export: DebateModule, services
+│   ├── index.ts                   # Barrel export: DebateModule, services, DTOs, WS types
 │   ├── debate.module.ts           # NestJS module definition
 │   ├── debate-prisma.service.ts   # PrismaClient for ~/.aweave/db/debate.db
-│   ├── debate.controller.ts       # REST endpoints
+│   ├── debate.controller.ts       # REST endpoints (Swagger-annotated)
 │   ├── debate.service.ts          # Debate CRUD + poll logic
 │   ├── argument.service.ts        # Argument operations (submit, appeal, ...)
 │   ├── debate.gateway.ts          # WebSocket gateway (/ws)
@@ -316,7 +355,15 @@ devtools/common/nestjs-debate/
 │   ├── state-machine.ts           # isActionAllowed(), calculateNextState()
 │   ├── errors.ts                  # AppError hierarchy
 │   ├── types.ts                   # DebateState, Role, WaitAction, etc.
-│   └── serializers.ts             # camelCase → snake_case for API responses
+│   ├── serializers.ts             # camelCase → snake_case for API responses
+│   ├── ws-types.ts                # WebSocket event type definitions
+│   └── dto/                       # Swagger DTO classes
+│       ├── debate.dto.ts          # DebateDto
+│       ├── argument.dto.ts        # ArgumentDto
+│       ├── request.dto.ts         # Request body DTOs
+│       ├── response.dto.ts        # Response envelope DTOs
+│       ├── error.dto.ts           # ErrorResponseDto
+│       └── index.ts               # Barrel export
 └── dist/                          # Build output
 ```
 

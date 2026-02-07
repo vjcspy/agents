@@ -12,6 +12,7 @@ import {
   InvalidInputError,
 } from './errors';
 import { calculateNextState, isActionAllowed } from './state-machine';
+import { serializeDebate, serializeArgument } from './serializers';
 import type { ArgumentType, DebateState, Role } from './types';
 
 const MAX_CONTENT_LENGTH = 10 * 1024; // 10KB
@@ -164,8 +165,8 @@ export class ArgumentService {
     if (!result.isExisting) {
       this.gateway.broadcastNewArgument(
         input.debate_id,
-        result.debate,
-        result.argument,
+        serializeDebate(result.debate as any) as unknown as Record<string, unknown>,
+        serializeArgument(result.argument as any) as unknown as Record<string, unknown>,
       );
     }
 
