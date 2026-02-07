@@ -1,5 +1,5 @@
 {
-  "name": "@aweave/cli-plugin-bitbucket",
+  "name": "@aweave/cli-plugin-tinybots-bitbucket",
   "version": "0.1.0",
   "private": true,
   "main": "dist/index.js",
