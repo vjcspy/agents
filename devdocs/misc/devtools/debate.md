@@ -63,7 +63,9 @@ Khi có bản ghi mới thì `Proposer` và `Opponent` đều sẽ nhận đư�
 `Opponent` chỉ đơn giản là đọc hiểu ngữ cảnh, lấy được `argument_id` của phán quyết này rồi gọi luôn `aw debate wait` để chờ `Proposer` align theo phán quyết.
 
 **1.1.5** Step5 2 bên đều nhất trí hết các điểm:
-Lúc đó `Proposer` sẽ gọi `aw debate request-completion` để tạo bản ghi `RESOLUTION`. Lúc này cả 2 `Proposer` và `Opponent` đều sẽ cần `aw debate wait` trên argument_id này, `Arbitrator` sẽ hành động trên web để tạo bản ghi `RULING` để complete → chuyển state của debate sang `CLOSED` hoặc đưa ra 1 hướng khác. Nếu đưa ra hướng khác thì quay lại step 4 còn nếu close thì 2 bên `Proposer` và `Opponent` sẽ dừng.
+Lúc đó `Proposer` sẽ gọi `aw debate request-completion` để tạo bản ghi `RESOLUTION`. **Server sẽ tự động tạo bản ghi `RULING` với close=true** (auto-ruling), chuyển state của debate sang `CLOSED`. Cả 2 `Proposer` và `Opponent` sẽ nhận `action: "debate_closed"` khi poll và dừng lại.
+
+> **Note:** Trong giai đoạn hiện tại, server auto-approve RESOLUTION — không cần Arbitrator can thiệp thủ công. Xem `devdocs/misc/devtools/plans/260207-auto-ruling-on-resolution.md`.
 
 **1.1.6** Lưu ý về INTERVENTION:
 

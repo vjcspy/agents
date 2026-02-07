@@ -4,7 +4,7 @@ import {
   toDebateEvent,
   transition,
 } from '@aweave/debate-machine';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 
 import { DebateGateway } from './debate.gateway';
@@ -54,6 +54,8 @@ function toActionNotAllowedError(
 
 @Injectable()
 export class ArgumentService {
+  private readonly logger = new Logger(ArgumentService.name);
+
   constructor(
     private readonly prisma: DebatePrismaService,
     private readonly locks: LockService,
@@ -178,7 +180,11 @@ export class ArgumentService {
       );
     }
 
-    return { debate: result.debate, argument: result.argument };
+    return {
+      debate: result.debate,
+      argument: result.argument,
+      isIdempotencyHit: result.isExisting,
+    };
   }
 
   async submitClaim(input: {
@@ -222,7 +228,7 @@ export class ArgumentService {
     content: string;
     client_request_id: string;
   }) {
-    return this.submitArgument({
+    const result = await this.submitArgument({
       debate_id: input.debate_id,
       role: 'proposer',
       parent_id: input.target_id,
@@ -231,6 +237,29 @@ export class ArgumentService {
       client_request_id: input.client_request_id,
       action_name: 'submit_resolution',
     });
+
+    // Auto-ruling: automatically close debate when RESOLUTION is created
+    // Skip if this was an idempotency hit (client retry)
+    if (!result.isIdempotencyHit) {
+      try {
+        await this.submitArgument({
+          debate_id: input.debate_id,
+          role: 'arbitrator',
+          parent_id: null,
+          type: 'RULING',
+          content: 'Auto-approved: Debate completed as requested by proposer.',
+          client_request_id: null,
+          action_name: 'submit_ruling',
+          close: true,
+        });
+      } catch (err) {
+        this.logger.warn(
+          `Auto-ruling failed for debate ${input.debate_id}: ${err}`,
+        );
+      }
+    }
+
+    return result;
   }
 
   async submitIntervention(input: {

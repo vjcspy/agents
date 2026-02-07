@@ -69,6 +69,7 @@ devtools/
 │   ├── cli-shared/                  # @aweave/cli-shared — shared utilities (MCP, HTTP, helpers)
 │   ├── cli-plugin-debate/           # @aweave/cli-plugin-debate — aw debate *
 │   ├── cli-plugin-docs/             # @aweave/cli-plugin-docs — aw docs *
+│   ├── cli-plugin-dashboard/       # @aweave/cli-plugin-dashboard — aw dashboard * (Ink v6, ESM)
 │   ├── server/                      # @aweave/server — unified NestJS server
 │   ├── nestjs-debate/               # @aweave/nestjs-debate — debate backend module
 │   └── debate-web/                  # Next.js debate monitoring UI
@@ -93,6 +94,7 @@ devtools/
 - **Domain plugins** (`cli-plugin-*`): Each plugin registers commands under its own topic (e.g. `aw debate *`)
 - **Plugin loading:** oclif reads `oclif.plugins` from `package.json`, auto-discovers command classes from each plugin's `dist/commands/`
 - **Global install:** `pnpm link --global` in `common/cli/` → `aw` command available system-wide
+- **Interactive UI plugins:** `cli-plugin-dashboard` uses Ink v6 (ESM-only, React 19) for terminal UI. This is a reference implementation for Ink + oclif integration — see its OVERVIEW for ESM interop patterns, non-blocking data collection rules, and custom component guide.
 
 See: `devdocs/misc/devtools/common/cli/OVERVIEW.md`
 
@@ -150,6 +152,18 @@ All CLI commands output responses in a structured format designed for AI agent c
 5. Add to `oclif.plugins` array in `devtools/common/cli/package.json`
 6. `pnpm install && pnpm -r build`
 
+### Adding an Ink-based (Interactive UI) Plugin
+
+For plugins with interactive terminal UI using Ink v6 + React 19, the plugin **must be ESM** (`"type": "module"`) and follows a different pattern from standard CJS plugins. Key differences:
+
+- ESM package config: `"type": "module"`, `tsconfig: { module: "Node16", jsx: "react-jsx" }`
+- CJS dependencies imported via `createRequire(import.meta.url)` instead of `import`
+- Ink/React loaded via dynamic `import()` inside command `run()` — not top-level
+- No dev mode (ts-node): must `pnpm build` before every test
+- All data fetching must be async — `execSync` blocks Ink rendering
+
+**Full guide with code examples, interop patterns, and component reference:** `devdocs/misc/devtools/common/cli-plugin-dashboard/OVERVIEW.md`
+
 ### Adding a New Backend Feature
 
 1. Create NestJS module package at `devtools/<domain>/nestjs-<feature>/`
@@ -171,6 +185,7 @@ All CLI commands output responses in a structured format designed for AI agent c
   ├── @aweave/cli-shared
   ├── @aweave/cli-plugin-debate ──► @aweave/cli-shared
   ├── @aweave/cli-plugin-docs ──► @aweave/cli-shared
+  ├── @aweave/cli-plugin-dashboard ──► @aweave/cli-shared + ink + react  (ESM)
   └── @aweave/cli-plugin-<name> ──► @aweave/cli-shared
 
 @aweave/server
@@ -197,6 +212,7 @@ Each package has its own OVERVIEW at:
 - **CLI entrypoint:** `devdocs/misc/devtools/common/cli/OVERVIEW.md`
 - **CLI shared library:** `devdocs/misc/devtools/common/cli-shared/OVERVIEW.md`
 - **CLI plugins:** `devdocs/misc/devtools/common/cli-plugin-<name>/OVERVIEW.md`
+- **Dashboard plugin (Ink v6):** `devdocs/misc/devtools/common/cli-plugin-dashboard/OVERVIEW.md` — ESM + Ink integration guide
 - **Server:** `devdocs/misc/devtools/common/server/OVERVIEW.md`
 - **NestJS modules:** `devdocs/misc/devtools/common/nestjs-<name>/OVERVIEW.md`
 - **Domain-specific:** `devdocs/misc/devtools/<domain>/<package>/OVERVIEW.md`

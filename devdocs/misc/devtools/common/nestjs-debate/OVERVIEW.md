@@ -289,6 +289,19 @@ All REST responses wrapped in standard envelope:
 
 ## Key Design Decisions
 
+### Auto-Ruling on Resolution
+
+Khi Proposer submit RESOLUTION (`request-completion`), server **tự động** tạo thêm bản ghi RULING với `close=true` để close debate ngay lập tức — không cần Arbitrator can thiệp thủ công.
+
+- RESOLUTION (seq N) được tạo → state = `AWAITING_ARBITRATOR` → broadcast WS
+- RULING (seq N+1) được tạo tự động → state = `CLOSED` → broadcast WS
+- Nếu client retry (idempotency hit), auto-ruling không chạy lại
+- Nếu auto-ruling fail, RESOLUTION vẫn thành công — Arbitrator có thể ruling thủ công sau
+
+> **Note:** Chỉ áp dụng cho RESOLUTION. APPEAL vẫn cần Arbitrator phán xử thủ công.
+
+Xem plan: `devdocs/misc/devtools/plans/260207-auto-ruling-on-resolution.md`
+
 ### Interval Polling (thay vì Long Polling)
 
 Old debate-server dùng **long polling** (server giữ connection 60s, in-memory EventEmitter notification). Module này dùng **interval polling**:
