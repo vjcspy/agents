@@ -55,6 +55,7 @@ export function useDebate(debateId: string) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttempts = useRef(0);
+  const connectRef = useRef<(() => void) | null>(null);
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -96,7 +97,7 @@ export function useDebate(debateId: string) {
       const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
       reconnectAttempts.current++;
       
-      reconnectTimeoutRef.current = setTimeout(connect, delay);
+      reconnectTimeoutRef.current = setTimeout(() => connectRef.current?.(), delay);
     };
 
     ws.onerror = () => {
@@ -105,6 +106,11 @@ export function useDebate(debateId: string) {
 
     wsRef.current = ws;
   }, [debateId]);
+
+  // Keep ref in sync so reconnect always uses latest connect
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {

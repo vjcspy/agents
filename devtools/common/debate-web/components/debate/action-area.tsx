@@ -23,6 +23,15 @@ export function ActionArea({ state, onIntervention, onRuling }: ActionAreaProps)
 
   const HOLD_DURATION = 1000; // 1 second hold to confirm
 
+  const cancelHold = useCallback(() => {
+    setIsHolding(false);
+    setHoldProgress(0);
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+  }, []);
+
   const startHold = useCallback(() => {
     setIsHolding(true);
     holdStartRef.current = Date.now();
@@ -41,16 +50,7 @@ export function ActionArea({ state, onIntervention, onRuling }: ActionAreaProps)
     };
 
     holdTimerRef.current = setTimeout(updateProgress, 16);
-  }, [onIntervention]);
-
-  const cancelHold = useCallback(() => {
-    setIsHolding(false);
-    setHoldProgress(0);
-    if (holdTimerRef.current) {
-      clearTimeout(holdTimerRef.current);
-      holdTimerRef.current = null;
-    }
-  }, []);
+  }, [onIntervention, cancelHold]);
 
   const handleSubmitRuling = () => {
     if (!content.trim()) return;
