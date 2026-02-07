@@ -99,8 +99,11 @@ export class HTTPClient {
   }
 
   private buildUrl(path: string, params?: Record<string, string>): string {
-    // If path is already absolute URL, use as-is
-    const url = path.startsWith('http') ? new URL(path) : new URL(path, this.baseUrl);
+    // If path is already absolute URL, use as-is.
+    // Otherwise concatenate baseUrl + path (new URL(path, base) drops base path when path starts with '/').
+    const url = path.startsWith('http')
+      ? new URL(path)
+      : new URL(this.baseUrl + path);
     if (params) {
       for (const [k, v] of Object.entries(params)) {
         url.searchParams.set(k, v);
