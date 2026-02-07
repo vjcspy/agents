@@ -11,7 +11,7 @@ export class DocsGet extends Command {
 
   static flags = {
     version: Flags.integer({ description: 'Specific version' }),
-    format: Flags.string({ default: 'json', options: ['json', 'markdown', 'plain'], description: 'Output format' }),
+    format: Flags.string({ default: 'markdown', options: ['json', 'markdown', 'plain'], description: 'Output format' }),
   };
 
   async run() {

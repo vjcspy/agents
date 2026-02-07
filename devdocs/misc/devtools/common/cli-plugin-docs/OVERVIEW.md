@@ -12,7 +12,7 @@ Lưu trữ và quản lý documents (chủ yếu markdown) với version history
 - **Document Versioning:** Mỗi lần submit = version mới (immutable history)
 - **Soft Delete:** Documents không bị xóa vật lý, chỉ đánh dấu `deleted_at`
 - **Metadata:** JSON field cho phép AI agents lưu arbitrary data (debate_id, tags, etc.)
-- **AI-Friendly Output:** MCPResponse JSON format, `--format plain` cho raw content piping
+- **AI-Friendly Output:** MCPResponse format (markdown default, json optional), `--format plain` cho raw content piping
 
 **Cách tiếp cận:** Direct SQLite access (không qua server) vì docs là local-first tool:
 - Database: `~/.aweave/docstore.db` (shared across projects)
@@ -65,7 +65,7 @@ Lưu trữ và quản lý documents (chủ yếu markdown) với version history
 |---------|-------------|----------------|
 | `aw docs create` | Create document (v1) | json, markdown |
 | `aw docs submit <doc_id>` | Submit new version | json, markdown |
-| `aw docs get <doc_id>` | Get latest (or specific version) | json, markdown, **plain** |
+| `aw docs get <doc_id>` | Get latest (or specific version) | **markdown** (default), json, plain |
 | `aw docs list` | List all documents | json, markdown |
 | `aw docs history <doc_id>` | Show version history | json, markdown |
 | `aw docs export <doc_id>` | Export content to file | json, markdown |
@@ -149,6 +149,7 @@ pnpm build
 export AWEAVE_DB_PATH=/tmp/test-docs.db
 aw docs create --summary "Test" --content "Hello"
 aw docs list
+aw docs get <doc_id>                  # markdown (default)
 aw docs get <doc_id> --format plain
 rm -f /tmp/test-docs.db
 ```
